@@ -6,6 +6,9 @@ module.exports = {
       fontFamily: {
         sans: ['"Open Sans"', '"Public Sans"', 'sans-serif', 'system-ui'],
         mono: ['monospace', 'SFMono-Regular'],
+        outfit: ['Outfit', 'cursive'],
+        "outfit-light": ['OutfitLight', 'cursive'],
+        "outfit-thin": ['OutfitThin', 'cursive']
       },
       height: {
       "10v": "10vh",
