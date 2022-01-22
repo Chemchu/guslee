@@ -1,9 +1,23 @@
 import { motion } from "framer-motion";
+import { ScreenSide } from "../../../types";
+import LateralCard from "../card";
 
 const LandingPage = () => {
+
+    const smallScreenImages = {
+        container: `flex flex-col`,
+        images: `h-72 w-72`
+    }
+
+    const mdScreenImages = {
+        container: `md:grid md:grid-cols-2 md:justify-items-stretch md:gap-12 md:bg-cyan-500`,
+        images: `md:w-92 md:w-92`
+    }
+
     return (
-        <motion.main className="dark:bg-gray-800 font-outfit bg-white relative overflow-y-scroll overflow-x-hidden h-screen">
-            <header className="h-24 sm:h-32 flex items-center z-30 w-full">
+        <motion.main className="dark:bg-gray-800 font-outfit-light bg-white relative overflow-y-scroll overflow-x-hidden h-screen"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* <header className="h-24 sm:h-32 flex items-center z-30 w-full">
                 <div className="container mx-auto px-6 flex items-center justify-between">
                     <div className="uppercase text-gray-800 dark:text-white font-black text-3xl flex items-center">
                         <svg width="25" height="25" viewBox="0 0 1792 1792" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -39,24 +53,52 @@ const LandingPage = () => {
                         </button>
                     </div>
                 </div>
-            </header>
+            </header> */}
             <div className="flex relative z-20 items-center">
                 <div className="container mx-auto px-6 flex flex-col justify-between items-center relative py-4">
                     <div className="flex flex-col">
-                        <img src="/images/person/11.webp" className="rounded-full w-28 mx-auto" />
-                        <p className="text-3xl my-6 text-center dark:text-white">
-                            Buenas, me llamo Gustavo 🤘
-                        </p>
-                        <h2 className="max-w-3xl text-5xl md:text-6xl font-bold mx-auto dark:text-white text-gray-800 text-center py-2">
+                        <motion.p initial={{ opacity: 0, x: '-30vw' }} animate={{ opacity: 1, x: 0, transition: { duration: 1.5, ease: [0.87, 0, 0.13, 1], delay: 0 } }}
+                            className="text-3xl my-6 text-center dark:text-white">
+                            Buenas, me llamo Gustavo
+                        </motion.p>
+                        <motion.p initial={{ opacity: 0, x: '30vw' }} animate={{ opacity: 1, x: 0, transition: { duration: 1.5, ease: [0.87, 0, 0.13, 1], delay: 1.5 } }}
+                            className="text-3xl my-6 text-center dark:text-white">
+                            Me gusta programar
+                        </motion.p>
+                        <motion.h2 whileHover={{ scale: 1.1 }} className="max-w-3xl text-5xl md:text-6xl font-bold mx-auto dark:text-white text-gray-800 text-center py-2">
                             Portfolio a medio hacer...
-                        </h2>
-                        <div className="flex items-center justify-center mt-4">
-                            <a href="#" className="uppercase py-2 my-2 px-4 md:mt-16 bg-transparent dark:bg-white hover:dark:bg-gray-100 border-2 border-gray-800 text-gray-800 dark:text-white hover:bg-gray-800 hover:text-white text-md">
-                                Contáctame
-                            </a>
-                        </div>
+                        </motion.h2>
                     </div>
                 </div>
+            </div>
+            <div className={`${smallScreenImages.container} ${mdScreenImages.container} h-full w-full`}>
+                <div className={`${mdScreenImages.images} ${smallScreenImages.images} md:justify-self-start`}>
+                    <LateralCard className="rounded-3xl" imgSrc="/img/gus1.jpeg" side={ScreenSide.LeftSide} />
+                </div>
+                <div className={`${mdScreenImages.images} ${smallScreenImages.images} md:justify-self-end`}>
+                    <LateralCard className="rounded-3xl" imgSrc="/img/gus2.jpg" side={ScreenSide.RightSide} />
+                </div>
+
+                <div className={`${mdScreenImages.images} ${smallScreenImages.images} md:justify-self-start`}>
+                    <LateralCard className="rounded-3xl" imgSrc="/img/gus1.jpeg" side={ScreenSide.LeftSide} />
+                </div>
+                <div className={`${mdScreenImages.images} ${smallScreenImages.images} md:justify-self-end`}>
+                    <LateralCard className="rounded-3xl" imgSrc="/img/gus2.jpg" side={ScreenSide.RightSide} />
+                </div>
+                <div className={`${mdScreenImages.images} ${smallScreenImages.images} md:justify-self-start`}>
+                    <LateralCard className="rounded-3xl" imgSrc="/img/gus1.jpeg" side={ScreenSide.LeftSide} />
+                </div>
+                <div className={`${mdScreenImages.images} ${smallScreenImages.images} md:justify-self-end`}>
+                    <LateralCard className="rounded-3xl" imgSrc="/img/gus2.jpg" side={ScreenSide.RightSide} />
+                </div>
+                <div className={`${mdScreenImages.images} ${smallScreenImages.images} md:justify-self-start`}>
+                    <LateralCard className="rounded-3xl" imgSrc="/img/gus1.jpeg" side={ScreenSide.LeftSide} />
+                </div>
+                <div className={`${mdScreenImages.images} ${smallScreenImages.images} md:justify-self-end`}>
+                    <LateralCard className="rounded-3xl" imgSrc="/img/gus2.jpg" side={ScreenSide.RightSide} />
+                </div>
+
+
             </div>
         </motion.main>
 
