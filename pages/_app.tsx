@@ -5,7 +5,7 @@ import Head from 'next/head';
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <AnimatePresence exitBeforeEnter initial={false}>
+    <AnimatePresence exitBeforeEnter >
       <Head key={'Head'}>
         <title>Gustavo Lee!</title>
       </Head>
