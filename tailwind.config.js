@@ -11,9 +11,7 @@ module.exports = {
         "outfit-thin": ['OutfitThin', 'cursive']
       },
       backgroundImage: {
-        'sky': "url('/img/sky.jpg')",
-        'window': "url('/img/window.jpg')",
-        'seta': "url('/img/seta.jpg')",
+        'main': "url('/img/window.jpg')",
       }
     },
   },

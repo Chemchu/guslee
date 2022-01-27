@@ -40,7 +40,7 @@ const FondoVideo = () => {
 
 const FondoImagen = () => {
     return (
-        <main className="bg-window bg-cover bg-no-repeat bg-center font-outfit-light w-screen h-screen p-2 overflow-hidden">
+        <main className="bg-main bg-cover bg-no-repeat bg-center font-outfit-light w-screen h-screen p-2 overflow-hidden">
             <div className="text-white m-4 text-left items-end">
                 <div className="flex text-3xl md:text-5xl lg:text-7xl">
                     <motion.div initial={{ opacity: 0, x: '100vw' }} animate={{ opacity: 1, x: 0, transition: { duration: 1.5, ease: [0.87, 0, 0.13, 1], delay: 0 } }}
