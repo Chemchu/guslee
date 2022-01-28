@@ -1,47 +1,14 @@
-import { motion } from "framer-motion";
-import Image from "next/image";
-import { ScreenSide } from "../../../types";
-
-const cardVariants = {
-    offScreenLeft: {
-        opacity: 0,
-        rotate: -30
-    },
-    offScreenRight: {
-        opacity: 0,
-        rotate: 30
-    },
-    onScreenLeft: {
-        opacity: 1,
-        rotate: 5,
-        transition: {
-            type: "spring",
-            bounce: 0.4,
-            duration: 0.8
-        }
-    },
-    onScreenRight: {
-        opacity: 1,
-        rotate: -5,
-        transition: {
-            type: "spring",
-            bounce: 0.4,
-            duration: 0.8
-        }
-    }
-};
-
-const LateralCard = (props: { className?: string, imgSrc: string, side: ScreenSide }) => {
+const Card = () => {
     return (
-        <motion.div
-            whileInView={props.side === ScreenSide.LeftSide ? cardVariants.onScreenLeft : cardVariants.onScreenRight}
-            initial={props.side === ScreenSide.LeftSide ? cardVariants.offScreenLeft : cardVariants.offScreenRight}
-            viewport={{ once: true }}
-            className={`h-full w-full relative`}
-        >
-            <Image className={`${props.className} `} src={props.imgSrc} layout="fill" objectFit="cover" />
-        </motion.div>
+        <div className="grid grid-cols-2 h-full w-full p-2">
+            <div id="LeftSide" className="bg-blue-500">
+
+            </div>
+            <div id="RightSide" className="bg-red-500">
+
+            </div>
+        </div>
     );
 }
 
-export default LateralCard;
+export default Card;
