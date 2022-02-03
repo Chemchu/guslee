@@ -41,7 +41,7 @@ const FondoImagen = () => {
 
                 <hr className="my-2 animate-pulse" />
 
-                <div className="flex flex-col justify-center w-full h-full pl-6">
+                <div className="flex flex-col mt-10 pl-10 lg:mt-0 lg:pl-6 lg:justify-center w-full h-full">
                     <div className="flex text-xl sm:text-4xl xl:text-6xl">
                         <div className="font-outfit mr-2 md:mr-4">
                             {!firstWriterDone ?
