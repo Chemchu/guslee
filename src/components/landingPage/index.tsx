@@ -38,17 +38,15 @@ const FondoImagen = () => {
                         GitHub
                     </div>
                 </div>
-
                 <hr className="my-2 animate-pulse" />
-
                 <div className="flex flex-col mt-10 pl-10 lg:mt-0 lg:pl-6 lg:justify-center w-full h-full">
                     <div className="flex text-xl sm:text-4xl xl:text-6xl">
                         <div className="font-outfit mr-2 md:mr-4">
                             {!firstWriterDone ?
                                 <Typewriter
+                                    options={{ delay: 60 }}
                                     onInit={(typewriter) => {
                                         typewriter.typeString('¡Hola!')
-                                            .pauseFor(500)
                                             .stop()
                                             .callFunction(() => { setFirstWriter(true) })
                                             .start();
@@ -62,6 +60,7 @@ const FondoImagen = () => {
                         <div className="font-outfit-thin">
                             {firstWriterDone && !secondWriterDone ?
                                 <Typewriter
+                                    options={{ delay: 55 }}
                                     onInit={(typewriter) => {
                                         typewriter.typeString('Soy Gus')
                                             .pauseFor(200)
@@ -82,6 +81,7 @@ const FondoImagen = () => {
                             {/* Segundo */}
                             {secondWriterDone && !thirdWriterDone ?
                                 <Typewriter
+                                    options={{ delay: 40 }}
                                     onInit={(typewriter) => {
                                         typewriter.typeString('Soy')
                                             .pauseFor(400)
@@ -95,7 +95,7 @@ const FondoImagen = () => {
                             }
                             {thirdWriterDone &&
                                 <Typewriter
-                                    options={{ deleteSpeed: 27, loop: true }}
+                                    options={{ delay: 70, deleteSpeed: 27, loop: true }}
                                     onInit={(typewriter) => {
                                         typewriter
                                             .typeString('ingeniero de software')
@@ -161,6 +161,7 @@ const FondoImagen = () => {
                     GitHub
                 </h1>
             </div>
+
         </main>
     );
 }
