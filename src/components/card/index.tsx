@@ -1,13 +1,13 @@
+import { motion } from "framer-motion";
+
 const Card = () => {
     return (
-        <div className="grid grid-cols-2 h-full w-full p-2">
-            <div id="LeftSide" className="bg-blue-500">
-
-            </div>
-            <div id="RightSide" className="bg-red-500">
-
-            </div>
-        </div>
+        <motion.div className="w-full h-full rounded-xl bg-white opacity-30"
+            initial={{ x: '-100vw' }} animate={{ x: 0 }}
+            whileInView="visible"
+            viewport={{ once: true }}>
+            Arroz
+        </motion.div>
     );
 }
 
