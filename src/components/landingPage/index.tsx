@@ -15,8 +15,8 @@ const FondoImagen = () => {
     const [thirdWriterDone, setThirdWriter] = useState<boolean>(false);
 
     return (
-        <main className="overflow-x-hidden text-white font-outfit-light h-screen w-screen">
-            <div className="bg-main bg-cover bg-no-repeat bg-center w-full h-full cursor-default">
+        <main className="bg-main bg-cover bg-no-repeat bg-center overflow-x-hidden text-white font-outfit-light h-screen w-screen">
+            <div className="w-full h-full cursor-default">
                 <div className="transform flex justify-around items-center text-base sm:text-lg xl:text-xl">
                     <div className="transition hover:scale-150 hover:duration-100 cursor-pointer">
                         Sobre mí
@@ -132,10 +132,8 @@ const FondoImagen = () => {
                 </div>
             </div >
 
-            <div className="w-full h-full bg-orange-500">
-                <h1>
-                    Sobre mí
-                </h1>
+            <div className="w-full h-full p-4">
+                <Card />
             </div>
 
             <div className="w-full h-full bg-green-600">
