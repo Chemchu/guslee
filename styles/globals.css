@@ -18,3 +18,37 @@
         src: url('/fonts/outfit/Outfit-Regular.ttf') format('truetype');
     }
 }
+
+:root {
+    --background: #fff;
+    --dark: #34314c;
+}
+
+.box {
+    border: 0.2rem solid var(--dark);
+    outline: 0;
+    overflow: hidden;
+}
+
+.box::after {
+    content: '';
+    position: absolute;
+    bottom: -50%;
+    left: -50%;
+    background-color: var(--background);
+    width: 200%;
+    height: 300%;
+    border-radius: 95%;
+    animation: spin 6s ease-in-out infinite; 
+}
+
+@keyframes spin {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  
+  100% {
+    transform: translateY(-100%) rotate(500deg);
+  }
+}
+
