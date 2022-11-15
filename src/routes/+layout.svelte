@@ -3,12 +3,22 @@
 </script>
 
 <div class="flex flex-col w-full h-full font-raleway">
-	<div class="z-50 flex w-full h-16 items-center justify-end text-white cristal">
-		<nav class="flex flex-wrap items-center justify-evenly bg-transparent w-1/2 h-full text-xl">
-			<a href="/">Inicio</a>
-			<a href="/">Sobre mí</a>
-			<a href="/">Proyectos</a>
-			<a href="/">Contacto</a>
+	<div class="fixed z-50 flex w-full h-10 md:h-16 items-center justify-end text-white cristal">
+		<nav
+			class="flex flex-wrap items-center justify-evenly w-full md:w-2/3 h-full text-sm md:text-xl"
+		>
+			<a class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold" href="/"
+				>Inicio</a
+			>
+			<a class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold" href="/"
+				>Sobre mí</a
+			>
+			<a class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold" href="/"
+				>Proyectos</a
+			>
+			<a class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold" href="/"
+				>Contacto</a
+			>
 		</nav>
 	</div>
 	<slot />
