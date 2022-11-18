@@ -17,10 +17,15 @@
 		await p;
 	});
 
-	let showBackFace = false;
-	const handleClick = (e: any) => {
-		showBackFace = !showBackFace;
-		console.log(e);
+	let toggleClick = false;
+	let outEnded = true;
+	const handleClick = () => {
+		toggleClick = !toggleClick;
+		outEnded = false;
+	};
+
+	const handleOutEnded = () => {
+		outEnded = true;
 	};
 </script>
 
@@ -46,17 +51,19 @@
 				transition:fade={{ delay: 1700, duration: 1500 }}
 			>
 				<span class="s-title w-full text-start">Me llamo</span>
-				<div class="container">
-					<div class="card" on:click={handleClick}>
-						<span class="front-face b-title w-full text-center font-extralight">Gustavo</span>
-						<span class="back-face flex justify-between items-center">
-							<div class="bg-red-500">
-								<img src="/images/linkedin.svg" alt="LinkedIn logo" />
-							</div>
-							<div>GitHub</div>
-							<div>CV</div>
+				<div class="card cursor-pointer" on:click={handleClick} on:keydown={handleClick}>
+					{#if !toggleClick && outEnded}
+						<span
+							class="text-color b-title w-full text-center font-extralight"
+							transition:fade
+							on:outroend={handleOutEnded}
+						>
+							Gustavo
 						</span>
-					</div>
+					{/if}
+					{#if toggleClick && outEnded}
+						<span transition:fade on:outroend={handleOutEnded}>Hola</span>
+					{/if}
 				</div>
 				<span class="m-title w-full text-end font-bold">Lee</span>
 			</div>
@@ -70,36 +77,6 @@
 {/if}
 
 <style>
-	.container {
-		width: 100%;
-		height: 100%;
-		position: relative;
-	}
-
-	.card {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		transform-style: preserve-3d;
-		transition: all 0.5s ease;
-	}
-
-	.front-face,
-	.back-face {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		backface-visibility: hidden;
-	}
-
-	.back-face {
-		transform: rotateY(180deg);
-	}
-
-	.card:hover {
-		transform: rotateX(180deg);
-	}
-
 	.b-title {
 		font-size: 18vw;
 		line-height: 100%;
