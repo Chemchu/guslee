@@ -105,8 +105,18 @@
 		</div>
 	</div>
 	<div class="overflow-x-hidden">
-		<AboutMe />
-		<Projects />
+		<AboutMe
+			on:enter={() => console.log('ey?')}
+			on:leave={() => {
+				console.log('sale');
+			}}
+		/>
+		<Projects
+			on:enter={() => console.log('ey?')}
+			on:leave={() => {
+				console.log('sale');
+			}}
+		/>
 	</div>
 {/if}
 
