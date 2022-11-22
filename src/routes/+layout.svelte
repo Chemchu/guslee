@@ -10,11 +10,13 @@
 			<a class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold" href="/"
 				>Inicio</a
 			>
-			<a class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold" href="/"
-				>Sobre mí</a
+			<a
+				href="#about_me"
+				class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold">Sobre mí</a
 			>
-			<a class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold" href="/"
-				>Proyectos</a
+			<a
+				class="hover:scale-110 duration-200 hover:text-orange-500 hover:font-semibold"
+				href="#projects">Proyectos</a
 			>
 		</nav>
 	</div>
