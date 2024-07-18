@@ -18,9 +18,11 @@ fn main() {
     let flag = "/C";
 
     #[cfg(unix)]
-    let command = "npx tailwindcss -i static/style.css -o static/compiled.css";
+    let command =
+        "npx tailwindcss -c tailwind.config.js -i static/style.css -o static/compiled.css";
     #[cfg(windows)]
-    let command = "npx tailwindcss -i static\\style.css -o static\\compiled.css";
+    let command =
+        "npx tailwindcss -c tailwind.config.js -i static\\style.css -o static\\compiled.css";
 
     match process::Command::new(shell).arg(flag).arg(command).output() {
         Ok(output) => {
@@ -28,6 +30,9 @@ fn main() {
                 let _ = io::stdout().write_all(&output.stdout);
                 let _ = io::stdout().write_all(&output.stderr);
                 panic!("Tailwind error");
+            } else {
+                let _ = io::stdout().write_all(&output.stdout);
+                println!("Tailwind compiled successfully!")
             }
         }
         Err(e) => panic!("Tailwind error: {:?}", e),
