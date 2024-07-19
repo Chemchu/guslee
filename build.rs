@@ -6,6 +6,7 @@ use std::{
 fn main() {
     println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=static/style.css");
+    println!("cargo:rerun-if-changed=templates");
 
     #[cfg(unix)]
     let shell = "sh";
@@ -18,11 +19,9 @@ fn main() {
     let flag = "/C";
 
     #[cfg(unix)]
-    let command =
-        "npx tailwindcss -c tailwind.config.js -i static/style.css -o static/compiled.css";
+    let command = "npx tailwindcss -i static/style.css -o static/compiled.css";
     #[cfg(windows)]
-    let command =
-        "npx tailwindcss -c tailwind.config.js -i static\\style.css -o static\\compiled.css";
+    let command = "npx tailwindcss -i static\\style.css -o static\\compiled.css";
 
     match process::Command::new(shell).arg(flag).arg(command).output() {
         Ok(output) => {

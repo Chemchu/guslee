@@ -1,77 +1,9 @@
 {% extends "base.html" %} {% block title %}Gustavo Lee?{% endblock %} {% block
 content %}
 
-<div class="container mx-auto">
-        <div class="flex justify-center gap-4 mt-16">
-            <button
-                type="button"
-                x-data=""
-                @click="$store.darkMode.inactive()"
-                class="font-medium hover:text-gray-900 dark:hover:text-white"
-            >
-                Light
-            </button>
-            <button
-                type="button"
-                x-data=""
-                @click="$store.darkMode.active()"
-                class="font-medium hover:text-gray-900 dark:hover:text-white"
-            >
-                Dark
-            </button>
-            <button
-                type="button"
-                x-data=""
-                @click="$store.darkMode.reset()"
-                class="font-medium hover:text-gray-900 dark:hover:text-white"
-            >
-                Sistema
-            </button>
-        </div>
-        <h1 class="text-4xl font-black text-gray-900 dark:text-white text-center mt-16">
-            Ejemplo de Dark Mode (no funciona?)
-        </h1>
-        <div class="w-full dark:bg-black bg-red-500">
-            Gus
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.store('darkMode', {
-                init() {
-                    window.matchMedia('(prefers-color-scheme: dark)').onchange = function() {
-                        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                            document.documentElement.classList.add('dark')
-                        } else {
-                            document.documentElement.classList.remove('dark')
-                        }
-                    }
-                },
-
-                active() {
-                    localStorage.theme = 'dark'
-
-                    document.documentElement.classList.add('dark')
-                },
-
-                inactive() {
-                    localStorage.theme = 'light'
-
-                    document.documentElement.classList.remove('dark')
-                },
-
-                reset() {
-                    localStorage.removeItem('theme')
-
-                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        document.documentElement.classList.add('dark')
-                    } else {
-                        document.documentElement.classList.remove('dark')
-                    }
-                }
-            })
-        })
-    </script>
+<div class="container mx-auto bg-white dark:bg-slate-900">
+    <button x-on:click="dark = !dark">Click me</button>
+    <h1 class="text-4xl font-bold text-gray-900 dark:text-white">Hello, Gustavo Lee!</h1>
+</div>
 
 {% endblock %}
