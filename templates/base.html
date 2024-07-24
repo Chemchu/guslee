@@ -31,7 +31,7 @@
   <body hx-boost="true"
         class="h-full w-full"
         :class="dark ? 'dark' : 'light'"
-        x-data="{ dark: false }">
+        x-data="{ dark: true }">
     <div id="content" class="min-h-screen w-full bg-zinc-50 dark:bg-black">
       {% block content %}{% endblock %}
     </div>
