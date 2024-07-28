@@ -1,15 +1,16 @@
 {% extends "base.html" %} {% block title %}Gustavo Lee - Ingeniero de software{% endblock %} {% block
 content %}
 
-<div class="px-20">
-    <div class="container mx-auto bg-white dark:bg-neutral-800 border-x border-neutral-800/10 dark:border-neutral-50/10">
+<div class="flex flex-col w-full items-center">
+    <div class="flex flex-col gap-16 w-2/3 justify-center items-center
+        bg-white dark:bg-neutral-800 border-x border-neutral-800/10 dark:border-neutral-50/10">
         <!-- Navbar -->
         <nav class="flex justify-center items-center p-4">
             <div class="flex justify-center items-center text-gray-900 dark:text-white">
                 <div class="font-bold dark:bg-neutral-700 border rounded-l-2xl border-neutral-800/10 dark:border-neutral-50/10 p-2 shadow">
                     <a href="#" class="hover:text-orange-600 dark:hover:text-orange-500 mx-2">Yo</a>
                     <a href="#" class="hover:text-orange-600 dark:hover:text-orange-500 mx-2">Artículos</a>
-                    <a href="#" class="hover:text-orange-600 dark:hover:text-orange-500 mx-2">Proyectos</a>
+                    <a href="#" class="hover:text-orange-600 dark:hover:text-orange-500 mx-2">Trayectoria</a>
                     <a href="#" class="hover:text-orange-600 dark:hover:text-orange-500 mx-2">Contacto</a>
                 </div>
             </div>
@@ -29,10 +30,10 @@ content %}
         </nav>
 
         <!-- Introducción con foto, titulo y resumen -->
-        <div class="flex flex-col md:flex-row items-center justify-center pt-10">
+        <div class="flex flex-col md:flex-row items-center justify-center">
             <div class="w-1/3">
                 <img src="https://avatars.githubusercontent.com/u/33813160?v=4" alt="Gustavo Lee"
-                    class="rounded-full w-32 h-32 mx-auto" />
+                    class="rounded-full border-2 border-neutral-800 dark:border-white w-52 h-52 mx-auto" />
             </div>
             <div class="w-2/3">
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Ingeniero de software</h2>
@@ -40,6 +41,25 @@ content %}
                     de aplicaciones web y móviles. Me apasiona la tecnología y la programación. Siempre estoy en busca de
                     nuevos retos y oportunidades para seguir aprendiendo.</p>
             </div>
+        </div>
+        <!-- Carusel de proyectos -->
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Trayectoria</h2>
+            <div class="flex flex-row gap-4 justify-center items-center">
+                <div class="w-1/3">
+                    <img src="https://via.placeholder.com/600" alt="Trayectoria 1" class="rounded-lg w-64 h-64 mx-auto" />
+                    <p class="text-gray-700 dark:text-gray-300">Trayectoria 1</p>
+                </div>
+                <div class="w-1/3">
+                    <img src="https://via.placeholder.com/600" alt="Trayectoria 2" class="rounded-lg w-64 h-64 mx-auto" />
+                    <p class="text-gray-700 dark:text-gray-300">Trayectoria 2</p>
+                </div>
+                <div class="w-1/3">
+                    <img src="https://via.placeholder.com/600" alt="Trayectoria 3" class="rounded-lg w-64 h-64 mx-auto" />
+                    <p class="text-gray-700 dark:text-gray-300">Trayectoria 3</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Link a redes, linkdin y github -->
     </div>
