@@ -2,6 +2,7 @@ use actix_files as fs;
 use actix_web::{middleware::Logger, App, HttpServer};
 use env_logger::Env;
 
+mod i18n;
 mod routes;
 
 #[actix_web::main]
