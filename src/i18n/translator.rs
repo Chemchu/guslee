@@ -2,13 +2,12 @@ use std::{
     collections::HashMap,
     fmt::Display,
     fs::{self, read_dir},
-    path::Path,
     str::FromStr,
 };
 
 /// This enum represents the languages that the application supports.
 #[derive(Debug, PartialEq)]
-enum Language {
+pub enum Language {
     English,
     Spanish,
     Portuguese,
@@ -24,7 +23,7 @@ impl Display for Language {
     }
 }
 
-struct Translator {
+pub struct Translator {
     translations: HashMap<String, String>,
 }
 
@@ -35,48 +34,53 @@ impl Translator {
             translations: HashMap::new(),
         };
 
-        if let Ok(entries) = read_dir(".") {
+        if let Ok(entries) = read_dir("./src/i18n") {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.extension().map_or(false, |ext| ext == "yaml") {
-                    if let Err(e) = translator.load_yaml_file(&path) {
-                        eprintln!("Failed to load YAML file {:?}: {}", path, e);
-                    }
+                    translator.load_yaml_file(&path);
                 }
             }
         }
 
-        Translator {
-            translations: HashMap::new(),
-        }
+        translator
     }
 
-    fn add_translation(&mut self, key: String, language: Language, value: String) {
+    fn add_translation(&mut self, key: &str, language: &Language, value: &str) {
         let key_and_language: String = format!("{}-{}", key, language);
-        self.translations.insert(key_and_language, value);
+        self.translations
+            .insert(key_and_language, value.to_string());
     }
 
     /// This function returns the localized text for a given key and language.
-    pub fn get_translation(&self, key: String, language: Language) -> Option<&String> {
+    pub fn get_translation(&self, key: &str, language: &Language) -> Option<&String> {
         let key_and_language: String = format!("{}-{}", key, language);
         self.translations.get(&key_and_language)
     }
 
+    /// This function tries to load the contents of a YAML file and add its contento into the
+    /// translations map
     fn load_yaml_file(&mut self, path: &std::path::PathBuf) {
-        // Load keys into hashmap
+        let languages = vec![Language::English, Language::Spanish, Language::Portuguese];
+        let file_name = String::from_str(path.to_str().expect("Failed to convert path to string"))
+            .expect("Failed to convert slice into String");
 
-        let languages = vec!["english", "spanish", "portuguese"];
+        for language in languages {
+            if !file_name.contains(&language.to_string()) {
+                /* // This panic indicates that there's a new language YAML file but the Language
+                // enum was not updated
+                panic!("Language file defined when no such language is defined") */
+                continue;
+            }
 
-        let file_name = path.to_str();
-        if file_name.is_none() {
-            panic!("??¿¿¿ gus¿¿¿");
+            if let Ok(file) = fs::read_to_string(path) {
+                let locale_map: HashMap<String, String> = serde_yaml::from_str(file.as_str())
+                    .expect("Failed to transform YAML to Struct");
+
+                locale_map
+                    .iter()
+                    .for_each(|(key, value)| self.add_translation(key, &language, value))
+            }
         }
-
-        let lang = String::from_str(file_name.unwrap()).unwrap();
-        if lang.contains(languages.contains(languages)) {
-            if let Ok(file) = fs::read_to_string(path) {}
-        }
-
-        self.translations
     }
 }
