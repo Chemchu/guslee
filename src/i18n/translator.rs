@@ -35,8 +35,16 @@ impl Translator {
             .insert(key_and_language, value.to_string());
     }
 
+    /// This function returns the localized text for a given key in Spanish.
+    pub fn get_translation(&self, key: &str) -> String {
+        let message_key = Message::from_str(key).expect("Failed to convert the &str into Message");
+        self.get_translation_by_language(&message_key, &Language::Spanish)
+            .expect("Could not translate the message")
+            .to_string()
+    }
+
     /// This function returns the localized text for a given key and language.
-    pub fn get_translation(&self, key: &Message, language: &Language) -> Option<&String> {
+    fn get_translation_by_language(&self, key: &Message, language: &Language) -> Option<&String> {
         let key_and_language: String = format!("{}-{}", key, language);
         self.translations.get(&key_and_language)
     }
