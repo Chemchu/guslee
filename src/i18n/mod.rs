@@ -1,12 +1,14 @@
-use strum_macros::Display;
+use strum_macros::{Display, EnumString};
 
 pub mod translator;
 
-#[derive(Debug, PartialEq, Display)]
+#[derive(Debug, PartialEq, Display, EnumString)]
 pub enum Message {
-    Test1,
-    Test2,
-    Test3,
+    Me,
+    News,
+    Contact,
+    Experience,
+    SelfDescription,
 }
 
 /// This enum represents the languages that the application supports.
