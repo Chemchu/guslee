@@ -1,27 +1,10 @@
 use std::{
     collections::HashMap,
-    fmt::Display,
     fs::{self, read_dir},
     str::FromStr,
 };
 
-/// This enum represents the languages that the application supports.
-#[derive(Debug, PartialEq)]
-pub enum Language {
-    English,
-    Spanish,
-    Portuguese,
-}
-
-impl Display for Language {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Language::Portuguese => write!(f, "portuguese"),
-            Language::Spanish => write!(f, "spanish"),
-            Language::English => write!(f, "english"),
-        }
-    }
-}
+use super::{Language, Message};
 
 pub struct Translator {
     translations: HashMap<String, String>,
@@ -53,7 +36,7 @@ impl Translator {
     }
 
     /// This function returns the localized text for a given key and language.
-    pub fn get_translation(&self, key: &str, language: &Language) -> Option<&String> {
+    pub fn get_translation(&self, key: &Message, language: &Language) -> Option<&String> {
         let key_and_language: String = format!("{}-{}", key, language);
         self.translations.get(&key_and_language)
     }
@@ -61,7 +44,7 @@ impl Translator {
     /// This function tries to load the contents of a YAML file and add its contento into the
     /// translations map
     fn load_yaml_file(&mut self, path: &std::path::PathBuf) {
-        let languages = vec![Language::English, Language::Spanish, Language::Portuguese];
+        let languages = Language::all();
         let file_name = String::from_str(path.to_str().expect("Failed to convert path to string"))
             .expect("Failed to convert slice into String");
 

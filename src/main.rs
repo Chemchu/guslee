@@ -1,7 +1,7 @@
 use actix_files as fs;
 use actix_web::{middleware::Logger, App, HttpServer};
 use env_logger::Env;
-use i18n::translator::Language;
+use i18n::{Language, Message};
 
 mod i18n;
 mod routes;
@@ -11,9 +11,9 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
     let translator = i18n::translator::Translator::new();
-    let en = translator.get_translation("test1", &Language::English);
-    let es = translator.get_translation("test1", &Language::Spanish);
-    let pt = translator.get_translation("test1", &Language::Portuguese);
+    let en = translator.get_translation(&Message::Test1, &Language::English);
+    let es = translator.get_translation(&Message::Test2, &Language::Spanish);
+    let pt = translator.get_translation(&Message::Test3, &Language::Portuguese);
 
     println!("All languages {:?}, {:?} and {:?}", en, es, pt);
 
