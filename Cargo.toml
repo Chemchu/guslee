@@ -11,3 +11,5 @@ serde_yaml = "0.9"
 chrono = { version = "0.4", features = ["serde"] }
 askama = "0.12.1"
 env_logger = "0.11.5"
+strum = "0.26.3"
+strum_macros = "0.26.4"
