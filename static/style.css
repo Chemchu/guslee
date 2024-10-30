@@ -13,6 +13,13 @@ body {
     display: inline;
 }
 
+.background {
+  background-color: #ffffff;
+  background-size: contain;
+  background-repeat: repeat;
+  background-blend-mode: overlay; /* Optional to blend the texture with color */
+}
+
 /* dark */
 .markdown-body-dark {
   color-scheme: dark;
