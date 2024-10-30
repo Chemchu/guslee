@@ -15,6 +15,7 @@ async fn main() -> std::io::Result<()> {
             .service(fs::Files::new("/_static", "static").show_files_listing())
             .service(routes::landing_page)
             .service(routes::articles_page)
+            .service(routes::article_page)
     })
     .bind(("127.0.0.1", 3000))?
     .run()
