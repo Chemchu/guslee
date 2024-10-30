@@ -28,11 +28,9 @@ content %}
                 </svg>
             </button>
         </nav>
-
-        <div>
+        <div class="w-full" x-bind:class="dark ? 'markdown-body-dark' : 'markdown-body-light'">
             {{ content|safe }}
         </div>
-
     </div>
 </div>
 

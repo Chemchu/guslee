@@ -22,7 +22,7 @@ pub struct ArticlePage {
     content: String,
 }
 
-#[get("")]
+#[get("/")]
 pub async fn landing_page() -> impl Responder {
     let template = LandingPage {
         // TODO: Add State management to avoid creating a new Translator instance every time
@@ -85,10 +85,14 @@ Or an image of bears
 
 The end ...";
 
+    let mut html_output = String::new();
+    let parser = pulldown_cmark::Parser::new(&article);
+    pulldown_cmark::html::push_html(&mut html_output, parser);
+
     let template = ArticlePage {
         // TODO: Add State management to avoid creating a new Translator instance every time
         translator: i18n::translator::Translator::new(),
-        content: comrak::markdown_to_html(article, &comrak::ComrakOptions::default()),
+        content: html_output,
     };
 
     let reply_html = askama::Template::render(&template).unwrap();
