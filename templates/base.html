@@ -28,12 +28,22 @@
     <meta name="view-transition" content="same-origin" />
   </head>
 
-  <body hx-boost="true"
-        class="h-full w-full"
-        :class="dark ? 'dark' : 'light'"
-        x-data="{ dark: true }">
-    <div id="content" class="min-h-screen w-full background">
-      {% block content %}{% endblock %}
+  <body hx-boost="true" class="h-full w-full">
+    <div class="relative min-h-screen w-svw bg-white overflow-hidden">
+
+      <!-- Blurred Gradient Blob -->
+      <div class="absolute left-0 bottom-0 blob-1 animate-blob-1">
+      </div>
+
+      <div class="blur-3xl">
+        <div class="absolute right-0 top-0 blob-2 animate-blob-2">
+        </div>
+      </div>
+
+      <!-- Main Content -->
+        <div id="content" class="min-h-screen w-full">
+          {% block content %}{% endblock %}
+        </div>
     </div>
   </body>
 </html>
