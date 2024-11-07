@@ -9,6 +9,7 @@ pub enum Message {
     Contact,
     Experience,
     SelfDescription,
+    SoftwareEngineer,
 }
 
 /// This enum represents the languages that the application supports.
