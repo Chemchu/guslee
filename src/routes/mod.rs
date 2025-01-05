@@ -1,7 +1,7 @@
-use actix_web::{get, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use askama_actix::Template;
 
-use crate::i18n;
+use crate::{i18n, AppState};
 
 #[derive(Template)]
 #[template(path = "landing_page.html")]
@@ -47,8 +47,14 @@ pub async fn articles_page() -> impl Responder {
 }
 
 #[get("/articles/{article_id}")]
-pub async fn article_page(req: HttpRequest) -> impl Responder {
-    let _article_id = req.match_info().get("article_id").unwrap_or("0");
+pub async fn article_page(req: HttpRequest, data: web::Data<AppState>) -> impl Responder {
+    let article_id = req.match_info().get("article_id").unwrap_or("0");
+    let language = "en";
+
+    let res = reqwest::get(format!(
+        "{}/rest/v1/blogs?id=eq.{}&language={}&select=*",
+        &data.supabase_url, article_id, language
+    ));
 
     let article = "# Sample Markdown
 
