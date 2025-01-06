@@ -51,48 +51,21 @@ pub async fn article_page(req: HttpRequest, data: web::Data<AppState>) -> impl R
     let article_id = req.match_info().get("article_id").unwrap_or("0");
     let language = "en";
 
-    let res = reqwest::get(format!(
+    let article = reqwest::get(format!(
         "{}/rest/v1/blogs?id=eq.{}&language={}&select=*",
         &data.supabase_url, article_id, language
-    ));
+    ))
+    .await;
 
-    let article = "# Sample Markdown
+    if article.is_err() {
+        panic!("{}", article.err().unwrap())
+    }
 
-This is some basic, sample markdown.
-
-## Second Heading
-
-*   Unordered lists, and:
-    1.  One
-    2.  Two
-    3.  Three
-*   More
-
-> Blockquote
-
-And **bold**, _italics_, and even _italics and later **bold**_. Even strikethrough. [A link](https://markdowntohtml.com) to somewhere.
-
-And code highlighting:
-
-```
-var foo = 'bar';
-
-						function baz(s) {
-						return foo + ':' + s;
-						}
-
-```
-
-Or inline code like `var foo = 'bar';`.
-
-Or an image of bears
-
-![bears](http://placebear.com/200/200)
-
-The end ...";
+    // TODO: Transform this into a struct similar to the supabase table
+    let _article_md = article.unwrap().text().await.unwrap();
 
     let mut html_output = String::new();
-    let parser = pulldown_cmark::Parser::new(&article);
+    let parser = pulldown_cmark::Parser::new(_article_md.as_str());
     pulldown_cmark::html::push_html(&mut html_output, parser);
 
     let template = ArticlePage {
