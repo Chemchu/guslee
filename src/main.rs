@@ -1,12 +1,14 @@
-use actix_files as fs;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
+use dotenv::dotenv;
 use env_logger::Env;
+use reqwest::Client;
+use std::sync::Arc;
 
 mod i18n;
 mod routes;
 
-pub struct AppState {
-    http_caller: reqwest::Client,
+struct AppState {
+    http_caller: Arc<Client>,
     supabase_url: String,
 }
 
@@ -14,19 +16,23 @@ pub struct AppState {
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
-    dotenv::dotenv().expect("Missing env variables");
-    let client = reqwest::Client::builder()
-        .build()
-        .expect("Error creating HTTP client");
+    dotenv().expect("Missing env variables");
+    let client = Arc::new(
+        reqwest::Client::builder()
+            .build()
+            .expect("Error creating HTTP client"),
+    );
 
-    HttpServer::new(|| {
+    let supabase_url = std::env::var("SUPABASE_URL").expect("Missing env SUPABASE_URL");
+
+    HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
             .app_data(Data::new(AppState {
-                http_caller: client,
-                supabase_url: std::env::var("SUPABASE_URL").expect("Missing env SUPABASE_URL"),
+                http_caller: client.clone(),
+                supabase_url: supabase_url.clone(),
             }))
-            .service(fs::Files::new("/_static", "static").show_files_listing())
+            .service(actix_files::Files::new("/_static", "static").show_files_listing())
             .service(routes::landing_page)
             .service(routes::articles_page)
             .service(routes::article_page)
