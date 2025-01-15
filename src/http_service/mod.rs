@@ -53,7 +53,6 @@ impl HttpService {
                     panic!("{}", e)
                 }
                 let text = response.unwrap().text().await.unwrap();
-                println!("Response Body: {}", text);
                 let data: Result<Vec<T>, Error> = serde_json::from_str(&text);
                 match data {
                     Err(e) => panic!("{}", e),

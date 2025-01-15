@@ -51,6 +51,7 @@ pub async fn article_page(req: HttpRequest, data: web::Data<AppState>) -> impl R
     let article_id = req.match_info().get("article_id").unwrap_or("0");
     let language = "en";
 
+
     let article: ResponseData<Article> = data
         .http_service
         .get(
