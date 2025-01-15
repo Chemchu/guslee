@@ -1,9 +1,18 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::Error;
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound = "T: Serialize + DeserializeOwned")]
-pub struct RequestData<T> {
+pub struct ResponseData<T> {
     pub content: T,
+}
+
+impl<T: Clone> Clone for ResponseData<T> {
+    fn clone(&self) -> Self {
+        ResponseData {
+            content: self.content.clone(),
+        }
+    }
 }
 
 pub struct HttpService {
@@ -20,7 +29,11 @@ impl HttpService {
             http_caller: reqwest::Client::new(),
         }
     }
-    pub async fn get<T: DeserializeOwned>(&self, table: &String, query: &String) -> RequestData<T> {
+    pub async fn get<T: DeserializeOwned + std::clone::Clone>(
+        &self,
+        table: &String,
+        query: &String,
+    ) -> ResponseData<T> {
         let request = self
             .http_caller
             .get(format!(
@@ -35,14 +48,22 @@ impl HttpService {
         match request {
             Err(e) => panic!("{}", e),
             Ok(r) => {
-                let result = self.http_caller.execute(r).await;
-                if let Err(e) = result {
+                let response = self.http_caller.execute(r).await;
+                if let Err(e) = response {
                     panic!("{}", e)
                 }
-                let json = result.unwrap().json::<T>().await;
-                match json {
+                let text = response.unwrap().text().await.unwrap();
+                println!("Response Body: {}", text);
+                let data: Result<Vec<T>, Error> = serde_json::from_str(&text);
+                match data {
                     Err(e) => panic!("{}", e),
-                    Ok(j) => RequestData { content: j },
+                    Ok(d) => match d.first() {
+                        // TODO: replace this panic with an empty generic not found
+                        None => panic!("Array vacio"),
+                        Some(c) => ResponseData {
+                            content: c.to_owned(),
+                        },
+                    },
                 }
             }
         }

@@ -1,11 +1,12 @@
-use actix_web::cookie::time::OffsetDateTime;
 use serde::{Deserialize, Serialize};
-#[derive(Deserialize, Serialize)]
+use time::OffsetDateTime;
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Article {
     id: u8,
     language: String,
     title: String,
     content: String,
+    #[serde(with = "time::serde::rfc3339")]
     created_at: OffsetDateTime,
 }
 

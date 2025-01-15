@@ -1,7 +1,7 @@
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use askama_actix::Template;
 
-use crate::{http_service::RequestData, i18n, md_service::Article, AppState};
+use crate::{http_service::ResponseData, i18n, md_service::Article, AppState};
 
 #[derive(Template)]
 #[template(path = "landing_page.html")]
@@ -51,11 +51,11 @@ pub async fn article_page(req: HttpRequest, data: web::Data<AppState>) -> impl R
     let article_id = req.match_info().get("article_id").unwrap_or("0");
     let language = "en";
 
-    let article: RequestData<Article> = data
+    let article: ResponseData<Article> = data
         .http_service
         .get(
             &"blogs".to_string(),
-            &format!("id=eq.{}&language={}&select=*", &article_id, &language),
+            &format!("id=eq.{}&language=eq.{}&select=*", &article_id, &language),
         )
         .await;
 
