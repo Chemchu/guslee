@@ -5,13 +5,13 @@ use dotenv::dotenv;
 use env_logger::Env;
 use http_service::HttpService;
 
-mod http_service;
 mod i18n;
-mod md_service;
 mod routes;
+mod http_service;
+mod md_service;
 
 struct AppState {
-    http_service: Arc<HttpService>,
+    http_service: Arc<HttpService>
 }
 
 #[actix_web::main]
@@ -27,10 +27,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .app_data(Data::new(AppState {
-                http_service: Arc::new(HttpService::new(
-                    api_key.to_owned(),
-                    supabase_url.to_owned(),
-                )),
+                http_service: Arc::new(HttpService::new(api_key.to_owned(), supabase_url.to_owned()))
+
             }))
             .service(actix_files::Files::new("/_static", "static").show_files_listing())
             .service(routes::landing_page)
