@@ -17,5 +17,3 @@ strum_macros = "0.26.4"
 pulldown-cmark = "0.12"
 reqwest = { version = "0.12", features = ["json"] }
 dotenv = "0.15.0"
-time = { version = "0.3.4", features = ["serde"] }
-

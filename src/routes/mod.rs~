@@ -59,10 +59,10 @@ pub async fn article_page(req: HttpRequest, data: web::Data<AppState>) -> impl R
         )
         .await;
 
-    let article_md = article.content.get_content();
+    let _article_md = article.content.get_content();
 
     let mut html_output = String::new();
-    let parser = pulldown_cmark::Parser::new(article_md.as_str());
+    let parser = pulldown_cmark::Parser::new(_article_md.as_str());
     pulldown_cmark::html::push_html(&mut html_output, parser);
 
     let template = ArticlePage {
