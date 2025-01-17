@@ -1,7 +1,12 @@
-use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, http::header::AcceptLanguage, web, HttpRequest, HttpResponse, Responder};
 use askama_actix::Template;
 
-use crate::{http_service::ResponseData, i18n, md_service::Article, AppState};
+use crate::{
+    http_service::ResponseData,
+    i18n::{self, to_language},
+    md_service::{render_markdown, Article},
+    AppState,
+};
 
 #[derive(Template)]
 #[template(path = "landing_page.html")]
@@ -47,10 +52,14 @@ pub async fn articles_page() -> impl Responder {
 }
 
 #[get("/articles/{article_id}")]
-pub async fn article_page(req: HttpRequest, data: web::Data<AppState>) -> impl Responder {
+pub async fn article_page(
+    req: HttpRequest,
+    data: web::Data<AppState>,
+    accept_language: web::Header<AcceptLanguage>,
+) -> impl Responder {
     let article_id = req.match_info().get("article_id").unwrap_or("0");
-    let language = "en";
-
+    let languages = accept_language.ranked();
+    let language = to_language(&languages);
 
     let article: ResponseData<Article> = data
         .http_service
@@ -60,20 +69,15 @@ pub async fn article_page(req: HttpRequest, data: web::Data<AppState>) -> impl R
         )
         .await;
 
-    let article_md = article.content.get_content();
-
-    let mut html_output = String::new();
-    let parser = pulldown_cmark::Parser::new(article_md.as_str());
-    pulldown_cmark::html::push_html(&mut html_output, parser);
+    let html = render_markdown(article.content.get_content());
 
     let template = ArticlePage {
         // TODO: Add State management to avoid creating a new Translator instance every time
         translator: i18n::translator::Translator::new(),
-        content: html_output,
+        content: html,
     };
 
     let reply_html = askama::Template::render(&template).unwrap();
 
-    // TODO: Fetch markdown article from database
     HttpResponse::Ok().body(reply_html)
 }

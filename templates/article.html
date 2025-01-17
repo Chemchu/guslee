@@ -1,21 +1,9 @@
-{% extends "base.html" %} {% block title %}Gustavo Lee - Ingeniero de software{% endblock %} {% block
+{% extends "base.html" %} {% block title %}gustavo lee.{% endblock %} {% block
 content %}
 
 <div class="flex flex-col w-full items-center">
-    <div class="flex flex-col gap-16 w-2/3 justify-center items-center
-        bg-white border-x border-neutral-800/10">
-        <!-- Navbar -->
-        <nav class="flex justify-center items-center p-4">
-            <div class="flex justify-center items-center text-gray-900">
-                <div class="font-bold border rounded-l-2xl border-neutral-800/10 p-2 shadow">
-                    <a href="/" class="hover:text-orange-600 mx-2">Yo</a>
-                    <a href="/articles" class="hover:text-orange-600 mx-2">Artículos</a>
-                    <a href="#" class="hover:text-orange-600 mx-2">Trayectoria</a>
-                    <a href="#" class="hover:text-orange-600 mx-2">Contacto</a>
-                </div>
-            </div>
-        </nav>
-        <div class="w-full px-4 markdown-body-light" >
+    <div class="flex flex-col gap-16 justify-center items-center">
+        <div class="w-full px-4 py-2 markdown-body-light" >
             {{ content|safe }}
         </div>
     </div>
