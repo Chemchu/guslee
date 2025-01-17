@@ -15,3 +15,11 @@ impl Article {
         &self.content
     }
 }
+
+pub fn render_markdown(md: &str) -> String {
+    let mut html_output = String::new();
+    let parser = pulldown_cmark::Parser::new(md);
+    pulldown_cmark::html::push_html(&mut html_output, parser);
+
+    html_output
+}
