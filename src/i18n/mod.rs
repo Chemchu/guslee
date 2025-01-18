@@ -48,5 +48,5 @@ pub fn to_language(langs: &Vec<Preference<LanguageTag>>) -> &str {
         languages.push("en");
     }
 
-    languages.first().unwrap().clone()
+    languages.first().unwrap()
 }

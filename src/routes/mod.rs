@@ -4,7 +4,7 @@ use askama_actix::Template;
 use crate::{
     http_service::ResponseData,
     i18n::{self, to_language},
-    md_service::{render_markdown, Article},
+    md_service::{get_not_found_markdown, render_markdown, Article},
     AppState,
 };
 
@@ -30,7 +30,6 @@ pub struct ArticlePage {
 #[get("/")]
 pub async fn landing_page() -> impl Responder {
     let template = LandingPage {
-        // TODO: Add State management to avoid creating a new Translator instance every time
         translator: i18n::translator::Translator::new(),
     };
 
@@ -42,7 +41,6 @@ pub async fn landing_page() -> impl Responder {
 #[get("/articles")]
 pub async fn articles_page() -> impl Responder {
     let template = ArticlesPage {
-        // TODO: Add State management to avoid creating a new Translator instance every time
         translator: i18n::translator::Translator::new(),
     };
 
@@ -61,7 +59,7 @@ pub async fn article_page(
     let languages = accept_language.ranked();
     let language = to_language(&languages);
 
-    let article: ResponseData<Article> = data
+    let article: Option<ResponseData<Article>> = data
         .http_service
         .get(
             &"blogs".to_string(),
@@ -69,10 +67,15 @@ pub async fn article_page(
         )
         .await;
 
-    let html = render_markdown(article.content.get_content());
+    let md: String = if let Some(existing_article) = article {
+        existing_article.content.get_content().to_owned()
+    } else {
+        get_not_found_markdown()
+    };
+
+    let html = render_markdown(&md);
 
     let template = ArticlePage {
-        // TODO: Add State management to avoid creating a new Translator instance every time
         translator: i18n::translator::Translator::new(),
         content: html,
     };

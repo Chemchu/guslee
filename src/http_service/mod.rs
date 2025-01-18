@@ -33,7 +33,7 @@ impl HttpService {
         &self,
         table: &String,
         query: &String,
-    ) -> ResponseData<T> {
+    ) -> Option<ResponseData<T>> {
         let request = self
             .http_caller
             .get(format!(
@@ -56,13 +56,9 @@ impl HttpService {
                 let data: Result<Vec<T>, Error> = serde_json::from_str(&text);
                 match data {
                     Err(e) => panic!("{}", e),
-                    Ok(d) => match d.first() {
-                        // TODO: replace this panic with an empty generic not found
-                        None => panic!("Array vacio"),
-                        Some(c) => ResponseData {
-                            content: c.to_owned(),
-                        },
-                    },
+                    Ok(d) => d.first().map(|c| ResponseData {
+                        content: c.to_owned(),
+                    })
                 }
             }
         }
