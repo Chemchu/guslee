@@ -29,23 +29,16 @@
   </head>
 
   <body hx-boost="true" class="h-full w-full">
-    <div class="min-h-screen w-svw bg-white overflow-hidden grid grid-cols-6">
-
-      <!-- Navbar -->
-      <nav class="flex w-full justify-center items-center p-4 col-span-6 border-b-2 border-gray-900">
-          <div class="flex w-full justify-around font-bold p-2 text-gray-900">
-              <a href="/" class="hover:text-orange-600 mx-2">{{translator.get_translation("Me")}}</a>
-              <a href="/articles" class="hover:text-orange-600 mx-2">{{translator.get_translation("News")}}</a>
-              <a href="/experience" class="hover:text-orange-600 mx-2">{{translator.get_translation("Experience")}}</a>
-              <a href="/contact" class="hover:text-orange-600 mx-2">{{translator.get_translation("Contact")}}</a>
-          </div>
-      </nav>
-
-
-      <!-- Main Content -->
-      <div id="content" class="min-h-screen w-full col-start-1 col-end-6 border-r-2 border-gray-900">
+    <!-- Main Content -->
+    <main>
+      <div id="content" class="min-h-screen w-full">
         {% block content %}{% endblock %}
       </div>
-    </div>
+    </main>
+    <footer class="bg-gray-800 text-white p-4 mt-8">
+      <div class="container mx-auto text-center">
+        <p>strength bends to kindness.</p>
+      </div>
+    </footer>
   </body>
 </html>
