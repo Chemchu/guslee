@@ -6,6 +6,8 @@ node_modules
 .env
 .env.*
 !.env.example
+.direnv
+tailwindcss
 
 
 # Added by cargo

@@ -19,9 +19,10 @@ fn main() {
     let flag = "/C";
 
     #[cfg(unix)]
-    let command = "npx tailwindcss -i static/style.css -o static/compiled.css";
+    let command = "./tailwindcss -i static/style.css -o static/compiled.css; npx prettier --write './**/*.html'";
+
     #[cfg(windows)]
-    let command = "npx tailwindcss -i static\\style.css -o static\\compiled.css";
+    let command = ".\\tailwindcss -i static\\style.css -o static\\compiled.css; npx prettier --write './**/*.html'";
 
     match process::Command::new(shell).arg(flag).arg(command).output() {
         Ok(output) => {

@@ -20,7 +20,7 @@ impl Translator {
         if let Ok(entries) = read_dir("./src/i18n") {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().map_or(false, |ext| ext == "yaml") {
+                if path.extension().is_some_and(|ext| ext == "yaml") {
                     translator.load_yaml_file(&path);
                 }
             }
