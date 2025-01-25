@@ -11,6 +11,8 @@ pub enum Message {
     Experience,
     SelfDescription,
     SoftwareEngineer,
+    SoftwareEngineerTitle,
+    GustavoLee,
 }
 
 /// This enum represents the languages that the application supports.
