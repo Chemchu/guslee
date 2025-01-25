@@ -6,7 +6,7 @@ node_modules
 .env
 .env.*
 !.env.example
-.direnv
+/.direnv
 tailwindcss
 
 
