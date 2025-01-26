@@ -4,25 +4,22 @@ body {
   font-family: "Raleway", "Inter", sans-serif;
 }
 
-@keyframes rotate-blob {
+@keyframes animate-blob {
   0% {
     transform: rotate(0deg);
+    transform: scale(150%);
   }
   100% {
     transform: rotate(360deg);
+    transform: scale(80%);
   }
 }
 
 .gradient-blob {
-  --size: 750px;
-  --speed: 15s;
+  --speed: 25s;
   --easing: cubic-bezier(0.8, 0.2, 0.2, 0.8);
 
-  width: var(--size);
-  height: var(--size);
-  filter: blur(calc(var(--size) / 5));
-  background-image: linear-gradient(hsl(222, 84%, 60%), hsl(164, 79%, 71%));
-  animation: rotate-blob var(--speed) var(--easing) alternate infinite;
+  animation: animate-blob var(--speed) var(--easing) alternate infinite;
   border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
 }
 
