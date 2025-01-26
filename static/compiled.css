@@ -539,6 +539,9 @@
   .top-10 {
     top: calc(var(--spacing) * 10);
   }
+  .top-60 {
+    top: calc(var(--spacing) * 60);
+  }
   .right-0 {
     right: calc(var(--spacing) * 0);
   }
@@ -547,6 +550,9 @@
   }
   .bottom-0 {
     bottom: calc(var(--spacing) * 0);
+  }
+  .left-0 {
+    left: calc(var(--spacing) * 0);
   }
   .left-10 {
     left: calc(var(--spacing) * 10);
@@ -607,6 +613,14 @@
   }
   .table {
     display: table;
+  }
+  .size-96 {
+    width: calc(var(--spacing) * 96);
+    height: calc(var(--spacing) * 96);
+  }
+  .size-\[400px\] {
+    width: 400px;
+    height: 400px;
   }
   .size-full {
     width: 100%;
@@ -753,6 +767,23 @@
   .bg-white\/5 {
     background-color: color-mix(in oklab, var(--color-white) 5%, transparent);
   }
+  .bg-gradient-to-r {
+    --tw-gradient-position: to right in oklab,;
+    background-image: linear-gradient(var(--tw-gradient-stops));
+  }
+  .from-\[\#6a11cb\] {
+    --tw-gradient-from: #6a11cb;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position,) var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+  .via-\[\#2575fc\] {
+    --tw-gradient-via: #2575fc;
+    --tw-gradient-via-stops: var(--tw-gradient-position,) var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-via-stops);
+  }
+  .to-\[\#48b1bf\] {
+    --tw-gradient-to: #48b1bf;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position,) var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
   .object-cover {
     object-fit: cover;
   }
@@ -872,6 +903,10 @@
   }
   .ring-white\/5 {
     --tw-ring-color: color-mix(in oklab, var(--color-white) 5%, transparent);
+  }
+  .blur-xl {
+    --tw-blur: blur(var(--blur-xl));
+    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
   }
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
@@ -1071,23 +1106,20 @@
 body {
   font-family: "Raleway", "Inter", sans-serif;
 }
-@keyframes rotate-blob {
+@keyframes animate-blob {
   0% {
     transform: rotate(0deg);
+    transform: scale(150%);
   }
   100% {
     transform: rotate(360deg);
+    transform: scale(80%);
   }
 }
 .gradient-blob {
-  --size: 750px;
-  --speed: 15s;
+  --speed: 25s;
   --easing: cubic-bezier(0.8, 0.2, 0.2, 0.8);
-  width: var(--size);
-  height: var(--size);
-  filter: blur(calc(var(--size) / 5));
-  background-image: linear-gradient(hsl(222, 84%, 60%), hsl(164, 79%, 71%));
-  animation: rotate-blob var(--speed) var(--easing) alternate infinite;
+  animation: animate-blob var(--speed) var(--easing) alternate infinite;
   border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
 }
 @media (min-width: 720px) {
@@ -2744,6 +2776,48 @@ body {
   syntax: "*";
   inherits: false;
   initial-value: solid;
+}
+@property --tw-gradient-position {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-gradient-from {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+@property --tw-gradient-via {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+@property --tw-gradient-to {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+@property --tw-gradient-stops {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-gradient-via-stops {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-gradient-from-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+@property --tw-gradient-via-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+@property --tw-gradient-to-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 100%;
 }
 @property --tw-font-weight {
   syntax: "*";
