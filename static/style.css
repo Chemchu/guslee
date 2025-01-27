@@ -4,29 +4,50 @@ body {
   font-family: "Raleway", "Inter", sans-serif;
 }
 
-@keyframes animate-blob {
+* {
+  transition: all 1s ease-in-out;
+}
+
+@keyframes animate-blob-1 {
   0% {
-    transform: rotate(0deg);
-    transform: scale(150%);
+    transform: rotate(0deg) scale(150%);
+  }
+  50% {
+    transform: rotate(180deg) scale(90%);
   }
   100% {
-    transform: rotate(360deg);
-    transform: scale(80%);
+    transform: rotate(360deg) scale(150%);
   }
 }
 
-.gradient-blob {
-  --speed: 25s;
-  --easing: cubic-bezier(0.8, 0.2, 0.2, 0.8);
+.gradient-blob-1 {
+  --speed: 60s;
+  --easing: ease-in-out;
 
-  animation: animate-blob var(--speed) var(--easing) alternate infinite;
+  animation: animate-blob-1 var(--speed) var(--easing) infinite;
   border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
 }
 
-@media (min-width: 720px) {
-  .gradient-blob {
-    --size: 500px;
+@keyframes animate-blob-2 {
+  0% {
+    transform: skew(0deg) scale(150%);
+    border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
   }
+  50% {
+    transform: skew(20deg) scale(80%);
+    border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%;
+  }
+  100% {
+    transform: skew(0deg) scale(150%);
+    border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
+  }
+}
+
+.gradient-blob-2 {
+  --speed: 40s;
+  --easing: cubic-bezier(0.5, 0, 0.75, 0);
+
+  animation: animate-blob-2 var(--speed) var(--easing) infinite;
 }
 
 .htmx-indicator {

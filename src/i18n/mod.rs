@@ -13,6 +13,8 @@ pub enum Message {
     SoftwareEngineer,
     SoftwareEngineerTitle,
     GustavoLee,
+    Articles,
+    ArticlesDescription,
 }
 
 /// This enum represents the languages that the application supports.
