@@ -1,13 +1,13 @@
 {% extends "base.html" %} {% block title
 %}{{translator.get_translation("GustavoLee")}}{% endblock %} {% block content %}
 
-<div class="bg-gray-50 py-24 sm:py-32">
+<div class="py-24 sm:py-32">
   <div class="container relative w-full">
     <div
-      class="absolute gradient-blob bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] left-0 blur-xl size-96"
+      class="absolute gradient-blob-1 bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] left-0 blur-xl size-36 xl:size-96"
     ></div>
     <div
-      class="absolute gradient-blob bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] right-0 blur-xl size-[400px] top-60"
+      class="absolute gradient-blob-2 bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] right-0 blur-xl size-40 xl:size-[400px] top-72"
     ></div>
   </div>
   <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
@@ -128,11 +128,10 @@
             <p
               class="mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center"
             >
-              Powerful APIs
+              {{translator.get_translation("Articles")}}
             </p>
             <p class="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
-              Sit quis amet rutrum tellus ullamcorper ultricies libero dolor
-              eget sem sodales gravida.
+              {{translator.get_translation("ArticlesDescription")}}
             </p>
           </div>
           <div class="relative min-h-[30rem] w-full grow">
