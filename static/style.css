@@ -2,6 +2,14 @@
 
 body {
   font-family: "Raleway", "Inter", sans-serif;
+  min-height: 100vh; /* Ensure body covers full viewport */
+  display: flex; /* Use flexbox */
+  flex-direction: column; /* Stack elements vertically */
+  margin: 0; /* Remove default margin */
+}
+footer {
+  flex-shrink: 0; /* Prevent footer from shrinking */
+  /* Your existing footer classes: bg-gray-800 text-white p-4 z-10 */
 }
 
 * {
@@ -15,17 +23,16 @@ body {
 }
 
 .background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  overflow: hidden;
+  flex-grow: 1; /* Fill remaining vertical space */
+  position: relative; /* Required for absolutely positioned children */
+  z-index: 0; /* Lower than footer's z-index */
 }
 
 .background span {
   backface-visibility: hidden;
   position: absolute;
   animation: move;
-  animation-duration: 15;
+  animation-duration: 15s;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
@@ -35,8 +42,8 @@ body {
   height: 30vmin;
   border-radius: 30vmin;
   color: #6a11cb;
-  top: 23%;
-  left: 97%;
+  top: 10%;
+  left: 10%;
   animation-duration: 176s;
   animation-delay: -177s;
   transform-origin: -17vw -10vh;
@@ -46,8 +53,8 @@ body {
   height: 25vmin;
   border-radius: 25vmin;
   color: #2575fc;
-  top: 1%;
-  left: 62%;
+  top: 10%;
+  left: 50%;
   animation-duration: 251s;
   animation-delay: -269s;
   transform-origin: -10vw 16vh;
@@ -57,8 +64,8 @@ body {
   height: 15vmin;
   border-radius: 15vmin;
   color: #6a11cb;
-  top: 37%;
-  left: 24%;
+  top: 10%;
+  left: 90%;
   animation-duration: 122s;
   animation-delay: -78s;
   transform-origin: 17vw -9vh;
@@ -68,8 +75,8 @@ body {
   height: 33vmin;
   border-radius: 33vmin;
   color: #48b1bf;
-  top: 48%;
-  left: 84%;
+  top: 30%;
+  left: 20%;
   animation-duration: 94s;
   animation-delay: -179s;
   transform-origin: -4vw -24vh;
@@ -79,8 +86,8 @@ body {
   height: 23vmin;
   border-radius: 23vmin;
   color: #6a11cb;
-  top: 93%;
-  left: 57%;
+  top: 30%;
+  left: 70%;
   animation-duration: 211s;
   animation-delay: -27s;
   transform-origin: 24vw -21vh;
@@ -90,8 +97,8 @@ body {
   height: 10vmin;
   border-radius: 10vmin;
   color: #48b1bf;
-  top: 43%;
-  left: 30%;
+  top: 50%;
+  left: 10%;
   animation-duration: 35s;
   animation-delay: -308s;
   transform-origin: -17vw 17vh;
@@ -101,8 +108,8 @@ body {
   height: 27vmin;
   border-radius: 27vmin;
   color: #2575fc;
-  top: 42%;
-  left: 83%;
+  top: 50%;
+  left: 50%;
   animation-duration: 247s;
   animation-delay: -308s;
   transform-origin: -6vw 15vh;
@@ -112,8 +119,8 @@ body {
   height: 33vmin;
   border-radius: 33vmin;
   color: #48b1bf;
-  top: 71%;
-  left: 34%;
+  top: 50%;
+  left: 90%;
   animation-duration: 70s;
   animation-delay: -8s;
   transform-origin: -18vw 25vh;
@@ -123,8 +130,8 @@ body {
   height: 27vmin;
   border-radius: 27vmin;
   color: #2575fc;
-  top: 12%;
-  left: 10%;
+  top: 70%;
+  left: 20%;
   animation-duration: 272s;
   animation-delay: -95s;
   transform-origin: -21vw 19vh;
@@ -134,8 +141,8 @@ body {
   height: 18vmin;
   border-radius: 18vmin;
   color: #6a11cb;
-  top: 48%;
-  left: 95%;
+  top: 70%;
+  left: 70%;
   animation-duration: 96s;
   animation-delay: -253s;
   transform-origin: 8vw 21vh;
@@ -146,8 +153,8 @@ body {
   height: 18vmin;
   border-radius: 18vmin;
   color: #6a11cb;
-  top: 48%;
-  left: 95%;
+  top: 90%;
+  left: 10%;
   animation-duration: 96s;
   animation-delay: -253s;
   transform-origin: 8vw 21vh;
@@ -158,8 +165,8 @@ body {
   height: 18vmin;
   border-radius: 18vmin;
   color: #6a11cb;
-  top: 48%;
-  left: 95%;
+  top: 90%;
+  left: 50%;
   animation-duration: 96s;
   animation-delay: -253s;
   transform-origin: 8vw 21vh;
@@ -170,8 +177,8 @@ body {
   height: 18vmin;
   border-radius: 18vmin;
   color: #6a11cb;
-  top: 48%;
-  left: 95%;
+  top: 90%;
+  left: 90%;
   animation-duration: 96s;
   animation-delay: -253s;
   transform-origin: 8vw 21vh;
@@ -182,8 +189,8 @@ body {
   height: 18vmin;
   border-radius: 18vmin;
   color: #6a11cb;
-  top: 48%;
-  left: 95%;
+  top: 30%;
+  left: 50%;
   animation-duration: 96s;
   animation-delay: -253s;
   transform-origin: 8vw 21vh;
@@ -194,8 +201,8 @@ body {
   height: 18vmin;
   border-radius: 18vmin;
   color: #6a11cb;
-  top: 48%;
-  left: 95%;
+  top: 70%;
+  left: 50%;
   animation-duration: 96s;
   animation-delay: -253s;
   transform-origin: 8vw 21vh;

@@ -1,8 +1,8 @@
 {% extends "base.html" %} {% block title
 %}{{translator.get_translation("GustavoLee")}}{% endblock %} {% block content %}
 
-<div class="py-24 sm:py-32">
-  <div class="background w-full h-full">
+<div class="w-full h-full py-24 sm:py-32">
+  <div class="background">
     <span
       class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
     ></span>
@@ -42,7 +42,7 @@
     >
       {{translator.get_translation("GustavoLee")}}
     </p>
-    <h2 class="text-center text-base/10 font-semibold text-indigo-600">
+    <h2 class="text-center text-base/10 font-semibold text-gray-900">
       {{translator.get_translation("SoftwareEngineerTitle")}}
     </h2>
     <div class="mt-10 grid gap-4 sm:mt-16 lg:grid-cols-3 lg:grid-rows-2">
