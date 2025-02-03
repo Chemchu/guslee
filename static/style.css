@@ -35,6 +35,7 @@ footer {
   animation-duration: 15s;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+  opacity: 55%;
 }
 
 .background span:nth-child(0) {
