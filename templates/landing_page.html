@@ -1,44 +1,29 @@
 {% extends "base.html" %} {% block title
 %}{{translator.get_translation("GustavoLee")}}{% endblock %} {% block content %}
 
-<div class="w-full h-full py-24 sm:py-32">
-  <div class="background">
-    <span
-      class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
-    ></span>
-    <span class="bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] blur-xl"></span>
-    <span
-      class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
-    ></span>
-    <span class="bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] blur-xl"></span>
-    <span
-      class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
-    ></span>
-    <span class="bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] blur-xl"></span>
-    <span class="bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] blur-xl"></span>
-    <span
-      class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
-    ></span>
-    <span class="bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] blur-xl"></span>
-    <span
-      class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
-    ></span>
-    <span class="bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] blur-xl"></span>
-    <span
-      class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
-    ></span>
-    <span class="bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] blur-xl"></span>
-    <span
-      class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
-    ></span>
-    <span class="bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] blur-xl"></span>
-    <span
-      class="bg-gradient-to-r from-[#6a11cb] via-[#2575fc] to-[#48b1bf] blur-xl"
-    ></span>
+<div class="w-full h-full">
+  <div class="sticky top-0 px-8 bg-black/10 backdrop-blur-[2px] h-12 sm:h-14">
+    <nav
+      id="navbar"
+      class="flex justify-between overflow-hidden items-center border-white/50 border-b w-full h-full"
+    >
+      <a href="/" class="block font-roslindale-black">Gustavo Lee</a>
+      <span class="block">FULLSTACK ENGINEER</span>
+      <a href="#contact" class="block"
+        >{{translator.get_translation("Contact")}}</a
+      >
+    </nav>
+  </div>
+  <div class="flex flex-col-reverse">
+    <p
+      class="font-tusker text-[30vw] sm:text-[30vw] mx-auto mt-2 w-1/2 text-balance text-center tracking-tight text-gray-100"
+    >
+      {{translator.get_translation("GustavoLee")}}
+    </p>
   </div>
   <div class="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8 isolate">
     <p
-      class="mx-auto mt-2 max-w-lg text-balance text-center font-semibold tracking-tight text-gray-100"
+      class="font-tusker mx-auto mt-2 max-w-lg text-balance text-center tracking-tight text-gray-100"
     >
       {{translator.get_translation("GustavoLee")}}
     </p>
