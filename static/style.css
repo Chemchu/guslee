@@ -1,29 +1,5 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Tusker Grotesk"; /* Give your font a name */
-  src: url("TuskerGrotesk-2600Semibold.woff2") format("woff2");
-  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
-  font-style: normal; /* Specify the style (e.g., normal, italic) */
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Roslindale Black"; /* Give your font a name */
-  src: url("Roslindale-DisplayBlack.ttf") format("truetype");
-  font-weight: 900; /* Specify the weight (e.g., normal, bold) */
-  font-style: normal; /* Specify the style (e.g., normal, italic) */
-  font-display: swap;
-}
-
-.font-tusker {
-  font-family: "Tusker Grotesk";
-}
-
-.font-roslindale-black {
-  font-family: "Roslindale Black";
-}
-
 body {
   background-image: url("portfolio_wallpaper.png");
   background-size: cover;
@@ -33,6 +9,7 @@ body {
   margin: 0; /* Remove default margin */
   font-family: "Raleway", "Inter", sans-serif;
   font-weight: 600;
+  letter-spacing: -0.025em;
   min-height: 100vh; /* Ensure body covers full viewport */
   display: flex; /* Use flexbox */
   flex-direction: column; /* Stack elements vertically */
@@ -40,6 +17,32 @@ body {
 
 footer {
   flex-shrink: 0; /* Prevent footer from shrinking */
+}
+
+@font-face {
+  font-family: "Tusker Grotesk"; /* Give your font a name */
+  src: url("TuskerGrotesk-2600Semibold.woff2") format("woff2");
+  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
+  font-style: normal; /* Specify the style (e.g., normal, italic) */
+  font-display: swap;
+  letter-spacing: 0em;
+}
+
+@font-face {
+  font-family: "Roslindale Black"; /* Give your font a name */
+  src: url("Roslindale-DisplayBlack.ttf") format("truetype");
+  font-weight: 900; /* Specify the weight (e.g., normal, bold) */
+  font-style: normal; /* Specify the style (e.g., normal, italic) */
+  font-display: swap;
+  letter-spacing: 0em;
+}
+
+.font-tusker {
+  font-family: "Tusker Grotesk";
+}
+
+.font-roslindale-black {
+  font-family: "Roslindale Black";
 }
 
 * {
