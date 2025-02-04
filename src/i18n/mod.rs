@@ -12,7 +12,6 @@ pub enum Message {
     SelfDescription,
     SoftwareEngineer,
     SoftwareEngineerTitle,
-    GustavoLee,
     Articles,
     ArticlesDescription,
 }

@@ -527,9 +527,6 @@
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
-  .isolate {
-    isolation: isolate;
-  }
   .z-10 {
     z-index: 10;
   }
@@ -556,9 +553,6 @@
   }
   .mx-auto {
     margin-inline: auto;
-  }
-  .mt-2 {
-    margin-top: calc(var(--spacing) * 2);
   }
   .block {
     display: block;
@@ -590,6 +584,9 @@
   .h-full {
     height: 100%;
   }
+  .h-screen {
+    height: 100vh;
+  }
   .min-h-full {
     min-height: 100%;
   }
@@ -611,12 +608,6 @@
   .w-full {
     width: 100%;
   }
-  .max-w-2xl {
-    max-width: var(--container-2xl);
-  }
-  .max-w-lg {
-    max-width: var(--container-lg);
-  }
   .min-w-full {
     min-width: 100%;
   }
@@ -625,9 +616,6 @@
   }
   .flex-col {
     flex-direction: column;
-  }
-  .flex-col-reverse {
-    flex-direction: column-reverse;
   }
   .flex-row {
     flex-direction: row;
@@ -640,6 +628,9 @@
   }
   .justify-center {
     justify-content: center;
+  }
+  .justify-end {
+    justify-content: flex-end;
   }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
@@ -703,14 +694,14 @@
   .px-4 {
     padding-inline: calc(var(--spacing) * 4);
   }
-  .px-6 {
-    padding-inline: calc(var(--spacing) * 6);
-  }
   .px-8 {
     padding-inline: calc(var(--spacing) * 8);
   }
   .py-2 {
     padding-block: calc(var(--spacing) * 2);
+  }
+  .pl-7 {
+    padding-left: calc(var(--spacing) * 7);
   }
   .text-center {
     text-align: center;
@@ -719,20 +710,16 @@
     font-size: var(--text-2xl);
     line-height: var(--tw-leading, var(--text-2xl--line-height));
   }
-  .text-base\/10 {
-    font-size: var(--text-base);
-    line-height: calc(var(--spacing) * 10);
+  .text-\[30vh\] {
+    font-size: 30vh;
   }
-  .text-\[30vw\] {
-    font-size: 30vw;
+  .leading-none {
+    --tw-leading: 1;
+    line-height: 1;
   }
   .font-bold {
     --tw-font-weight: var(--font-weight-bold);
     font-weight: var(--font-weight-bold);
-  }
-  .font-semibold {
-    --tw-font-weight: var(--font-weight-semibold);
-    font-weight: var(--font-weight-semibold);
   }
   .tracking-tight {
     --tw-tracking: var(--tracking-tight);
@@ -740,9 +727,6 @@
   }
   .text-balance {
     text-wrap: balance;
-  }
-  .text-gray-100 {
-    color: var(--color-gray-100);
   }
   .text-gray-700 {
     color: var(--color-gray-700);
@@ -786,46 +770,11 @@
       height: calc(var(--spacing) * 14);
     }
   }
-  .sm\:text-\[30vw\] {
-    @media (width >= 40rem) {
-      font-size: 30vw;
-    }
-  }
   .md\:flex-row {
     @media (width >= 48rem) {
       flex-direction: row;
     }
   }
-  .lg\:max-w-7xl {
-    @media (width >= 64rem) {
-      max-width: var(--container-7xl);
-    }
-  }
-  .lg\:px-8 {
-    @media (width >= 64rem) {
-      padding-inline: calc(var(--spacing) * 8);
-    }
-  }
-}
-@font-face {
-  font-family: "Tusker Grotesk";
-  src: url("TuskerGrotesk-2600Semibold.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Roslindale Black";
-  src: url("Roslindale-DisplayBlack.ttf") format("truetype");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
-.font-tusker {
-  font-family: "Tusker Grotesk";
-}
-.font-roslindale-black {
-  font-family: "Roslindale Black";
 }
 body {
   background-image: url("portfolio_wallpaper.png");
@@ -836,12 +785,35 @@ body {
   margin: 0;
   font-family: "Raleway", "Inter", sans-serif;
   font-weight: 600;
+  letter-spacing: -0.025em;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 footer {
   flex-shrink: 0;
+}
+@font-face {
+  font-family: "Tusker Grotesk";
+  src: url("TuskerGrotesk-2600Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  letter-spacing: 0em;
+}
+@font-face {
+  font-family: "Roslindale Black";
+  src: url("Roslindale-DisplayBlack.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  letter-spacing: 0em;
+}
+.font-tusker {
+  font-family: "Tusker Grotesk";
+}
+.font-roslindale-black {
+  font-family: "Roslindale Black";
 }
 * {
   transition: all 1s ease-in-out;
@@ -2495,6 +2467,10 @@ footer {
   syntax: "*";
   inherits: false;
   initial-value: solid;
+}
+@property --tw-leading {
+  syntax: "*";
+  inherits: false;
 }
 @property --tw-font-weight {
   syntax: "*";
