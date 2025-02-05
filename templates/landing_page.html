@@ -2,7 +2,7 @@
 content %}
 
 <div class="w-full h-full">
-  <div class="w-full h-screen">
+  <div class="w-full h-screen flex flex-col">
     <div class="sticky top-0 px-8 bg-black/10 backdrop-blur-[2px] h-12 sm:h-14">
       <nav
         id="navbar"
@@ -15,11 +15,21 @@ content %}
         >
       </nav>
     </div>
-    <div
-      class="flex flex-col justify-end w-1/2 h-full font-tusker text-[30vh] text-balance pl-7 leading-none"
-    >
-      <span>FULLSTACK</span>
-      <span>ENGINEER</span>
+    <div class="flex flex-row h-full w-full">
+      <div
+        class="hidden sm:flex flex-col justify-center w-1/2 h-full font-tusker text-[35vh] text-balance pl-7 leading-none"
+      >
+        <span>FULLSTACK</span>
+        <span>ENGINEER</span>
+      </div>
+      <div
+        id="about"
+        class="w-1/2 flex justify-end items-center leading-4 pr-7"
+      >
+        <span class="text-3xl text-justify">
+          {{translator.get_translation("SelfDescription")}}
+        </span>
+      </div>
     </div>
   </div>
 </div>
