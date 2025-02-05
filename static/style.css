@@ -9,7 +9,6 @@ body {
   margin: 0; /* Remove default margin */
   font-family: "Raleway", "Inter", sans-serif;
   font-weight: 600;
-  letter-spacing: -0.025em;
   min-height: 100vh; /* Ensure body covers full viewport */
   display: flex; /* Use flexbox */
   flex-direction: column; /* Stack elements vertically */

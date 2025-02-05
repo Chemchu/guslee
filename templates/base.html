@@ -28,17 +28,20 @@
     <meta name="view-transition" content="same-origin" />
   </head>
 
-  <body hx-boost="true" class="h-full w-full text-white">
+  <body
+    hx-boost="true"
+    class="h-full w-full text-white scroll-smooth md:scroll-auto"
+  >
     <!-- Main Content -->
-    <main>
+    <main class="bg-black/20">
       <div id="content" class="min-h-full min-w-full">
         {% block content %}{% endblock %}
       </div>
     </main>
-    <footer class="bg-transparent p-4 z-10">
+    <!-- <footer class="bg-transparent p-4 z-10">
       <div class="container mx-auto text-center">
-        <p>hola bea mi amor.</p>
+        <p>:p</p>
       </div>
-    </footer>
+    </footer> -->
   </body>
 </html>
