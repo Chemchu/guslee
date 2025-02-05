@@ -10,8 +10,6 @@ body {
   font-family: "Raleway", "Inter", sans-serif;
   font-weight: 600;
   min-height: 100vh; /* Ensure body covers full viewport */
-  display: flex; /* Use flexbox */
-  flex-direction: column; /* Stack elements vertically */
 }
 
 footer {
