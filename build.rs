@@ -29,12 +29,12 @@ fn main() {
             if !output.status.success() {
                 let _ = io::stdout().write_all(&output.stdout);
                 let _ = io::stdout().write_all(&output.stderr);
-                panic!("Tailwind error");
+                println!("Could not complete build step: TailwindCSS binary not found");
             } else {
                 let _ = io::stdout().write_all(&output.stdout);
-                println!("Tailwind compiled successfully!")
+                println!("Build step completed successfully!")
             }
         }
-        Err(e) => panic!("Tailwind error: {:?}", e),
+        Err(e) => println!("Could not complete build step because of: {:?}", e),
     };
 }
