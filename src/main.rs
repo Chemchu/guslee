@@ -18,7 +18,7 @@ struct AppState {
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
-    dotenv().expect("Missing env variables");
+    dotenv().ok();
 
     let supabase_url = std::env::var("SUPABASE_URL").expect("Missing env SUPABASE_URL");
     let api_key = std::env::var("SUPABASE_KEY").expect("Missing env SUPABASE_KEY");
