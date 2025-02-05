@@ -22,6 +22,7 @@ async fn main() -> std::io::Result<()> {
 
     let supabase_url = std::env::var("SUPABASE_URL").expect("Missing env SUPABASE_URL");
     let api_key = std::env::var("SUPABASE_KEY").expect("Missing env SUPABASE_KEY");
+    let port = std::env::var("PORT").expect("Missing env PORT");
 
     HttpServer::new(move || {
         App::new()
@@ -37,7 +38,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::articles_page)
             .service(routes::article_page)
     })
-    .bind(("127.0.0.1", 3000))?
+    .bind(("127.0.0.1", port.parse::<u16>().unwrap()))?
     .run()
     .await
 }
