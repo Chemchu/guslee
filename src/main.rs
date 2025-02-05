@@ -38,7 +38,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::articles_page)
             .service(routes::article_page)
     })
-    .bind(("127.0.0.1", port.parse::<u16>().unwrap()))?
+    .bind(("0.0.0.0", port.parse::<u16>().unwrap()))?
     .run()
     .await
 }
