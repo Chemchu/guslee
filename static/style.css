@@ -5,7 +5,6 @@ body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  height: 100vh; /* Ensure the body takes up the full viewport height */
   margin: 0; /* Remove default margin */
   font-family: "Raleway", "Inter", sans-serif;
   font-weight: 600;

@@ -33,7 +33,7 @@ async fn main() -> std::io::Result<()> {
                     supabase_url.to_owned(),
                 )),
             }))
-            .service(actix_files::Files::new("/_static", "static").show_files_listing())
+            .service(actix_files::Files::new("/_static", "./static").show_files_listing())
             .service(routes::landing_page)
             .service(routes::articles_page)
             .service(routes::article_page)
