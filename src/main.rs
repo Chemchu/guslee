@@ -23,8 +23,6 @@ async fn main() -> std::io::Result<()> {
     let supabase_url = std::env::var("SUPABASE_URL").expect("Missing env SUPABASE_URL");
     let api_key = std::env::var("SUPABASE_KEY").expect("Missing env SUPABASE_KEY");
     let port = std::env::var("PORT").expect("Missing env PORT");
-    // Use an environment variable to specify the static files directory
-    let static_files_dir = std::env::var("STATIC_FILES_DIR").unwrap_or_else(|_| "./static".to_string());
 
     HttpServer::new(move || {
         App::new()
@@ -35,7 +33,7 @@ async fn main() -> std::io::Result<()> {
                     supabase_url.to_owned(),
                 )),
             }))
-            .service(actix_files::Files::new("/_static", &static_files_dir).show_files_listing())
+            .service(actix_files::Files::new("/_static", "./static").show_files_listing())
             .service(routes::landing_page)
             .service(routes::articles_page)
             .service(routes::article_page)
