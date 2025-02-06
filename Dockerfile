@@ -19,6 +19,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y libssl3 && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/guslee /usr/local/bin
 # Copy the static directory into the image
+COPY ./src /app/src
 COPY ./static /app/static
 COPY ./templates /app/templates
 ENTRYPOINT ["/usr/local/bin/guslee"]
