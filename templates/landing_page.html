@@ -3,7 +3,7 @@ content %}
 
 <div class="w-full h-full">
   <div
-    class="fixed w-full top-0 px-4 sm:px-7 bg-black/10 backdrop-blur-[2px] h-12 sm:h-14"
+    class="fixed w-full top-0 px-4 sm:px-7 bg-black/10 backdrop-blur-[2px] h-14"
   >
     <nav
       id="navbar"
@@ -28,9 +28,14 @@ content %}
   <div
     class="w-full h-screen flex flex-col sm:bg-[url('portfolio_wallpaper.png')] sm:bg-cover sm:bg-center sm:bg-no-repeat"
   >
-    <div class="flex flex-row h-full w-full justify-between items-end">
+    <!--   Mobile Screen -->
+    <div class="flex flex-col sm:hidden pt-14">In Progress</div>
+    <!--   Bigger screens -->
+    <div
+      class="hidden sm:flex flex-row h-full w-full justify-between items-end"
+    >
       <div
-        class="hidden sm:flex flex-col justify-end w-1/2 font-tusker text-[clamp(2rem,20vw,15rem)] text-balance pl-4 sm:pl-7 pb-4 sm:pb-7 leading-none"
+        class="flex flex-col justify-end w-1/2 font-tusker text-[clamp(2rem,20vw,15rem)] text-balance pl-4 sm:pl-7 pb-4 sm:pb-7 leading-none"
       >
         <span class="inline-block pt-[2vh] -mb-[2vh]">FULLSTACK</span>
         <div class="flex w-full h-full items-end">
@@ -45,7 +50,7 @@ content %}
         id="about"
         class="w-1/2 md:w-1/3 h-full flex justify-end items-end leading-4 pr-4 sm:pr-7 pb-7"
       >
-        <span class="text-lg sm:text-xl md:text-2xl xl:text-4xl md:text-right">
+        <span class="text-lg sm:text-xl md:text-2xl xl:text-4xl text-right">
           {{translator.get_translation("SelfDescription")}}
         </span>
       </div>
