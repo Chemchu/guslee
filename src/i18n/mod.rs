@@ -8,6 +8,7 @@ pub enum Message {
     Me,
     News,
     Contact,
+    Work,
     Experience,
     SelfDescription,
     SoftwareEngineer,

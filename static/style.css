@@ -1,10 +1,6 @@
 @import "tailwindcss";
 
 body {
-  background-image: url("portfolio_wallpaper.png");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   margin: 0; /* Remove default margin */
   font-family: "Raleway", "Inter", sans-serif;
   font-weight: 600;
@@ -43,6 +39,7 @@ footer {
 
 * {
   transition: all 1s ease-in-out;
+  scroll-behavior: smooth;
 }
 
 .htmx-indicator {
