@@ -37,11 +37,6 @@ footer {
   font-family: "Roslindale Black";
 }
 
-* {
-  transition: all 1s ease-in-out;
-  scroll-behavior: smooth;
-}
-
 .htmx-indicator {
   display: none;
 }
