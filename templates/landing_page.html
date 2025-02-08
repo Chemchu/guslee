@@ -1,13 +1,26 @@
 {% extends "base.html" %} {% block title %}Gustavo Lee{% endblock %} {% block
 content %}
 
-<div class="w-full h-full">
+<div
+  x-data="{ opacity: 1 }"
+  x-init="() => {
+      window.addEventListener('scroll', () => {
+        const scrollPercentage = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+        opacity = 1 - scrollPercentage;
+      });
+    }"
+  class="w-full h-full"
+>
   <div
-    class="fixed w-full top-0 px-4 sm:px-7 bg-black/10 backdrop-blur-[2px] h-14"
+    class="transform transition-none scroll-auto sm:fixed sm:inset-0 sm:bg-[url('portfolio_wallpaper.png')] sm:bg-cover sm:bg-center sm:bg-no-repeat -z-10"
+    :style="`opacity: ${opacity}`"
+  ></div>
+  <div
+    class="fixed w-full top-0 px-4 sm:px-7 bg-black/10 backdrop-blur-[2px] h-14 sm:h-20"
   >
     <nav
       id="navbar"
-      class="flex justify-between overflow-hidden items-center border-white/50 border-b w-full h-full"
+      class="flex justify-between overflow-hidden items-center border-white/50 border-b w-full h-full text-lg sm:text-xl"
     >
       <a href="/" class="block font-roslindale-black">Gustavo Lee</a>
       <span class="tracking-tight hidden sm:block">WELCOME</span>
@@ -25,9 +38,7 @@ content %}
     </nav>
   </div>
 
-  <div
-    class="w-full h-screen flex flex-col sm:bg-[url('portfolio_wallpaper.png')] sm:bg-cover sm:bg-center sm:bg-no-repeat"
-  >
+  <div class="w-full h-screen flex flex-col">
     <!--   Mobile Screen -->
     <div class="flex flex-col sm:hidden pt-14">In Progress</div>
     <!--   Bigger screens -->
