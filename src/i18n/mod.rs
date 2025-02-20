@@ -11,6 +11,7 @@ pub enum Message {
     Work,
     Experience,
     SelfDescription,
+    LongDescription,
     SoftwareEngineer,
     SoftwareEngineerTitle,
     Articles,
