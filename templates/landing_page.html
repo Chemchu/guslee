@@ -47,7 +47,7 @@ content %}
       id="navbar"
       class="flex justify-between overflow-hidden items-center border-white/50 border-b w-full h-full text-lg sm:text-xl"
     >
-      <a href="/" class="block font-roslindale-black">Gustavo Lee</a>
+      <a href="/" class="block font-migra-regular">Gustavo Lee</a>
       <div class="flex flex-row gap-1">
         <a href="#about" class="block hover:line-through"
           >{{translator.get_translation("Me")}},</a
@@ -76,7 +76,7 @@ content %}
         <div class="flex w-full h-full items-end">
           <span class="inline-block pt-[2vh] -mb-[2vh]">DEVELOPER</span>
           <span
-            class="hidden lg:inline-block font-roslindale-black text-3xl xl:text-4xl text-start"
+            class="hidden lg:inline-block font-migra-regular text-3xl xl:text-4xl text-start"
             >& guitarist</span
           >
         </div>
@@ -96,19 +96,19 @@ content %}
     id="about"
     class="h-screen w-full flex flex-col p-4 sm:p-7 pb-4 sm:pb-7 justify-center items-start"
   >
-    <div class="w-1/2 flex flex-col">
-      <div
-        class="flex flex-row gap-1 w-full items-end font-tusker leading-none"
-      >
-        <span class="text-[clamp(2rem,20vw,8rem)]">HELLO!</span>
-        <span class="text-[clamp(2rem,20vw,6rem)]">MY NAME IS GUS</span>
+    <div class="w-1/2 flex flex-col px-8">
+      <div class="flex flex-row gap-2 w-full items-end leading-none">
+        <span class="text-[clamp(2rem,20vw,6rem)] font-tusker">Welcome!</span>
+        <span class="text-[clamp(2rem,20vw,3rem)] font-migra-regular"
+          >I am Gus</span
+        >
       </div>
       <span class="text-3xl font-normal"
         >{{translator.get_translation("LongDescription")}}</span
       >
     </div>
   </div>
-  <div id="third" class="h-screen">Third part</div>
-  <div id="fourth" class="h-screen">Fourth part</div>
+  <div id="third" class="h-screen">Third section (work life)</div>
+  <div id="fourth" class="h-screen">Fourth section(contact)</div>
 </div>
 {% endblock %}
