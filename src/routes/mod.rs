@@ -38,6 +38,39 @@ pub async fn landing_page() -> impl Responder {
     HttpResponse::Ok().body(reply_html)
 }
 
+#[get("/compliments/{compliment_id}")]
+pub async fn compliments(path: web::Path<u32>) -> impl Responder {
+    let compliments: Vec<&str> = vec![
+        "the",
+        "a beautiful",
+        "an amazing",
+        "way too handsome",
+        "incredible smart",
+        "funny",
+    ];
+    let compliment_id = path.into_inner() as usize;
+    let index = if compliment_id >= compliments.len() {
+        0
+    } else {
+        compliment_id
+    };
+    let response = format!(
+        "<span
+          id='compliment'
+          class='inline-block font-migra-regular text-3xl xl:text-4xl pl-1 leading-none'
+          hx-target='this'
+          hx-get='/compliments/{}'
+          hx-swap='outerHTML'
+          hx-trigger='every 5s'
+          >{}</span
+        >",
+        index + 1,
+        compliments[index]
+    );
+
+    response
+}
+
 #[get("/articles")]
 pub async fn articles_page() -> impl Responder {
     let template = ArticlesPage {
