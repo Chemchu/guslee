@@ -2,33 +2,36 @@
 content %}
 
 <div
+  class="w-full h-full"
   x-data="{ opacityImg1: 1, opacityImg2: 0 }"
   x-init="() => {
       window.addEventListener('scroll', () => {
-        const sections = 3;
+        const sections = 4;
         const scrollPercentage = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
 
+        const firstSectionPercentage = 1/sections;
+        const lastSectionPercentage = (sections - 1)/sections;
+
         // Partir los tramos de opacidad (imagen o oscuro) aqui
-        if(scrollPercentage <= 1/3) {
+        if(scrollPercentage <= firstSectionPercentage) {
           opacityImg1 = 1 - (scrollPercentage * sections);
           opacityImg2 = 0;
           return;
         }
 
-        if(scrollPercentage >= 2/3) {
+        if(scrollPercentage >= lastSectionPercentage) {
           opacityImg1 = 0;
-          opacityImg2 = (scrollPercentage - 2/3) * sections;
+          opacityImg2 = (scrollPercentage - lastSectionPercentage) * sections;
           return;
         }
 
-        if(scrollPercentage > 1/3 && scrollPercentage < 2/3) {
+        if(scrollPercentage > firstSectionPercentage && scrollPercentage < lastSectionPercentage) {
           opacityImg1 = 0;
           opacityImg2 = 0;
         }
 
       });
     }"
-  class="w-full h-full"
 >
   <div
     class="transform transition-none scroll-auto sm:fixed sm:inset-0 sm:bg-[url('portfolio_wallpaper.png')] sm:bg-cover sm:bg-center sm:bg-no-repeat -z-10"
@@ -47,15 +50,35 @@ content %}
       id="navbar"
       class="flex justify-between overflow-hidden items-center border-white/50 border-b w-full h-full text-lg sm:text-xl"
     >
-      <a href="/" class="block font-migra-regular">Gustavo Lee</a>
+      <a
+        href="#"
+        class="block font-migra-regular"
+        x-on:click.prevent="window.scrollTo({ top: 0, behavior: 'smooth' })"
+        >Gustavo Lee</a
+      >
       <div class="flex flex-row gap-1">
-        <a href="#about" class="block hover:line-through"
+        <a
+          href="#about"
+          class="block hover:line-through"
+          x-on:click.prevent="document.querySelector('#about').scrollIntoView({ behavior: 'smooth', block: 'start' })"
           >{{translator.get_translation("Me")}},</a
         >
-        <a href="#work" class="block hover:line-through"
+        <a
+          href="#work"
+          class="block hover:line-through"
+          x-on:click.prevent="document.querySelector('#work').scrollIntoView({ behavior: 'smooth', block: 'start' })"
           >{{translator.get_translation("Work")}},</a
         >
-        <a href="#contact" class="block hover:line-through"
+        <a
+          href="#news"
+          class="block hover:line-through"
+          x-on:click.prevent="document.querySelector('#news').scrollIntoView({ behavior: 'smooth', block: 'start' })"
+          >{{translator.get_translation("News")}},</a
+        >
+        <a
+          href="#contact"
+          class="block hover:line-through"
+          x-on:click.prevent="document.querySelector('#contact').scrollIntoView({ behavior: 'smooth', block: 'start' })"
           >{{translator.get_translation("Contact")}}</a
         >
       </div>
@@ -72,15 +95,7 @@ content %}
       <div
         class="flex flex-col justify-end w-1/2 font-tusker text-[clamp(2rem,20vw,15rem)] text-balance pl-4 sm:pl-7 pb-4 sm:pb-7 leading-none"
       >
-        <span
-          id="compliment"
-          class="inline-block font-migra-regular text-3xl xl:text-4xl pl-1 leading-none"
-          hx-target="this"
-          hx-get="/compliments/1"
-          hx-swap="outerHTML"
-          hx-trigger="every 5s"
-          >the</span
-        >
+        {{compliment|safe}}
         <span class="inline-block pt-[2vh] -mb-[2vh]">FULLSTACK</span>
         <div class="flex w-full h-full items-end">
           <span class="inline-block pt-[2vh] -mb-[2vh]">DEVELOPER</span>
@@ -90,7 +105,9 @@ content %}
           >
         </div>
       </div>
-      <div class="w-1/3 h-full flex justify-end items-end pr-4 sm:pr-7 pb-7">
+      <div
+        class="w-1/2 lg:w-1/3 h-full flex justify-end items-end pr-4 sm:pr-7 pb-7"
+      >
         <span
           class="text-lg sm:text-xl md:text-2xl xl:text-4xl leading-tight indent-20 break-words"
         >
@@ -118,7 +135,8 @@ content %}
       >
     </div>
   </div>
-  <div id="third" class="h-screen">Third section (work life)</div>
-  <div id="fourth" class="h-screen">Fourth section(contact)</div>
+  <div id="work" class="h-screen">Third section (work life)</div>
+  <div id="news" class="h-screen">Fourth section(news)</div>
+  <div id="contact" class="h-screen">Fifth section(contact)</div>
 </div>
 {% endblock %}

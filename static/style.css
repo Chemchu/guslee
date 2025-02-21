@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+.fade {
+  transition: opacity 0.5s ease-in-out;
+}
+
+.fade-in {
+  opacity: 0;
+  animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 body {
   margin: 0; /* Remove default margin */
   font-family: "Neue Montreal Medium", sans-serif;

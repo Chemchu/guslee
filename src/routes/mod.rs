@@ -1,5 +1,6 @@
 use actix_web::{get, http::header::AcceptLanguage, web, HttpRequest, HttpResponse, Responder};
 use askama_actix::Template;
+use compliments::Compliment;
 
 use crate::{
     http_service::ResponseData,
@@ -8,10 +9,13 @@ use crate::{
     AppState,
 };
 
+pub mod compliments;
+
 #[derive(Template)]
 #[template(path = "landing_page.html")]
 pub struct LandingPage {
     translator: i18n::translator::Translator,
+    compliment: Compliment,
 }
 
 #[derive(Template)]
@@ -31,44 +35,12 @@ pub struct ArticlePage {
 pub async fn landing_page() -> impl Responder {
     let template = LandingPage {
         translator: i18n::translator::Translator::new(),
+        compliment: Compliment::new(0),
     };
 
     let reply_html = askama::Template::render(&template).unwrap();
 
     HttpResponse::Ok().body(reply_html)
-}
-
-#[get("/compliments/{compliment_id}")]
-pub async fn compliments(path: web::Path<u32>) -> impl Responder {
-    let compliments: Vec<&str> = vec![
-        "the",
-        "a beautiful",
-        "an amazing",
-        "way too handsome",
-        "incredible smart",
-        "funny",
-    ];
-    let compliment_id = path.into_inner() as usize;
-    let index = if compliment_id >= compliments.len() {
-        0
-    } else {
-        compliment_id
-    };
-    let response = format!(
-        "<span
-          id='compliment'
-          class='inline-block font-migra-regular text-3xl xl:text-4xl pl-1 leading-none'
-          hx-target='this'
-          hx-get='/compliments/{}'
-          hx-swap='outerHTML'
-          hx-trigger='every 5s'
-          >{}</span
-        >",
-        index + 1,
-        compliments[index]
-    );
-
-    response
 }
 
 #[get("/articles")]
