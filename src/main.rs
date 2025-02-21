@@ -37,6 +37,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::landing_page)
             .service(routes::articles_page)
             .service(routes::article_page)
+            .service(routes::compliments::compliments) 
     })
     .bind(("0.0.0.0", port.parse::<u16>().unwrap()))?
     .run()
