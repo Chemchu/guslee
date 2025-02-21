@@ -1,14 +1,57 @@
 @import "tailwindcss";
 
+.fade {
+  transition: opacity 0.5s ease-in-out;
+}
+
+.fade-in {
+  opacity: 0;
+  animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 body {
   margin: 0; /* Remove default margin */
-  font-family: "Raleway", "Inter", sans-serif;
+  font-family: "Neue Montreal Medium", sans-serif;
   font-weight: 600;
   min-height: 100vh; /* Ensure body covers full viewport */
 }
 
 footer {
   flex-shrink: 0; /* Prevent footer from shrinking */
+}
+
+@font-face {
+  font-family: "Migra Regular";
+  font-style: normal;
+  font-weight: 600;
+  src: url("migra-3.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Neue Montreal Medium"; /* Give your font a name */
+  src: url("neue-montreal-v2-0-medium.ttf") format("truetype");
+  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
+  font-style: normal; /* Specify the style (e.g., normal, italic) */
+  font-display: swap;
+  letter-spacing: 0em;
+}
+
+@font-face {
+  font-family: "Neue Montreal Mono"; /* Give your font a name */
+  src: url("pp-neue-montreal-mono-book.ttf") format("truetype");
+  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
+  font-style: normal; /* Specify the style (e.g., normal, italic) */
+  font-display: swap;
+  letter-spacing: 0em;
 }
 
 @font-face {
@@ -27,6 +70,14 @@ footer {
   font-style: normal; /* Specify the style (e.g., normal, italic) */
   font-display: swap;
   letter-spacing: 0em;
+}
+
+.font-migra-regular {
+  font-family: "Migra Regular";
+}
+
+.font-neue-montreal-medium {
+  font-family: "Neue Montreal Medium";
 }
 
 .font-tusker {
