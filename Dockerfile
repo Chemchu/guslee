@@ -17,6 +17,7 @@ RUN cargo build --release --bin guslee
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 RUN apt-get update && apt-get install -y libssl3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get install ca-certificates
 COPY --from=builder /app/target/release/guslee /usr/local/bin
 # Copy the static directory into the image
 COPY ./src /app/src
