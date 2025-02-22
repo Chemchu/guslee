@@ -10,6 +10,7 @@ node_modules
 /.direnv/bin
 /.direnv/*
 /.direnv*
+tailwindcsss
 
 # Added by cargo
 
