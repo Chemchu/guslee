@@ -12,8 +12,6 @@ node_modules
 /.direnv*
 tailwindcssss
 
-# Added by cargo
-
 /target
 
 
