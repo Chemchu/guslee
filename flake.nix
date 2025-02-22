@@ -1,8 +1,8 @@
 {
-  description = "A flake that installs and runs tailwindcss if not already installed";
+  description = "A flake that installs and runs TailwindCSS and Prettier";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable"; # Use the unstable channel
   };
 
   outputs = {
@@ -14,23 +14,9 @@
   in {
     devShells.${system}.default = pkgs.mkShell {
       nativeBuildInputs = with pkgs; [
-        curl
-        (writeShellScriptBin "check-and-install-tailwindcss" ''
-          if ! command -v ./tailwindcss &> /dev/null; then
-            echo "TailwindCSS not found. Installing..."
-            curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
-            chmod +x tailwindcss-linux-x64
-            mv tailwindcss-linux-x64 tailwindcss
-            echo "TailwindCSS installed!"
-          else
-            echo "TailwindCSS is already installed."
-          fi
-        '')
+        nodePackages.prettier # Prettier
+        tailwindcss_4 # Use the unstable version of TailwindCSS
       ];
-
-      shellHook = ''
-        check-and-install-tailwindcss
-      '';
     };
   };
 }

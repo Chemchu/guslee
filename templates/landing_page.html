@@ -136,7 +136,15 @@ content %}
     </div>
   </div>
   <div id="work" class="h-screen">Third section (work life)</div>
-  <div id="news" class="h-screen">Fourth section(news)</div>
+  <div
+    id="news"
+    class="h-screen"
+    hx-get="/articles"
+    hx-swap="innerHTML"
+    hx-trigger="load"
+  >
+    <span>Loading news...</span>
+  </div>
   <div id="contact" class="h-screen">Fifth section(contact)</div>
 </div>
 {% endblock %}

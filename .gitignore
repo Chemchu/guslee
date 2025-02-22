@@ -10,10 +10,7 @@ node_modules
 /.direnv/bin
 /.direnv/*
 /.direnv*
-tailwindcss
-
-
-# Added by cargo
+tailwindcssss
 
 /target
 
