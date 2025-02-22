@@ -19,10 +19,10 @@ fn main() {
     let flag = "/C";
 
     #[cfg(unix)]
-    let command = "./tailwindcss -i static/style.css -o static/compiled.css --minify; npx prettier --write './**/*.html'";
+    let command = "tailwindcss -i static/style.css -o static/compiled.css --minify; prettier --write './**/*.html'";
 
     #[cfg(windows)]
-    let command = ".\\tailwindcss -i static\\style.css -o static\\compiled.css --minify; npx prettier --write './**/*.html'";
+    let command = "tailwindcss -i static\\style.css -o static\\compiled.css --minify; prettier --write './**/*.html'";
 
     match process::Command::new(shell).arg(flag).arg(command).output() {
         Ok(output) => {

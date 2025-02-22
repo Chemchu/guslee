@@ -22,6 +22,7 @@ pub struct LandingPage {
 #[template(path = "articles_page.html")]
 pub struct ArticlesPage {
     translator: i18n::translator::Translator,
+    articles: Vec<Article>,
 }
 
 #[derive(Template)]
@@ -44,9 +45,28 @@ pub async fn landing_page() -> impl Responder {
 }
 
 #[get("/articles")]
-pub async fn articles_page() -> impl Responder {
+pub async fn articles_page(
+    data: web::Data<AppState>,
+    accept_language: web::Header<AcceptLanguage>,
+) -> impl Responder {
+    let languages = accept_language.ranked();
+    let language = to_language(&languages);
+
+    let articles: Option<ResponseData<Vec<Article>>> = data
+        .http_service
+        .get(
+            &"blogs".to_string(),
+            &format!("language=eq.{}&select=*&order=created_at.desc", &language),
+        )
+        .await;
+
     let template = ArticlesPage {
         translator: i18n::translator::Translator::new(),
+        articles: if let Some(a) = articles {
+            a.content
+        } else {
+            vec![]
+        },
     };
 
     let reply_html = askama::Template::render(&template).unwrap();
@@ -64,7 +84,7 @@ pub async fn article_page(
     let languages = accept_language.ranked();
     let language = to_language(&languages);
 
-    let article: Option<ResponseData<Article>> = data
+    let article: Option<ResponseData<Vec<Article>>> = data
         .http_service
         .get(
             &"blogs".to_string(),
@@ -73,7 +93,12 @@ pub async fn article_page(
         .await;
 
     let md: String = if let Some(existing_article) = article {
-        existing_article.content.get_content().to_owned()
+        existing_article
+            .content
+            .first()
+            .unwrap()
+            .get_content()
+            .to_owned()
     } else {
         get_not_found_markdown()
     };

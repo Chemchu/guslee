@@ -33,7 +33,7 @@ impl HttpService {
         &self,
         table: &String,
         query: &String,
-    ) -> Option<ResponseData<T>> {
+    ) -> Option<ResponseData<Vec<T>>> {
         let request = self
             .http_caller
             .get(format!(
@@ -56,9 +56,13 @@ impl HttpService {
                 let data: Result<Vec<T>, Error> = serde_json::from_str(&text);
                 match data {
                     Err(e) => panic!("{}", e),
-                    Ok(d) => d.first().map(|c| ResponseData {
-                        content: c.to_owned(),
-                    })
+                    Ok(d) => {
+                        if d.len() > 0 {
+                            Some(ResponseData { content: d })
+                        } else {
+                            None
+                        }
+                    }
                 }
             }
         }
