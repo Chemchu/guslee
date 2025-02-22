@@ -1,18 +1,29 @@
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Article {
-    id: u8,
-    language: String,
-    title: String,
-    content: String,
+    pub id: u8,
+    pub language: String,
+    pub title: String,
+    pub content: String,
     #[serde(with = "time::serde::rfc3339")]
-    created_at: OffsetDateTime,
+    pub created_at: OffsetDateTime,
+    pub thumbnail_url: String,
 }
 
 impl Article {
     pub fn get_content(&self) -> &String {
         &self.content
+    }
+
+    pub fn get_date(&self) -> String {
+        // Define a format description for the date and time
+        let format =
+            time::format_description::parse("[day]/[month]/[year] [hour]:[minute]").unwrap();
+
+        // Format the date and time into a string
+        self.created_at.format(&format).unwrap()
     }
 }
 

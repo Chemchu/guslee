@@ -1,7 +1,7 @@
 use actix_web::{get, web, Responder};
 use askama_actix::Template;
 
-#[derive(Template)]
+#[derive(Clone, Template)]
 #[template(path = "compliment.html")]
 pub struct Compliment {
     pub next_compliment_id: usize,

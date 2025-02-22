@@ -1,7 +1,6 @@
 .DS_Store
 node_modules
 /build
-/.svelte-kit
 /package
 .env
 .env.*
@@ -10,13 +9,9 @@ node_modules
 /.direnv/bin
 /.direnv/*
 /.direnv*
-tailwindcss
-
-
-# Added by cargo
+tailwindcssss
 
 /target
-
 
 # Added by cargo
 #
