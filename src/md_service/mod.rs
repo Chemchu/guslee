@@ -19,8 +19,7 @@ impl Article {
 
     pub fn get_date(&self) -> String {
         // Define a format description for the date and time
-        let format =
-            time::format_description::parse("[day]/[month]/[year] [hour]:[minute]").unwrap();
+        let format = time::format_description::parse("[day]/[month]/[year]").unwrap();
 
         // Format the date and time into a string
         self.created_at.format(&format).unwrap()

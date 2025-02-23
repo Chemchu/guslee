@@ -1,6 +1,5 @@
 use actix_web::{get, http::header::AcceptLanguage, web, HttpRequest, HttpResponse, Responder};
 use askama_actix::Template;
-use compliments::Compliment;
 
 use crate::{
     http_service::ResponseData,
@@ -15,7 +14,6 @@ pub mod compliments;
 #[template(path = "landing_page.html")]
 pub struct LandingPage {
     translator: i18n::translator::Translator,
-    compliment: Compliment,
 }
 
 #[derive(Template)]
@@ -36,7 +34,6 @@ pub struct ArticlePage {
 pub async fn landing_page() -> impl Responder {
     let template = LandingPage {
         translator: i18n::translator::Translator::new(),
-        compliment: Compliment::new(0),
     };
 
     let reply_html = askama::Template::render(&template).unwrap();

@@ -2,6 +2,7 @@
 
 <div id="news" class="w-full h-full flex justify-center items-center">
   <ul
+    id="news-list"
     role="list"
     class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 xl:gap-x-8"
   >
@@ -15,21 +16,34 @@
           alt="The article thumbnail image"
           class="w-64 h-48 overflow-hidden pointer-events-none aspect-10/7 object-cover group-hover:opacity-75 cursor-pointer"
         />
-        <button type="button" class="absolute inset-0 focus:outline-hidden">
+        <button
+          type="button"
+          class="absolute inset-0 focus:outline-hidden"
+          hx-get="/articles/{{article.id}}"
+          hx-swap="outerHTML"
+          hx-target="#news-list"
+        >
           <span class="sr-only">View details for {{ article.title }}</span>
         </button>
       </div>
       <p
         class="pointer-events-none mt-2 block truncate text-sm font-medium cursor-pointer"
+        hx-get="/articles/{{article.id}}"
+        hx-swap="outerHTML"
+        hx-target="#news-list"
       >
         {{ article.title }}
       </p>
-      <p class="pointer-events-none block text-sm font-medium cursor-pointer">
+      <p
+        class="pointer-events-none block text-sm font-medium cursor-pointer"
+        hx-get="/articles/{{article.id}}"
+        hx-swap="outerHTML"
+        hx-target="#news-list"
+      >
         {{ article.get_date() }}
       </p>
     </li>
     {% endfor %}
-    <!-- More files... -->
   </ul>
 </div>
 
