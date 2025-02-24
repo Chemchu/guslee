@@ -1,10 +1,11 @@
 use actix_web::{get, http::header::AcceptLanguage, web, HttpRequest, HttpResponse, Responder};
 use askama_actix::Template;
+use time::OffsetDateTime;
 
 use crate::{
     http_service::ResponseData,
     i18n::{self, to_language},
-    md_service::{get_not_found_markdown, render_markdown, Article},
+    md_service::{get_not_found_markdown, Article},
     AppState,
 };
 
@@ -27,7 +28,9 @@ pub struct ArticlesPage {
 #[template(path = "article.html")]
 pub struct ArticlePage {
     translator: i18n::translator::Translator,
-    content: String,
+    title: String,
+    date: OffsetDateTime,
+    contents: Vec<String>, // Separado por parrafos
 }
 
 #[get("/")]
@@ -89,25 +92,35 @@ pub async fn article_page(
         )
         .await;
 
-    let md: String = if let Some(existing_article) = article {
-        existing_article
-            .content
-            .first()
-            .unwrap()
-            .get_content()
-            .to_owned()
+    let article = if let Some(existing_article) = article {
+        existing_article.content.first().cloned()
     } else {
-        get_not_found_markdown()
+        None
     };
 
-    let html = render_markdown(&md);
+    if let Some(ar) = article {
+        let template = ArticlePage {
+            translator: i18n::translator::Translator::new(),
+            title: ar.title.clone(),
+            date: ar.created_at,
+            contents: ar.content.lines().map(|line| line.to_string()).collect(),
+        };
 
-    let template = ArticlePage {
-        translator: i18n::translator::Translator::new(),
-        content: html,
-    };
+        let reply_html = askama::Template::render(&template).unwrap();
+
+        HttpResponse::Ok().body(reply_html)
+    } else {
+
+        let template = ArticlePage {
+            translator: i18n::translator::Translator::new(),
+            title: "Not Found!".to_string(),
+            date: OffsetDateTime::now_utc(),
+            contents: vec![get_not_found_markdown()],
+        };
 
     let reply_html = askama::Template::render(&template).unwrap();
 
     HttpResponse::Ok().body(reply_html)
+    }
+
 }
