@@ -13,10 +13,6 @@ pub struct Article {
 }
 
 impl Article {
-    pub fn get_content(&self) -> &String {
-        &self.content
-    }
-
     pub fn get_date(&self) -> String {
         // Define a format description for the date and time
         let format = time::format_description::parse("[day]/[month]/[year]").unwrap();

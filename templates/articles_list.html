@@ -1,0 +1,44 @@
+{% block content %}
+
+<ul
+  id="articles-list"
+  role="list"
+  class="md:grid md:grid-cols-4 md:grid-rows-2 gap-4 justify-around"
+>
+  {% for article in articles %}
+  <li class="cursor-pointer">
+    <button
+      type="button"
+      class="overflow-hidden bg-gray-100"
+      hx-get="/articles/{{article.id}}"
+      hx-swap="outerHTML"
+      hx-target="#articles"
+    >
+      <img
+        src="{{article.thumbnail_url}}"
+        alt="The article thumbnail image"
+        class="hidden md:block w-64 h-48 overflow-hidden object-cover hover:opacity-75 cursor-pointer"
+      />
+      <span class="sr-only">View details for {{ article.title }}</span>
+    </button>
+    <p
+      class="mt-2 block truncate text-sm font-medium"
+      hx-get="/articles/{{article.id}}"
+      hx-swap="outerHTML"
+      hx-target="#news-list"
+    >
+      {{ article.title }}
+    </p>
+    <p
+      class="block text-sm font-medium"
+      hx-get="/articles/{{article.id}}"
+      hx-swap="outerHTML"
+      hx-target="#news-list"
+    >
+      {{ article.get_date() }}
+    </p>
+  </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

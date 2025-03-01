@@ -1,10 +1,35 @@
 {% block content %}
 
-<div class="flex flex-col w-full h-full items-center">
+<div id="article" class="flex w-full h-full items-center pt-20 sm:pt-24 px-7">
+  <button
+    class="cursor-pointer self-start"
+    hx-get="/articles"
+    hx-swap="outerHTML"
+    hx-target="#article"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="size-6"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+      />
+    </svg>
+  </button>
+
   <div class="flex flex-col w-full h-full gap-16 justify-center items-center">
-    {% for content in contents %}
-    <span class="px-4 py-2 markdown-body-light">{{ content|safe }}</span>
-    {% endfor %}
+    <span class="text-6xl font-migra-regular">{{ title|safe }}</span>
+    <div class="h-full w-full overflow-scroll flex flex-col gap-2 p-7">
+      {% for content in contents %}
+      <span>{{ content|safe }}</span>
+      {% endfor %}
+    </div>
   </div>
 </div>
 
