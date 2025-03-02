@@ -24,8 +24,7 @@ pub struct LandingPage {
 
 #[derive(Template)]
 #[template(path = "articles_page.html")]
-pub struct ArticlesPage {
-}
+pub struct ArticlesPage {}
 
 #[derive(Template)]
 #[template(path = "articles_list.html")]
@@ -53,8 +52,7 @@ pub async fn landing_page() -> impl Responder {
 
 #[get("/articles")]
 pub async fn articles_page() -> impl Responder {
-    let template = ArticlesPage {
-    };
+    let template = ArticlesPage {};
 
     let reply_html = askama::Template::render(&template).unwrap();
 
@@ -70,7 +68,7 @@ pub async fn articles_content(
     let languages = accept_language.ranked();
     let language = to_language(&languages);
     let offset = pagination.offset.unwrap_or(0);
-    let limit = pagination.limit.unwrap_or(1);
+    let limit = pagination.limit.unwrap_or(4);
 
     let articles: Option<ResponseData<Vec<Article>>> = data
         .http_service
@@ -90,6 +88,10 @@ pub async fn articles_content(
             vec![]
         },
     };
+
+    if template.articles.is_empty() {
+        return HttpResponse::NotFound().body("No articles found");
+    }
 
     let reply_html = askama::Template::render(&template).unwrap();
 

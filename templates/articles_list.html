@@ -1,10 +1,6 @@
 {% block content %}
 
-<ul
-  id="articles-list"
-  role="list"
-  class="md:grid md:grid-cols-4 md:grid-rows-2 gap-4 justify-around"
->
+<ul id="articles-list" role="list" class="flex flex-row gap-4 justify-evenly">
   {% for article in articles %}
   <li class="cursor-pointer">
     <button
