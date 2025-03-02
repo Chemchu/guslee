@@ -1,5 +1,7 @@
 use actix_web::{get, http::header::AcceptLanguage, web, HttpRequest, HttpResponse, Responder};
 use askama_actix::Template;
+use chrono::Offset;
+use time::OffsetDateTime;
 
 use crate::{
     http_service::ResponseData,
@@ -37,6 +39,7 @@ pub struct ArticlesList {
 pub struct ArticlePage {
     title: String,
     contents: Vec<String>, // Separado por parrafos
+    date: String
 }
 
 #[get("/")]
@@ -126,6 +129,7 @@ pub async fn article_page(
         let template = ArticlePage {
             title: ar.title.clone(),
             contents: ar.content.lines().map(|line| line.to_string()).collect(),
+            date: ar.get_date(),
         };
 
         let reply_html = askama::Template::render(&template).unwrap();
@@ -135,6 +139,7 @@ pub async fn article_page(
         let template = ArticlePage {
             title: "Not Found!".to_string(),
             contents: vec![get_not_found_markdown()],
+            date: OffsetDateTime::now_utc().to_string()
         };
 
         let reply_html = askama::Template::render(&template).unwrap();
