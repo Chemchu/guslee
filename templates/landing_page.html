@@ -1,46 +1,16 @@
 {% extends "base.html" %} {% block title %}Gustavo Lee{% endblock %} {% block
-content %}
+content %} {%for s in scripts%}
+<script src="{{ s }}"></script>
+{%endfor%}
 
-<div
-  class="w-full h-full"
-  x-data="{ opacityImg1: 1, opacityImg2: 0 }"
-  x-init="() => {
-      window.addEventListener('scroll', () => {
-        const sections = 4;
-        const scrollPercentage = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
-
-        const firstSectionPercentage = 1/sections;
-        const lastSectionPercentage = (sections - 1)/sections;
-
-        // Partir los tramos de opacidad (imagen o oscuro) aqui
-        if(scrollPercentage <= firstSectionPercentage) {
-          opacityImg1 = 1 - (scrollPercentage * sections);
-          opacityImg2 = 0;
-          return;
-        }
-
-        if(scrollPercentage >= lastSectionPercentage) {
-          opacityImg1 = 0;
-          opacityImg2 = (scrollPercentage - lastSectionPercentage) * sections;
-          return;
-        }
-
-        if(scrollPercentage > firstSectionPercentage && scrollPercentage < lastSectionPercentage) {
-          opacityImg1 = 0;
-          opacityImg2 = 0;
-        }
-
-      });
-    }"
->
+<div class="w-full h-full">
   <div
     class="transform transition-none scroll-auto sm:fixed sm:inset-0 sm:bg-[url('portfolio_wallpaper.png')] sm:bg-top sm:bg-no-repeat -z-10"
-    :style="`opacity: ${opacityImg1}`"
+    id="image1"
   ></div>
   <div
     class="transform transition-none scroll-auto sm:fixed sm:inset-0 sm:bg-[url('portfolio_wallpaper.png')] sm:bg-bottom sm:bg-no-repeat -z-10"
-    x-cloak
-    :style="`opacity: ${opacityImg2}`"
+    id="image2"
   ></div>
 
   <div
@@ -53,37 +23,41 @@ content %}
       <a
         href="#"
         class="block font-migra-regular"
-        x-on:click.prevent="window.scrollTo({ top: 0, behavior: 'smooth' })"
+        onclick="event.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' })"
         >Gustavo Lee</a
       >
       <div class="flex flex-row gap-1">
         <a
           href="#about"
           class="block hover:line-through"
-          x-on:click.prevent="document.querySelector('#about').scrollIntoView({ behavior: 'smooth', block: 'start' })"
-          >{{translator.get_translation("Me")}}</a
+          onclick="event.preventDefault(); document.querySelector('#about').scrollIntoView({ behavior: 'smooth', block: 'start' });"
         >
+          {{translator.get_translation("Me")}}
+        </a>
         <span>•</span>
         <a
           href="#work"
           class="block hover:line-through"
-          x-on:click.prevent="document.querySelector('#work').scrollIntoView({ behavior: 'smooth', block: 'start' })"
-          >{{translator.get_translation("Work")}}</a
+          onclick="event.preventDefault(); document.querySelector('#work').scrollIntoView({ behavior: 'smooth', block: 'start' });"
         >
+          {{translator.get_translation("Work")}}
+        </a>
         <span>•</span>
         <a
           href="#news"
           class="block hover:line-through"
-          x-on:click.prevent="document.querySelector('#news').scrollIntoView({ behavior: 'smooth', block: 'start' })"
-          >{{translator.get_translation("News")}}</a
+          onclick="event.preventDefault(); document.querySelector('#news').scrollIntoView({ behavior: 'smooth', block: 'start' });"
         >
+          {{translator.get_translation("News")}}
+        </a>
         <span>•</span>
         <a
           href="#contact"
           class="block hover:line-through"
-          x-on:click.prevent="document.querySelector('#contact').scrollIntoView({ behavior: 'smooth', block: 'start' })"
-          >{{translator.get_translation("Contact")}}</a
+          onclick="event.preventDefault(); document.querySelector('#contact').scrollIntoView({ behavior: 'smooth', block: 'start' });"
         >
+          {{translator.get_translation("Contact")}}
+        </a>
       </div>
     </nav>
   </div>
@@ -127,6 +101,7 @@ content %}
       </div>
     </div>
   </div>
+
   <div
     id="about"
     class="h-screen w-full flex flex-col p-4 sm:p-7 pb-4 sm:pb-7 justify-center items-start"
@@ -146,7 +121,9 @@ content %}
       >
     </div>
   </div>
+
   <div id="work" class="h-screen">Third section (work life)</div>
+
   <div
     id="news"
     class="w-full h-screen"
@@ -156,6 +133,7 @@ content %}
   >
     <span>Loading news...</span>
   </div>
+
   <div id="contact" class="h-screen">Fifth section(contact)</div>
 </div>
 {% endblock %}

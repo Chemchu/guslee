@@ -1,6 +1,5 @@
 use actix_web::{get, http::header::AcceptLanguage, web, HttpRequest, HttpResponse, Responder};
 use askama_actix::Template;
-use chrono::Offset;
 use time::OffsetDateTime;
 
 use crate::{
@@ -22,11 +21,14 @@ struct Pagination {
 #[template(path = "landing_page.html")]
 pub struct LandingPage {
     translator: i18n::translator::Translator,
+    scripts: Vec<String>,
 }
 
 #[derive(Template)]
 #[template(path = "articles_page.html")]
-pub struct ArticlesPage {}
+pub struct ArticlesPage {
+    scripts: Vec<String>,
+}
 
 #[derive(Template)]
 #[template(path = "articles_list.html")]
@@ -39,13 +41,14 @@ pub struct ArticlesList {
 pub struct ArticlePage {
     title: String,
     contents: Vec<String>, // Separado por parrafos
-    date: String
+    date: String,
 }
 
 #[get("/")]
 pub async fn landing_page() -> impl Responder {
     let template = LandingPage {
         translator: i18n::translator::Translator::new(),
+        scripts: vec!["/_static/scroll.js".to_string()],
     };
 
     let reply_html = askama::Template::render(&template).unwrap();
@@ -55,7 +58,9 @@ pub async fn landing_page() -> impl Responder {
 
 #[get("/articles")]
 pub async fn articles_page() -> impl Responder {
-    let template = ArticlesPage {};
+    let template = ArticlesPage {
+        scripts: vec!["/_static/articles.js".to_string()],
+    };
 
     let reply_html = askama::Template::render(&template).unwrap();
 
@@ -139,7 +144,7 @@ pub async fn article_page(
         let template = ArticlePage {
             title: "Not Found!".to_string(),
             contents: vec![get_not_found_markdown()],
-            date: OffsetDateTime::now_utc().to_string()
+            date: OffsetDateTime::now_utc().to_string(),
         };
 
         let reply_html = askama::Template::render(&template).unwrap();
