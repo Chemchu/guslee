@@ -17,9 +17,12 @@
     />
     <meta name="view-transition" content="same-origin" />
   </head>
-  <body class="bg-red-300">
-    <div class="w-1/6">Left column</div>
-    <div class="w-1/6">Content</div>
-    <div class="w-1/6">Right column</div>
+  <body class="w-full">
+    <header class="w-full">Hello</header>
+    <div class="flex flex-row w-full text-center">
+      <div id="left-section" class="bg-blue-400 flex-grow">Left column</div>
+      <div id="content-section" class="prose bg-red-400 w-1/2">{{CONTENT}}</div>
+      <div id="right-section" class="bg-green-300 flex-grow">Right column</div>
+    </div>
   </body>
 </html>

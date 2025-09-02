@@ -1,5 +1,5 @@
 {
-  description = "A flake that installs and runs TailwindCSS and Prettier";
+  description = "A flake that installs and runs TailwindCSS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable"; # Use the unstable channel
@@ -14,7 +14,6 @@
   in {
     devShells.${system}.default = pkgs.mkShell {
       nativeBuildInputs = with pkgs; [
-        nodePackages.prettier # Prettier
         tailwindcss_4 # Use the unstable version of TailwindCSS
       ];
     };
