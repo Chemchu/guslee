@@ -17,11 +17,26 @@
     />
     <meta name="view-transition" content="same-origin" />
   </head>
-  <body class="w-full">
-    <div class="flex flex-row w-full text-center py-16">
-      <div id="left-section" class="flex-grow">Left column</div>
-      <div id="content-section" class="prose w-1/2">{{CONTENT}}</div>
-      <div id="right-section" class="flex-grow">Right column</div>
+  <body class="w-full h-dvh">
+    <div class="flex flex-row w-full px-4 bg-[#2f3e46] text-[#cad2c5]">
+      <div
+        id="left-section"
+        class="flex-grow border-r border-[#cad2c5]/30 py-10"
+      >
+        <div>Left column</div>
+      </div>
+      <div class="flex flex-row py-10 w-5/6">
+        <div
+          id="content-section"
+          class="prose prose-invert prose-earthy w-2/3 px-4"
+          hx-boost="true"
+          hx-target="#content-section"
+          hx-swap="innerHTML"
+        >
+          {{CONTENT}}
+        </div>
+        <div id="right-section" class="flex-grow">Right column</div>
+      </div>
     </div>
   </body>
 </html>
