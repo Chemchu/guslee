@@ -3,6 +3,12 @@ use actix_web::{
     web::{self, Html},
 };
 use std::{fs, io};
+use tantivy::IndexReader;
+
+pub struct AppState {
+    pub app_name: String,
+    pub posts_reader: IndexReader,
+}
 
 #[get("/")]
 pub async fn landing() -> impl Responder {
@@ -27,6 +33,18 @@ pub async fn post(req: HttpRequest, route: web::Path<String>) -> impl Responder 
             Err(_err) => String::from("Fallback page"),
         })
     }
+}
+
+#[get("/search/{post:.*}")]
+pub async fn search_post(
+    req: HttpRequest,
+    app_state: web::Data<AppState>,
+    route: web::Path<String>,
+) -> impl Responder {
+    /* if route.is_empty() {
+        "Hello"
+    } */
+    "World"
 }
 
 fn wrap_markdown_with_whole_page(content: &str) -> String {
