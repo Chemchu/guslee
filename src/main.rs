@@ -21,11 +21,12 @@ async fn main() -> std::io::Result<()> {
 
     info!("🚀 Starting server...");
 
+    info!("Creating in-memory full-text search engine...");
     let posts_path = "/garden";
     let search_engine = Arc::new(SearchEngine::new(
         format!("{}{}", env!("CARGO_MANIFEST_DIR"), posts_path).as_str(),
     ));
-
+    info!("Search engine created correctly");
     info!("🌐 Server starting on http://127.0.0.1:3000");
 
     HttpServer::new(move || {
