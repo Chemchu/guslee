@@ -50,7 +50,6 @@ pub async fn search_post(
     if route.is_empty() {
         return Html::new(String::from("Fallback page"));
     }
-    println!("Entra!!");
     app_state.search_engine.exec_query(route.as_str(), 10);
 
     Html::new(String::from("Search done!"))
