@@ -2,23 +2,30 @@ use actix_web::{
     HttpRequest, Responder, get,
     web::{self, Html},
 };
+use search_engine::SearchEngine;
 use std::{fs, io};
-use tantivy::IndexReader;
 
 pub struct AppState {
     pub app_name: String,
-    pub posts_reader: IndexReader,
+    pub search_engine: std::sync::Arc<SearchEngine>,
 }
 
 #[get("/")]
-pub async fn landing() -> impl Responder {
+pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
     let content: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/garden/welcome.md"));
 
-    Html::new(wrap_markdown_with_whole_page(&markdown::to_html(content)))
+    Html::new(wrap_markdown_with_whole_page(
+        &app_state.app_name,
+        &markdown::to_html(content),
+    ))
 }
 
 #[get("/{post:.*}")]
-pub async fn post(req: HttpRequest, route: web::Path<String>) -> impl Responder {
+pub async fn post(
+    app_state: web::Data<AppState>,
+    req: HttpRequest,
+    route: web::Path<String>,
+) -> impl Responder {
     let content: io::Result<String> = fs::read_to_string(format!("./garden/{}.md", route));
 
     let is_htmx_req = req.headers().get("HX-Request").is_some();
@@ -29,26 +36,29 @@ pub async fn post(req: HttpRequest, route: web::Path<String>) -> impl Responder 
         })
     } else {
         Html::new(match content {
-            Ok(md) => wrap_markdown_with_whole_page(&markdown::to_html(&md)),
+            Ok(md) => wrap_markdown_with_whole_page(&app_state.app_name, &markdown::to_html(&md)),
             Err(_err) => String::from("Fallback page"),
         })
     }
 }
 
-#[get("/search/{post:.*}")]
+#[get("/search/{query}")]
 pub async fn search_post(
-    req: HttpRequest,
     app_state: web::Data<AppState>,
     route: web::Path<String>,
 ) -> impl Responder {
-    /* if route.is_empty() {
-        "Hello"
-    } */
-    "World"
+    if route.is_empty() {
+        return Html::new(String::from("Fallback page"));
+    }
+    println!("Entra!!");
+    app_state.search_engine.exec_query(route.as_str(), 10);
+
+    Html::new(String::from("Search done!"))
 }
 
-fn wrap_markdown_with_whole_page(content: &str) -> String {
+fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
     let html: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/index.html"));
 
-    html.replace("{{CONTENT}}", content)
+    html.replace("{{APPNAME}}", app_name)
+        .replace("{{CONTENT}}", content)
 }

@@ -1,3 +1,8 @@
+[workspace]
+members = [
+    "crates/search-engine",
+]
+
 [package]
 name = "guslee"
 version = "0.1.0"
@@ -7,6 +12,5 @@ edition = "2024"
 actix-files = "0.6.7"
 actix-web = "4.11.0"
 markdown = "1.0.0"
-tantivy = "0.25.0"
-tempdir = "0.3.7"
-walkdir = "2.5.0"
+search-engine = {path = "crates/search-engine"}
+
