@@ -1,9 +1,33 @@
+use serde::Deserialize;
 use std::fs;
 use tantivy::{
-    Index, IndexReader, IndexWriter, TantivyDocument,
+    Index, IndexReader, IndexWriter, Searcher, TantivyDocument,
     schema::{Field, STORED, Schema, TEXT, Value},
 };
 use walkdir::WalkDir;
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub enum Limit {
+    Number(usize),
+    String(String),
+}
+
+#[derive(Deserialize)]
+pub struct Params {
+    pub limit: Option<Limit>,
+}
+
+const DEFAULT_SEARCH_LIMIT: Limit = Limit::Number(100);
+
+impl Limit {
+    pub fn value(&self) -> usize {
+        match self {
+            Limit::Number(n) => *n,
+            Limit::String(_val) => DEFAULT_SEARCH_LIMIT.value(),
+        }
+    }
+}
 
 pub struct SearchResult {
     pub matching_files: Vec<MatchingFile>,
@@ -78,16 +102,15 @@ impl SearchEngine {
         SearchEngine { reader, index }
     }
 
-    pub fn exec_query(&self, query: &str, result_limit: usize) -> SearchResult {
+    pub fn exec_query(&self, query: &str, result_limit: Option<Limit>) -> SearchResult {
         let searcher = self.reader.searcher();
         let index = &self.index;
         let schema = index.schema();
         let fields: Vec<Field> = schema.fields().map(|(field, _field_entry)| field).collect();
-        let title_field: Field = fields
+        let title_field: Field = *fields
             .iter()
-            .find(|&f| schema.get_field_name(*f) == "title")
-            .expect("Error while getting 'title' Field")
-            .clone();
+            .find(|&&f| schema.get_field_name(f) == "title")
+            .expect("Error while getting 'title' Field");
 
         let query_parser = tantivy::query::QueryParser::for_index(index, fields);
         let query = query_parser
@@ -97,7 +120,69 @@ impl SearchEngine {
         let top_docs = searcher
             .search(
                 &query,
-                &tantivy::collector::TopDocs::with_limit(result_limit),
+                &tantivy::collector::TopDocs::with_limit(
+                    result_limit.unwrap_or(DEFAULT_SEARCH_LIMIT).value(),
+                ),
+            )
+            .expect("Error while searching top documents");
+
+        let docs: Vec<MatchingFile> = top_docs
+            .iter()
+            .map(|(_score, doc_address)| {
+                let retrieved_doc: TantivyDocument = searcher
+                    .doc(*doc_address)
+                    .expect("Error while retrieving the document");
+
+                // Extract the file path
+                let file_path = retrieved_doc
+                    .get_first(title_field)
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
+                // Extract the filename
+                let file_name = std::path::Path::new(&file_path)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
+                MatchingFile {
+                    name: file_name,
+                    path: file_path,
+                }
+            })
+            .collect();
+
+        SearchResult {
+            matching_files: docs,
+        }
+    }
+
+    fn exec_query_internal(
+        searcher: Searcher,
+        index: &Index,
+        query: &str,
+        result_limit: Option<Limit>,
+    ) -> SearchResult {
+        let schema = index.schema();
+        let fields: Vec<Field> = schema.fields().map(|(field, _field_entry)| field).collect();
+        let title_field: Field = *fields
+            .iter()
+            .find(|&&f| schema.get_field_name(f) == "title")
+            .expect("Error while getting 'title' Field");
+
+        let query_parser = tantivy::query::QueryParser::for_index(index, fields);
+        let query = query_parser
+            .parse_query(query)
+            .unwrap_or_else(|_| panic!("Error while parsing the query: {}", query));
+
+        let top_docs = searcher
+            .search(
+                &query,
+                &tantivy::collector::TopDocs::with_limit(
+                    result_limit.unwrap_or(DEFAULT_SEARCH_LIMIT).value(),
+                ),
             )
             .expect("Error while searching top documents");
 

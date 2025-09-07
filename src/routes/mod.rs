@@ -3,21 +3,13 @@ use actix_web::{
     web::{self, Html},
 };
 use maud::html;
-use search_engine::{SearchEngine, SearchResult};
-use serde::Deserialize;
+use search_engine::{Params, SearchEngine, SearchResult};
 use std::{fs, io};
 
 pub struct AppState {
     pub app_name: String,
     pub search_engine: std::sync::Arc<SearchEngine>,
 }
-
-#[derive(Deserialize)]
-struct Params {
-    limit: Option<usize>,
-}
-
-const DEFAULT_SEARCH_LIMIT: usize = 100;
 
 #[get("/")]
 pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
@@ -65,7 +57,7 @@ pub async fn search_post(
         }
         let result: SearchResult = app_state
             .search_engine
-            .exec_query(route.as_str(), params.limit.unwrap_or(DEFAULT_SEARCH_LIMIT));
+            .exec_query(route.as_str(), params.into_inner().limit);
 
         let html = html! {
             ul {
@@ -81,10 +73,12 @@ pub async fn search_post(
                         hx-target="#content-section"
                         hx-swap="innerHTML"
                         {
-                            (matching_file
-                                .file_name()
-                                .strip_suffix(".md")
-                                .unwrap_or(matching_file.file_path()))
+                            (file_name_to_title(
+                                matching_file
+                                    .file_name()
+                                    .strip_suffix(".md")
+                                    .unwrap_or(matching_file.file_path())
+                            ))
                         }
                     }
                 }
@@ -102,4 +96,15 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
 
     html.replace("{{APPNAME}}", app_name)
         .replace("{{CONTENT}}", content)
+}
+
+fn file_name_to_title(file_name: &str) -> String {
+    let title_case: String = file_name
+        .chars()
+        .take(1)
+        .flat_map(|f| f.to_uppercase())
+        .chain(file_name.chars().skip(1))
+        .collect();
+
+    title_case.replace("_", " ")
 }
