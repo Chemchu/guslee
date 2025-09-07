@@ -17,19 +17,26 @@
     />
     <meta name="view-transition" content="same-origin" />
   </head>
-  <body class="w-full h-dvh">
+  <body class="w-full h-dvh" hx-boost="true">
     <div class="flex flex-row w-full px-4 bg-[#2f3e46] text-[#cad2c5]">
       <div
-        id="left-section"
+        id="list-section"
         class="flex-grow border-r border-[#cad2c5]/30 py-10"
+        hx-target="#list-section"
+        hx-swap="innerHTML"
       >
-        <div>Left column</div>
+        <div
+          hx-get="/search/*?limit=100"
+          hx-trigger="load"
+          hx-target="#list-section"
+        >
+          Loading...
+        </div>
       </div>
       <div class="flex flex-row py-10 w-5/6">
         <div
           id="content-section"
           class="prose prose-invert prose-earthy w-2/3 px-4"
-          hx-boost="true"
           hx-target="#content-section"
           hx-swap="innerHTML"
         >

@@ -1,9 +1,28 @@
 use std::fs;
 use tantivy::{
-    Document, Index, IndexReader, IndexWriter, TantivyDocument,
-    schema::{Field, STORED, Schema, TEXT},
+    Index, IndexReader, IndexWriter, TantivyDocument,
+    schema::{Field, STORED, Schema, TEXT, Value},
 };
 use walkdir::WalkDir;
+
+pub struct SearchResult {
+    pub matching_files: Vec<MatchingFile>,
+}
+
+pub struct MatchingFile {
+    name: String,
+    path: String,
+}
+
+impl MatchingFile {
+    pub fn file_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn file_path(&self) -> &str {
+        &self.path
+    }
+}
 
 pub struct SearchEngine {
     reader: IndexReader,
@@ -59,11 +78,16 @@ impl SearchEngine {
         SearchEngine { reader, index }
     }
 
-    pub fn exec_query(&self, query: &str, result_limit: usize) {
+    pub fn exec_query(&self, query: &str, result_limit: usize) -> SearchResult {
         let searcher = self.reader.searcher();
         let index = &self.index;
         let schema = index.schema();
-        let fields = schema.fields().map(|(field, _field_entry)| field).collect();
+        let fields: Vec<Field> = schema.fields().map(|(field, _field_entry)| field).collect();
+        let title_field: Field = fields
+            .iter()
+            .find(|&f| schema.get_field_name(*f) == "title")
+            .expect("Error while getting 'title' Field")
+            .clone();
 
         let query_parser = tantivy::query::QueryParser::for_index(index, fields);
         let query = query_parser
@@ -77,11 +101,36 @@ impl SearchEngine {
             )
             .expect("Error while searching top documents");
 
-        for (_score, doc_address) in top_docs {
-            let retrieved_doc: TantivyDocument = searcher
-                .doc(doc_address)
-                .expect("Error while retrieving the document");
-            println!("{}", retrieved_doc.to_json(&schema));
+        let docs: Vec<MatchingFile> = top_docs
+            .iter()
+            .map(|(_score, doc_address)| {
+                let retrieved_doc: TantivyDocument = searcher
+                    .doc(*doc_address)
+                    .expect("Error while retrieving the document");
+
+                // Extract the file path
+                let file_path = retrieved_doc
+                    .get_first(title_field)
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
+                // Extract the filename
+                let file_name = std::path::Path::new(&file_path)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
+                MatchingFile {
+                    name: file_name,
+                    path: file_path,
+                }
+            })
+            .collect();
+
+        SearchResult {
+            matching_files: docs,
         }
     }
 }
