@@ -1,7 +1,8 @@
+use lru::LruCache;
 use serde::Deserialize;
-use std::fs;
+use std::{fs, num::NonZeroUsize, sync::Mutex};
 use tantivy::{
-    Index, IndexReader, IndexWriter, Searcher, TantivyDocument,
+    Index, IndexReader, IndexWriter, TantivyDocument,
     schema::{Field, STORED, Schema, TEXT, Value},
 };
 use walkdir::WalkDir;
@@ -29,10 +30,12 @@ impl Limit {
     }
 }
 
+#[derive(Clone)]
 pub struct SearchResult {
     pub matching_files: Vec<MatchingFile>,
 }
 
+#[derive(Clone)]
 pub struct MatchingFile {
     name: String,
     path: String,
@@ -51,6 +54,7 @@ impl MatchingFile {
 pub struct SearchEngine {
     reader: IndexReader,
     index: Index,
+    lru_cache: Mutex<LruCache<String, SearchResult>>,
 }
 
 impl SearchEngine {
@@ -99,73 +103,39 @@ impl SearchEngine {
 
         let reader = index.reader().expect("Error creating the index reader");
 
-        SearchEngine { reader, index }
+        SearchEngine {
+            reader,
+            index,
+            lru_cache: Mutex::new(LruCache::new(
+                NonZeroUsize::new(100).expect("Error creating LRU cache"),
+            )),
+        }
     }
 
     pub fn exec_query(&self, query: &str, result_limit: Option<Limit>) -> SearchResult {
-        let searcher = self.reader.searcher();
-        let index = &self.index;
-        let schema = index.schema();
-        let fields: Vec<Field> = schema.fields().map(|(field, _field_entry)| field).collect();
-        let title_field: Field = *fields
-            .iter()
-            .find(|&&f| schema.get_field_name(f) == "title")
-            .expect("Error while getting 'title' Field");
+        let limit = match result_limit {
+            Some(l) => l.value(),
+            None => DEFAULT_SEARCH_LIMIT.value(),
+        };
+        let cache_key = format!("{}-{}", query, limit);
 
-        let query_parser = tantivy::query::QueryParser::for_index(index, fields);
-        let query = query_parser
-            .parse_query(query)
-            .unwrap_or_else(|_| panic!("Error while parsing the query: {}", query));
+        // Try to get from cache first
+        {
+            let mut cache = self.lru_cache.lock().unwrap();
+            if let Some(val) = cache.get(&cache_key) {
+                return val.clone();
+            }
+        } // Lock is released here
 
-        let top_docs = searcher
-            .search(
-                &query,
-                &tantivy::collector::TopDocs::with_limit(
-                    result_limit.unwrap_or(DEFAULT_SEARCH_LIMIT).value(),
-                ),
-            )
-            .expect("Error while searching top documents");
-
-        let docs: Vec<MatchingFile> = top_docs
-            .iter()
-            .map(|(_score, doc_address)| {
-                let retrieved_doc: TantivyDocument = searcher
-                    .doc(*doc_address)
-                    .expect("Error while retrieving the document");
-
-                // Extract the file path
-                let file_path = retrieved_doc
-                    .get_first(title_field)
-                    .and_then(|value| value.as_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-
-                // Extract the filename
-                let file_name = std::path::Path::new(&file_path)
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-
-                MatchingFile {
-                    name: file_name,
-                    path: file_path,
-                }
-            })
-            .collect();
-
-        SearchResult {
-            matching_files: docs,
-        }
+        // Not in cache, execute query
+        self.exec_query_internal(query, limit)
     }
 
-    fn exec_query_internal(
-        searcher: Searcher,
-        index: &Index,
-        query: &str,
-        result_limit: Option<Limit>,
-    ) -> SearchResult {
-        let schema = index.schema();
+    fn exec_query_internal(&self, query: &str, result_limit: usize) -> SearchResult {
+        let searcher = self.reader.searcher();
+        let index = &self.index;
+        let schema = self.index.schema();
+
         let fields: Vec<Field> = schema.fields().map(|(field, _field_entry)| field).collect();
         let title_field: Field = *fields
             .iter()
@@ -173,16 +143,14 @@ impl SearchEngine {
             .expect("Error while getting 'title' Field");
 
         let query_parser = tantivy::query::QueryParser::for_index(index, fields);
-        let query = query_parser
+        let search_engine_query = query_parser
             .parse_query(query)
             .unwrap_or_else(|_| panic!("Error while parsing the query: {}", query));
 
         let top_docs = searcher
             .search(
-                &query,
-                &tantivy::collector::TopDocs::with_limit(
-                    result_limit.unwrap_or(DEFAULT_SEARCH_LIMIT).value(),
-                ),
+                &search_engine_query,
+                &tantivy::collector::TopDocs::with_limit(result_limit),
             )
             .expect("Error while searching top documents");
 
@@ -214,8 +182,16 @@ impl SearchEngine {
             })
             .collect();
 
-        SearchResult {
+        let search_result = SearchResult {
             matching_files: docs,
-        }
+        };
+
+        let cache_key = format!("{}-{}", query, result_limit);
+        self.lru_cache
+            .lock()
+            .unwrap()
+            .put(cache_key, search_result.clone());
+
+        search_result
     }
 }
