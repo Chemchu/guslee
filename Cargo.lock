@@ -1669,6 +1669,7 @@ dependencies = [
  "lru 0.16.0",
  "serde",
  "tantivy",
+ "tantivy-fst",
  "tempdir",
  "walkdir",
 ]

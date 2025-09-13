@@ -1,10 +1,14 @@
 use lru::LruCache;
 use serde::Deserialize;
+use std::sync::Arc;
 use std::{fs, num::NonZeroUsize, sync::Mutex};
+use tantivy::query::{BooleanQuery, Occur};
 use tantivy::{
     Index, IndexReader, IndexWriter, TantivyDocument,
+    query::RegexQuery,
     schema::{Field, STORED, Schema, TEXT, Value},
 };
+use tantivy_fst::Regex;
 use walkdir::WalkDir;
 
 #[derive(Deserialize, Clone)]
@@ -62,8 +66,6 @@ pub struct SearchEngine {
 impl SearchEngine {
     pub fn new(documents_path: &str, default_docs: Vec<String>) -> SearchEngine {
         let mut schema_builder = Schema::builder();
-
-        // TODO: Create a new tokenizer that replaces "_" and "/" for " "
         schema_builder.add_text_field("title", TEXT | STORED);
         schema_builder.add_text_field("body", TEXT);
         let schema = schema_builder.build();
@@ -155,7 +157,6 @@ impl SearchEngine {
 
     fn exec_query_internal(&self, query: &str, result_limit: usize) -> SearchResult {
         let searcher = self.reader.searcher();
-        let index = &self.index;
         let schema = self.index.schema();
 
         let fields: Vec<Field> = schema.fields().map(|(field, _field_entry)| field).collect();
@@ -163,19 +164,26 @@ impl SearchEngine {
             .iter()
             .find(|&&f| schema.get_field_name(f) == "title")
             .expect("Error while getting 'title' Field");
+        let body_field: Field = *fields
+            .iter()
+            .find(|&&f| schema.get_field_name(f) == "body")
+            .expect("Error while getting 'body' Field");
 
-        let term = tantivy::Term::from_field_text(title_field, query);
-        let fuzzy_query = tantivy::query::FuzzyTermQuery::new(term, 2, true);
+        let regex_pattern =
+            Arc::new(Regex::new(format!(".*{}.*", query).as_str()).expect("Invalid regex pattern"));
 
-        let query_parser = tantivy::query::QueryParser::for_index(index, fields);
-        let search_engine_query = query_parser
-            .parse_query(query)
-            .unwrap_or_else(|_| panic!("Error while parsing the query: {}", query));
+        let title_regex_query = RegexQuery::from_regex(regex_pattern.clone(), title_field);
+        let body_regex_query = RegexQuery::from_regex(regex_pattern.clone(), body_field);
+
+        // Combine them with BooleanQuery
+        let boolean_query = BooleanQuery::new(vec![
+            (Occur::Should, Box::new(title_regex_query)),
+            (Occur::Should, Box::new(body_regex_query)),
+        ]);
 
         let top_docs = searcher
             .search(
-                /*                 &search_engine_query, */
-                &fuzzy_query,
+                &boolean_query,
                 &tantivy::collector::TopDocs::with_limit(result_limit),
             )
             .expect("Error while searching top documents");
