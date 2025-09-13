@@ -7,15 +7,16 @@ use tantivy::{
 };
 use walkdir::WalkDir;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(untagged)]
 pub enum Limit {
     Number(usize),
     String(String),
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Params {
+    pub query: Option<String>,
     pub limit: Option<Limit>,
 }
 
@@ -24,7 +25,7 @@ const DEFAULT_SEARCH_LIMIT: Limit = Limit::Number(100);
 impl Limit {
     pub fn value(&self) -> usize {
         match self {
-            Limit::Number(n) => *n,
+            Limit::Number(val) => *val,
             Limit::String(_val) => DEFAULT_SEARCH_LIMIT.value(),
         }
     }
@@ -55,11 +56,14 @@ pub struct SearchEngine {
     reader: IndexReader,
     index: Index,
     lru_cache: Mutex<LruCache<String, SearchResult>>,
+    default_results: Vec<String>,
 }
 
 impl SearchEngine {
-    pub fn new(documents_path: &str) -> SearchEngine {
+    pub fn new(documents_path: &str, default_docs: Vec<String>) -> SearchEngine {
         let mut schema_builder = Schema::builder();
+
+        // TODO: Create a new tokenizer that replaces "_" and "/" for " "
         schema_builder.add_text_field("title", TEXT | STORED);
         schema_builder.add_text_field("body", TEXT);
         let schema = schema_builder.build();
@@ -86,7 +90,7 @@ impl SearchEngine {
                 match fs::read_to_string(path) {
                     Ok(content) => {
                         let mut doc = TantivyDocument::default();
-                        doc.add_text(title, &file_path);
+                        doc.add_text(title, file_path);
                         doc.add_text(body, &content);
                         index_writer
                             .add_document(doc)
@@ -109,14 +113,32 @@ impl SearchEngine {
             lru_cache: Mutex::new(LruCache::new(
                 NonZeroUsize::new(100).expect("Error creating LRU cache"),
             )),
+            default_results: default_docs,
         }
     }
 
-    pub fn exec_query(&self, query: &str, result_limit: Option<Limit>) -> SearchResult {
-        let limit = match result_limit {
+    pub fn exec_query(&self, params: &Params) -> SearchResult {
+        let limit = match &params.limit {
             Some(l) => l.value(),
             None => DEFAULT_SEARCH_LIMIT.value(),
         };
+
+        let is_empty_query = params.query.is_none()
+            || params.query.as_ref().unwrap().is_empty()
+            || params.query.as_ref().unwrap() == "*";
+
+        if is_empty_query {
+            let cache_key = format!("{}-{}-DefaultPosts", params.query.as_ref().unwrap(), limit);
+            {
+                let mut cache = self.lru_cache.lock().unwrap();
+                if let Some(val) = cache.get(&cache_key) {
+                    return val.clone();
+                }
+            }
+
+            return self.query_default_docs();
+        }
+        let query = params.query.as_ref().unwrap();
         let cache_key = format!("{}-{}", query, limit);
 
         // Try to get from cache first
@@ -142,6 +164,9 @@ impl SearchEngine {
             .find(|&&f| schema.get_field_name(f) == "title")
             .expect("Error while getting 'title' Field");
 
+        let term = tantivy::Term::from_field_text(title_field, query);
+        let fuzzy_query = tantivy::query::FuzzyTermQuery::new(term, 2, true);
+
         let query_parser = tantivy::query::QueryParser::for_index(index, fields);
         let search_engine_query = query_parser
             .parse_query(query)
@@ -149,7 +174,8 @@ impl SearchEngine {
 
         let top_docs = searcher
             .search(
-                &search_engine_query,
+                /*                 &search_engine_query, */
+                &fuzzy_query,
                 &tantivy::collector::TopDocs::with_limit(result_limit),
             )
             .expect("Error while searching top documents");
@@ -193,5 +219,33 @@ impl SearchEngine {
             .put(cache_key, search_result.clone());
 
         search_result
+    }
+
+    fn query_default_docs(&self) -> SearchResult {
+        let files: Vec<MatchingFile> = self
+            .default_results
+            .iter()
+            .map(|file_path| (extract_file_name(file_path.as_str()), file_path))
+            .filter(|(file_name, _path)| file_name.is_some())
+            .map(|(file_name, file_path)| MatchingFile {
+                name: file_name.unwrap(),
+                path: file_path.to_string(),
+            })
+            .collect();
+
+        SearchResult {
+            matching_files: files,
+        }
+    }
+}
+
+fn extract_file_name(path: &str) -> Option<String> {
+    let file_path = std::path::Path::new(path).file_name();
+    match file_path {
+        Some(file_name) => file_name.to_str().map(|s| s.to_string()),
+        None => {
+            eprintln!("File not found in path: {}", path);
+            None
+        }
     }
 }

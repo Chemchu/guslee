@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Html},
 };
 use maud::html;
-use search_engine::{Params, SearchEngine, SearchResult};
+use search_engine::{Params, SearchEngine};
 use std::{fs, io};
 
 pub struct AppState {
@@ -43,25 +43,22 @@ pub async fn post(
     }
 }
 
-#[get("/search/{query}")]
+#[get("/search")]
 pub async fn search_post(
     app_state: web::Data<AppState>,
     req: HttpRequest,
-    route: web::Path<String>,
     params: web::Query<Params>,
 ) -> impl Responder {
     let is_htmx_req = req.headers().get("HX-Request").is_some();
     if is_htmx_req {
-        if route.is_empty() {
-            return Html::new(String::from("Fallback page"));
-        }
-        let result: SearchResult = app_state
+        let matching_files = app_state
             .search_engine
-            .exec_query(route.as_str(), params.into_inner().limit);
+            .exec_query(&params.into_inner())
+            .matching_files;
 
         let html = html! {
             ul {
-                @for matching_file in result.matching_files {
+                @for matching_file in matching_files {
                     li {
                         a href=(format!(
                             "/{}",
