@@ -17,36 +17,47 @@
     />
     <meta name="view-transition" content="same-origin" />
   </head>
-  <body class="w-full h-dvh bg-[#2f3e46] text-[#cad2c5]" hx-boost="true">
+  <body
+    class="flex flex-col w-full h-dvh bg-[#2f3e46] text-[#cad2c5]"
+    hx-boost="true"
+  >
     <div class="w-full flex justify-items-stretch justify-between p-2">
       <span> WELCOME HELLO GUS TEXT PLACEHOLDER FOO BAR </span>
-      <input
-        class="bg-white text-black px-2 py-1 rounded"
-        type="text"
-        name="query"
-        placeholder="Search..."
-        hx-get="/search"
-        hx-vals='{"limit": 100}'
-        hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
-        hx-target="#list-section"
-        hx-swap="innerHTML"
-      />
     </div>
-    <div class="flex flex-row px-4 border-t border-[#cad2c5]/30">
+    <div class="flex-grow flex flex-row w-full border-t border-[#cad2c5]/30">
       <div
-        id="list-section"
-        class="h-screen flex-grow border-r border-[#cad2c5]/30 pt-2"
-        hx-target="#list-section"
-        hx-swap="innerHTML"
+        class="flex flex-col justify-between w-1/4 lg:w-1/5 border-r border-[#cad2c5]/30 pt-2 px-2"
       >
+        <div>
+          <input
+            class="bg-white text-black px-2 py-1 w-full"
+            type="text"
+            name="query"
+            placeholder="Search..."
+            hx-get="/search"
+            hx-vals='{"limit": 100}'
+            hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
+            hx-target="#list-section"
+            hx-swap="innerHTML"
+          />
+        </div>
+
         <div
-          hx-get="/search?query=*&limit=100"
-          hx-trigger="load"
+          id="list-section"
+          class="flex-grow pt-2"
           hx-target="#list-section"
+          hx-swap="innerHTML"
         >
-          Loading...
+          <div
+            hx-get="/search?query=*&limit=100"
+            hx-trigger="load"
+            hx-target="#list-section"
+          >
+            Loading...
+          </div>
         </div>
       </div>
+
       <div class="flex flex-row w-3/4 lg:w-4/5 pt-2">
         <div
           id="content-section"
@@ -61,5 +72,6 @@
         </div>
       </div>
     </div>
+    <div class="border-t border-[#cad2c5]/30 p-2">Fooooter</div>
   </body>
 </html>
