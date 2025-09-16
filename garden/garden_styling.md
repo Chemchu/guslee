@@ -1,4 +1,15 @@
-# Website styling notes
+---
+title: "Styling notes"
+date: "2025-09-15"
+description: "Notes about the styling of this site, including colorschemes and fonts"
+tags:
+  - digital garden
+  - website
+  - styling
+  - style
+---
+
+# My styling notes
 
 ## Website color palette [Earthy Green](https://coolors.co/palette/cad2c5-84a98c-52796f-354f52-2f3e46)
 

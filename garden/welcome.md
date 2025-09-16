@@ -1,3 +1,15 @@
+---
+title: "Welcome to my website"
+date: "2025-09-15"
+description: "Brief introduction to my digital garden"
+tags:
+  - digital garden
+  - website
+  - introduction
+  - rust
+  - htmx
+---
+
 # Welcome to my website
 
 So, you found my website. Probably in Twitter or LinkedIn, right? Yeah,

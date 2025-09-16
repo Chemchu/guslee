@@ -1,5 +1,4 @@
 use lru::LruCache;
-use serde::Deserialize;
 use std::sync::Arc;
 use std::{fs, num::NonZeroUsize, sync::Mutex};
 use tantivy::query::{BooleanQuery, Occur};
@@ -11,50 +10,12 @@ use tantivy::{
 use tantivy_fst::Regex;
 use walkdir::WalkDir;
 
-#[derive(Deserialize, Clone)]
-#[serde(untagged)]
-pub enum Limit {
-    Number(usize),
-    String(String),
-}
+use crate::types::{DEFAULT_SEARCH_LIMIT, SearchResult};
+use crate::types::{MatchingFile, Params};
+use crate::utils::TitleField;
 
-#[derive(Deserialize, Clone)]
-pub struct Params {
-    pub query: Option<String>,
-    pub limit: Option<Limit>,
-}
-
-const DEFAULT_SEARCH_LIMIT: Limit = Limit::Number(100);
-
-impl Limit {
-    pub fn value(&self) -> usize {
-        match self {
-            Limit::Number(val) => *val,
-            Limit::String(_val) => DEFAULT_SEARCH_LIMIT.value(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct SearchResult {
-    pub matching_files: Vec<MatchingFile>,
-}
-
-#[derive(Clone)]
-pub struct MatchingFile {
-    name: String,
-    path: String,
-}
-
-impl MatchingFile {
-    pub fn file_name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn file_path(&self) -> &str {
-        &self.path
-    }
-}
+pub mod types;
+pub mod utils;
 
 pub struct SearchEngine {
     reader: IndexReader,
@@ -202,17 +163,9 @@ impl SearchEngine {
                     .unwrap_or("unknown")
                     .to_string();
 
-                // Extract the filename
-                let file_name = std::path::Path::new(&file_path)
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
+                let title = TitleField::extract(&file_path);
 
-                MatchingFile {
-                    name: file_name,
-                    path: file_path,
-                }
+                MatchingFile::new(title.expect("Post file missing title metadata"), file_path)
             })
             .collect();
 
@@ -233,11 +186,10 @@ impl SearchEngine {
         let files: Vec<MatchingFile> = self
             .default_results
             .iter()
-            .map(|file_path| (extract_file_name(file_path.as_str()), file_path))
-            .filter(|(file_name, _path)| file_name.is_some())
-            .map(|(file_name, file_path)| MatchingFile {
-                name: file_name.unwrap(),
-                path: file_path.to_string(),
+            .map(|file_path| (TitleField::extract(file_path.as_str()), file_path))
+            .filter(|(file_title, _file_path)| file_title.is_some())
+            .map(|(file_title, file_path)| {
+                MatchingFile::new(file_title.unwrap(), file_path.to_string())
             })
             .collect();
 
@@ -245,15 +197,8 @@ impl SearchEngine {
             matching_files: files,
         }
     }
-}
 
-fn extract_file_name(path: &str) -> Option<String> {
-    let file_path = std::path::Path::new(path).file_name();
-    match file_path {
-        Some(file_name) => file_name.to_str().map(|s| s.to_string()),
-        None => {
-            eprintln!("File not found in path: {}", path);
-            None
-        }
+    pub fn set_lru_cache(&mut self, lru_cache: Mutex<LruCache<String, SearchResult>>) {
+        self.lru_cache = lru_cache;
     }
 }

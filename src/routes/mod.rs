@@ -2,8 +2,9 @@ use actix_web::{
     HttpRequest, Responder, get,
     web::{self, Html},
 };
+use markdown::{Constructs, Options, ParseOptions};
 use maud::html;
-use search_engine::{Params, SearchEngine};
+use search_engine::{SearchEngine, types::Params};
 use std::{fs, io};
 
 pub struct AppState {
@@ -15,9 +16,20 @@ pub struct AppState {
 pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
     let content: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/garden/welcome.md"));
 
+    let frontmatter = Options {
+        parse: ParseOptions {
+            constructs: Constructs {
+                frontmatter: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
     Html::new(wrap_markdown_with_whole_page(
         &app_state.app_name,
-        &markdown::to_html(content),
+        &markdown::to_html_with_options(content, &frontmatter).unwrap(),
     ))
 }
 
@@ -29,15 +41,29 @@ pub async fn post(
 ) -> impl Responder {
     let content: io::Result<String> = fs::read_to_string(format!("./garden/{}.md", route));
 
+    let frontmatter = Options {
+        parse: ParseOptions {
+            constructs: Constructs {
+                frontmatter: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
     let is_htmx_req = req.headers().get("HX-Request").is_some();
     if is_htmx_req {
         Html::new(match content {
-            Ok(md) => markdown::to_html(&md),
+            Ok(md) => markdown::to_html_with_options(&md, &frontmatter).unwrap(),
             Err(_err) => String::from("Fallback page"),
         })
     } else {
         Html::new(match content {
-            Ok(md) => wrap_markdown_with_whole_page(&app_state.app_name, &markdown::to_html(&md)),
+            Ok(md) => wrap_markdown_with_whole_page(
+                &app_state.app_name,
+                &markdown::to_html_with_options(&md, &frontmatter).unwrap(),
+            ),
             Err(_err) => String::from("Fallback page"),
         })
     }
@@ -70,12 +96,7 @@ pub async fn search_post(
                         hx-target="#content-section"
                         hx-swap="innerHTML"
                         {
-                            (file_name_to_title(
-                                matching_file
-                                    .file_name()
-                                    .strip_suffix(".md")
-                                    .unwrap_or(matching_file.file_path())
-                            ))
+                            (matching_file.file_name())
                         }
                     }
                 }
@@ -93,15 +114,4 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
 
     html.replace("{{APPNAME}}", app_name)
         .replace("{{CONTENT}}", content)
-}
-
-fn file_name_to_title(file_name: &str) -> String {
-    let title_case: String = file_name
-        .chars()
-        .take(1)
-        .flat_map(|f| f.to_uppercase())
-        .chain(file_name.chars().skip(1))
-        .collect();
-
-    title_case.replace("_", " ")
 }
