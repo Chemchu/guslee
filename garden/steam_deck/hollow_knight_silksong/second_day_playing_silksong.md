@@ -1,5 +1,5 @@
 ---
-title: "Hollow Knight Silksong - First impression"
+title: "Hollow Knight Silksong - Second impression"
 date: "2025-09-15"
 description: "Brief description of Silksong"
 tags:

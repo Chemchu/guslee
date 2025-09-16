@@ -1,7 +1,7 @@
 use lru::LruCache;
 use std::sync::Arc;
 use std::{fs, num::NonZeroUsize, sync::Mutex};
-use tantivy::query::{BooleanQuery, Occur};
+use tantivy::query::{BooleanQuery, Occur, Query};
 use tantivy::{
     Index, IndexReader, IndexWriter, TantivyDocument,
     query::RegexQuery,
@@ -113,7 +113,7 @@ impl SearchEngine {
         } // Lock is released here
 
         // Not in cache, execute query
-        self.exec_query_internal(query, limit)
+        self.exec_query_internal(query.to_lowercase().as_str(), limit)
     }
 
     fn exec_query_internal(&self, query: &str, result_limit: usize) -> SearchResult {
@@ -130,16 +130,36 @@ impl SearchEngine {
             .find(|&&f| schema.get_field_name(f) == "body")
             .expect("Error while getting 'body' Field");
 
-        let regex_pattern =
-            Arc::new(Regex::new(format!(".*{}.*", query).as_str()).expect("Invalid regex pattern"));
+        let regex_queries: Result<Vec<_>, _> = query
+            .split_whitespace()
+            .map(|term| {
+                let pattern = format!(".*{}.*", term);
+                Regex::new(&pattern).map_err(|_| "Invalid regex pattern")
+            })
+            .collect();
 
-        let title_regex_query = RegexQuery::from_regex(regex_pattern.clone(), title_field);
-        let body_regex_query = RegexQuery::from_regex(regex_pattern.clone(), body_field);
+        let regex_queries: Vec<Regex> = regex_queries.expect("Invalid regex patterns");
+
+        // Create boolean queries that require ALL terms to be present
+        let mut title_clauses = Vec::new();
+        let mut body_clauses = Vec::new();
+
+        for regex in regex_queries {
+            let regex_arc: Arc<Regex> = Arc::new(regex);
+            let title_regex_query = RegexQuery::from_regex(regex_arc.clone(), title_field);
+            let body_regex_query = RegexQuery::from_regex(regex_arc, body_field);
+
+            title_clauses.push((Occur::Must, Box::new(title_regex_query) as Box<dyn Query>));
+            body_clauses.push((Occur::Must, Box::new(body_regex_query) as Box<dyn Query>));
+        }
+
+        let title_boolean = BooleanQuery::new(title_clauses);
+        let body_boolean = BooleanQuery::new(body_clauses);
 
         // Combine them with BooleanQuery
         let boolean_query = BooleanQuery::new(vec![
-            (Occur::Should, Box::new(title_regex_query)),
-            (Occur::Should, Box::new(body_regex_query)),
+            (Occur::Should, Box::new(title_boolean)),
+            (Occur::Should, Box::new(body_boolean)),
         ]);
 
         let top_docs = searcher
