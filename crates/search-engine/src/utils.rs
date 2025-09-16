@@ -3,37 +3,42 @@ use std::fs;
 use gray_matter::Matter;
 use serde::Deserialize;
 
+pub struct TitleField;
+pub struct TagsField;
+
 #[derive(Deserialize, Debug, Clone)]
 struct MdMetadata {
     title: String,
     tags: Vec<String>,
 }
 
-pub struct TitleField;
-pub struct TagsField;
-
-impl TitleField {
-    pub const ID: u8 = 1;
-}
-impl TagsField {
-    pub const ID: u8 = 2;
+pub trait MetadataField<T> {
+    fn data(path: &str) -> T;
 }
 
-macro_rules! define_field_extractor {
-    ($field_type:ty, $return_type:ty, $field_access:expr) => {
-        impl $field_type {
-            pub fn extract(path: &str) -> Option<$return_type> {
-                let metadata = extract_metadata(path)?;
-                Some($field_access(&metadata))
-            }
+impl MetadataField<Option<String>> for TitleField {
+    fn data(path: &str) -> Option<String> {
+        match extract_metadata_from_file_in_path(path) {
+            Some(metadata) => Some(metadata.title),
+            None => None,
         }
-    };
+    }
 }
 
-define_field_extractor!(TitleField, String, |m: &MdMetadata| m.title.clone());
-define_field_extractor!(TagsField, Vec<String>, |m: &MdMetadata| m.tags.clone());
+impl MetadataField<Option<Vec<String>>> for TagsField {
+    fn data(path: &str) -> Option<Vec<String>> {
+        match extract_metadata_from_file_in_path(path) {
+            Some(metadata) => Some(metadata.tags),
+            None => None,
+        }
+    }
+}
 
-fn extract_metadata(markdown_path: &str) -> Option<MdMetadata> {
+pub fn extract_metadata<F: MetadataField<T>, T>(path: &str) -> T {
+    F::data(path)
+}
+
+fn extract_metadata_from_file_in_path(markdown_path: &str) -> Option<MdMetadata> {
     use gray_matter::engine::YAML;
     let matter = Matter::<YAML>::new();
 

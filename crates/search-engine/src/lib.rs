@@ -12,7 +12,7 @@ use walkdir::WalkDir;
 
 use crate::types::{DEFAULT_SEARCH_LIMIT, SearchResult};
 use crate::types::{MatchingFile, Params};
-use crate::utils::TitleField;
+use crate::utils::{TitleField, extract_metadata};
 
 pub mod types;
 pub mod utils;
@@ -163,7 +163,7 @@ impl SearchEngine {
                     .unwrap_or("unknown")
                     .to_string();
 
-                let title = TitleField::extract(&file_path);
+                let title = extract_metadata::<TitleField, Option<String>>(&file_path);
 
                 MatchingFile::new(title.expect("Post file missing title metadata"), file_path)
             })
@@ -186,7 +186,12 @@ impl SearchEngine {
         let files: Vec<MatchingFile> = self
             .default_results
             .iter()
-            .map(|file_path| (TitleField::extract(file_path.as_str()), file_path))
+            .map(|file_path| {
+                (
+                    extract_metadata::<TitleField, Option<String>>(file_path.as_str()),
+                    file_path,
+                )
+            })
             .filter(|(file_title, _file_path)| file_title.is_some())
             .map(|(file_title, file_path)| {
                 MatchingFile::new(file_title.unwrap(), file_path.to_string())
