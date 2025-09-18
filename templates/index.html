@@ -18,15 +18,17 @@
     <meta name="view-transition" content="same-origin" />
   </head>
   <body
-    class="flex flex-col w-full h-dvh bg-[#2f3e46] text-[#cad2c5]"
+    class="flex flex-col w-full h-dvh max-h-dvh bg-[#2f3e46] text-[#cad2c5]"
     hx-boost="true"
   >
     <div class="w-full flex justify-items-stretch justify-between p-2">
       <span> WELCOME HELLO GUS TEXT PLACEHOLDER FOO BAR </span>
     </div>
-    <div class="flex-grow flex flex-row w-full border-t border-[#cad2c5]/30">
+    <div
+      class="flex-grow flex flex-row w-full border-t border-[#cad2c5]/30 min-h-0"
+    >
       <div
-        class="flex flex-col justify-between w-1/4 lg:w-1/5 border-r border-[#cad2c5]/30 pt-2 px-2"
+        class="flex flex-col justify-between w-1/4 lg:w-1/5 border-r border-[#cad2c5]/30 pt-2 px-2 min-h-0"
       >
         <div>
           <input
@@ -44,7 +46,7 @@
 
         <div
           id="list-section"
-          class="flex-grow pt-2"
+          class="flex-grow pt-2 overflow-auto"
           hx-target="#list-section"
           hx-swap="innerHTML"
         >
@@ -58,10 +60,10 @@
         </div>
       </div>
 
-      <div class="flex flex-row w-3/4 lg:w-4/5 pt-2">
+      <div class="flex flex-row w-3/4 lg:w-4/5 pt-2 min-h-0">
         <div
           id="content-section"
-          class="prose prose-invert prose-earthy lg:w-2/3 px-4"
+          class="prose prose-invert prose-earthy lg:w-2/3 px-4 overflow-auto"
           hx-target="#content-section"
           hx-swap="innerHTML"
         >
