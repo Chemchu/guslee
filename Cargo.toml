@@ -17,3 +17,11 @@ simple_logger = "5.0"
 log = "0.4"
 maud = { version = "0.27.0", features = ["actix-web"] }
 serde = { version = "1.0", features = ["derive"] }
+surrealdb = { version = "2.3.10", features = ["kv-mem"] }
+
+[profile.release]
+lto = true
+strip = true
+opt-level = 3
+panic = 'abort'
+codegen-units = 1

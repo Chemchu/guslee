@@ -1,53 +1,38 @@
 use std::fs;
 
 use gray_matter::Matter;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub struct TitleField;
 pub struct TagsField;
 
-#[derive(Deserialize, Debug, Clone)]
-struct MdMetadata {
-    title: String,
-    tags: Vec<String>,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MdMetadata {
+    pub title: String,
+    pub description: String,
+    pub tags: Vec<String>,
+    pub date: String,
 }
 
-pub trait MetadataField<T> {
-    fn data(path: &str) -> T;
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Post {
+    pub file_name: String,
+    pub file_path: String,
+    pub metadata: MdMetadata,
+    pub content: String,
 }
 
-impl MetadataField<Option<String>> for TitleField {
-    fn data(path: &str) -> Option<String> {
-        match extract_metadata_from_file_in_path(path) {
-            Some(metadata) => Some(metadata.title),
-            None => None,
-        }
-    }
-}
-
-impl MetadataField<Option<Vec<String>>> for TagsField {
-    fn data(path: &str) -> Option<Vec<String>> {
-        match extract_metadata_from_file_in_path(path) {
-            Some(metadata) => Some(metadata.tags),
-            None => None,
-        }
-    }
-}
-
-pub fn extract_metadata<F: MetadataField<T>, T>(path: &str) -> T {
-    F::data(path)
-}
-
-fn extract_metadata_from_file_in_path(markdown_path: &str) -> Option<MdMetadata> {
+pub fn extract_full_metadata(post_path: &str) -> Option<MdMetadata> {
     use gray_matter::engine::YAML;
     let matter = Matter::<YAML>::new();
+    let content = fs::read_to_string(post_path).ok()?;
 
-    let content = fs::read_to_string(format!("./garden/{}", markdown_path));
-    match content {
-        Ok(c) => {
-            let result_with_struct = matter.parse::<MdMetadata>(c.as_str()).unwrap();
-            result_with_struct.data
+    match matter.parse::<MdMetadata>(&content) {
+        Ok(result) => result.data,
+        Err(e) => {
+            eprintln!("Failed to parse frontmatter: {:?}", e);
+            eprintln!("Content: {}", content);
+            None
         }
-        Err(_e) => None,
     }
 }

@@ -12,10 +12,8 @@ mod routes;
 async fn main() -> std::io::Result<()> {
     simple_logger::SimpleLogger::new()
         .with_level(log::LevelFilter::Info) // Only show INFO and above (no DEBUG/TRACE)
-        .with_module_level("tantivy", log::LevelFilter::Warn) // Only warnings/errors from tantivy
         .with_module_level("actix_server", log::LevelFilter::Warn) // Only warnings/errors from actix_server
         .with_module_level("actix_web", log::LevelFilter::Info) // Keep actix_web info (for HTTP logs)
-        .with_module_level("mio", log::LevelFilter::Warn) // Suppress mio logs
         .init()
         .unwrap();
 
@@ -23,10 +21,14 @@ async fn main() -> std::io::Result<()> {
 
     info!("Creating in-memory full-text search engine...");
     let posts_path = format!("{}/garden", env!("CARGO_MANIFEST_DIR"));
-    let search_engine = Arc::new(SearchEngine::new(
-        &posts_path,
-        vec!["welcome.md".to_string(), "hello.md".to_string()],
-    ));
+    let search_engine = Arc::new(
+        SearchEngine::new(
+            &posts_path,
+            vec!["welcome.md".to_string(), "hello.md".to_string()],
+        )
+        .await,
+    );
+
     info!("Search engine created correctly");
     info!("🌐 Server starting on http://127.0.0.1:3000");
 

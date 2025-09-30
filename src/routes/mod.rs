@@ -80,6 +80,7 @@ pub async fn search_post(
         let matching_files = app_state
             .search_engine
             .exec_query(&params.into_inner())
+            .await
             .matching_files;
 
         let html = html! {
