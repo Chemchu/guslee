@@ -65,7 +65,7 @@ impl SearchEngine {
             DEFINE INDEX file_path_index ON TABLE posts COLUMNS file_path UNIQUE;
 
             -- Define a custom analyzer
-            DEFINE ANALYZER full_text_analyzer TOKENIZERS blank FILTERS lowercase, ascii;
+            DEFINE ANALYZER full_text_analyzer TOKENIZERS class FILTERS lowercase, ascii, edgengram(2, 15);
             
             -- Create a full-text search index
             DEFINE INDEX ml_title ON TABLE posts FIELDS metadata.title SEARCH ANALYZER full_text_analyzer BM25 HIGHLIGHTS;
@@ -91,7 +91,8 @@ impl SearchEngine {
 
         let is_empty_query = params.query.is_none()
             || params.query.as_ref().unwrap().is_empty()
-            || params.query.as_ref().unwrap() == "*";
+            || params.query.as_ref().unwrap() == "*"
+            || params.query.as_ref().unwrap().len() < 3;
 
         if is_empty_query {
             let cache_key = format!("{}-{}-DefaultPosts", params.query.as_ref().unwrap(), limit);
