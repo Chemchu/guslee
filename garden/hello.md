@@ -8,6 +8,10 @@ tags:
   - introduction
 ---
 
-# My first flower
+# Well, Hello world
 
-This is the first markdown in my garden. I am still figuring things out
+Hi! Good to see you here. If you are looking for some cool information or
+anything interesting in my blog site, I would suggest you to go to any other
+blog post. I honestly just wanted to say "hello world!" in here. That's it.
+
+See you around!
