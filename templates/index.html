@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{APPNAME}}</title>
     <script src="/_static/htmx.min.js"></script>
+    <script src="/_static/vis-network.min.js"></script>
 
     <link rel="stylesheet" href="/_static/compiled.css" />
     <link rel="icon" type="image/x-icon" href="/_static/favicon.ico" />
@@ -18,19 +19,19 @@
     <meta name="view-transition" content="same-origin" />
   </head>
   <body
-    class="flex flex-col w-full h-dvh max-h-dvh bg-[#2f3e46] text-[#cad2c5]"
+    class="flex flex-col w-full h-dvh max-h-dvh bg-background-color text-text-color"
     hx-boost="true"
   >
     <div class="w-full flex justify-items-stretch justify-between p-2">
       <span> WELCOME HELLO GUS TEXT PLACEHOLDER FOO BAR </span>
     </div>
     <div
-      class="flex-grow flex flex-row w-full border-t border-[#cad2c5]/30 min-h-0"
+      class="flex-grow flex flex-row w-full border-t border-shade-color min-h-0"
     >
       <div
-        class="flex flex-col justify-between w-1/4 lg:w-1/5 border-r border-[#cad2c5]/30 pt-2 px-2 min-h-0"
+        class="flex flex-col justify-between w-1/4 lg:w-1/5 border-r border-shade-color pt-2 px-2 min-h-0"
       >
-        <div>
+        <div class="bg-white">
           <input
             class="bg-white text-black px-2 py-1 w-full"
             type="text"
@@ -63,7 +64,7 @@
       <div class="flex flex-row w-3/4 lg:w-4/5 pt-2 min-h-0">
         <div
           id="content-section"
-          class="prose prose-invert prose-earthy lg:w-2/3 px-4 overflow-auto"
+          class="prose prose-theme lg:w-2/3 px-4 overflow-auto"
           hx-target="#content-section"
           hx-swap="innerHTML"
         >
@@ -74,6 +75,6 @@
         </div>
       </div>
     </div>
-    <div class="border-t border-[#cad2c5]/30 p-2">Fooooter</div>
+    <div class="border-t border-shade-color p-2">Fooooter</div>
   </body>
 </html>
