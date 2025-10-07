@@ -8,4 +8,4 @@ walkdir = "2.5.0"
 serde = { version = "1.0", features = ["derive"] }
 lru = "0.16.0"
 gray_matter = "0.3.2"
-surrealdb = { version = "2.3.10", features = ["kv-mem"] }
+surrealdb = { version = "2.3.10", features = ["kv-mem"], default-features = false }

@@ -29,7 +29,8 @@
       class="flex-grow flex flex-row w-full border-t border-shade-color min-h-0"
     >
       <div
-        class="flex flex-col justify-between w-1/4 lg:w-1/5 border-r border-shade-color pt-2 px-2 min-h-0"
+        id="left-section"
+        class="flex flex-col justify-between min-w-3xs w-1/4 lg:w-1/5 border-r border-shade-color pt-2 px-2 min-h-0"
       >
         <div class="bg-white">
           <input
@@ -61,16 +62,16 @@
         </div>
       </div>
 
-      <div class="flex flex-row w-3/4 lg:w-4/5 pt-2 min-h-0">
+      <div class="flex flex-row justify-between w-3/4 lg:w-4/5 pt-2 min-h-0">
         <div
           id="content-section"
-          class="prose prose-theme lg:w-2/3 px-4 overflow-auto"
+          class="prose prose-theme max-w-4xl px-4 overflow-auto"
           hx-target="#content-section"
           hx-swap="innerHTML"
         >
           {{CONTENT}}
         </div>
-        <div id="right-section" class="lg:flex-grow hidden lg:block">
+        <div id="right-section" class="hidden lg:block w-full">
           Right column
         </div>
       </div>
