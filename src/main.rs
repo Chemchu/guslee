@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use actix_web::{App, HttpServer, middleware::Logger, web};
-use chess_module::ChessModule;
 use log::info;
 use search_engine::SearchEngine;
 
@@ -40,9 +39,6 @@ async fn main() -> std::io::Result<()> {
     info!("Search engine created correctly");
     info!("🌐 Server starting on http://127.0.0.1:3000");
 
-    // TODO: Move the next chess function to an endpoint
-    ChessModule::get_player_data("chemchuu");
-
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::new("%s %r - %Dms"))
@@ -52,8 +48,9 @@ async fn main() -> std::io::Result<()> {
                 search_engine: Arc::clone(&search_engine),
             }))
             .service(routes::landing)
+            .service(routes::chess_stats_page)
             .service(routes::search_post)
-            .service(routes::post)
+            .service(routes::post) // This service should be last because it matches any string
     })
     .bind(("127.0.0.1", 3000))?
     .run()

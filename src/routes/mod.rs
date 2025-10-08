@@ -2,6 +2,7 @@ use actix_web::{
     HttpRequest, Responder, get,
     web::{self, Html},
 };
+use chess_module::ChessModule;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::html;
 use search_engine::{SearchEngine, types::Params};
@@ -115,4 +116,39 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
 
     html.replace("{{APPNAME}}", app_name)
         .replace("{{CONTENT}}", content)
+}
+
+#[get("/chess/stats/{game_mode}")]
+pub async fn chess_stats_page(path: web::Path<String>) -> impl Responder {
+    let game_mode = path.into_inner();
+    let player_name = "chemchuu";
+    let player_data = ChessModule::get_player_data(player_name);
+    let player_stats = ChessModule::get_player_stats_by_game_mode(player_name, game_mode.as_str());
+
+    if player_data.is_none() || player_stats.is_none() {
+        println!("{}", player_data.is_none());
+        println!("{}", player_stats.is_none());
+        let fallback_html: &str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/templates/chess_stats_fallback.html"
+        ));
+
+        Html::new(fallback_html);
+    };
+
+    let html: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/templates/chess_stats.html"
+    ));
+
+    let html_stats = html! {
+        div {
+            "Last " (player_stats.unwrap().stats.count) " games"
+        }
+    };
+
+    /* html.replace("{{APPNAME}}", player_data.unwrap())
+    .replace("{{CONTENT}}", player_stats.unwrap()) */
+
+    html_stats
 }
