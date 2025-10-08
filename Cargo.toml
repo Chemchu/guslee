@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/search-engine",
+    "crates/chess-module",
 ]
 
 [package]
@@ -10,6 +11,7 @@ edition = "2024"
 
 [dependencies]
 search-engine = {path = "crates/search-engine"}
+chess-module = {path = "crates/chess-module"}
 actix-files = "0.6.7"
 actix-web = "4.11.0"
 markdown = "1.0.0"

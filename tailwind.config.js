@@ -26,9 +26,9 @@ module.exports = {
             "--tw-prose-lead": "#DBDFE5", // Lead text
             "--tw-prose-bold": "#DBDFE5", // Bold text
             "--tw-prose-links": "#F58A07", // Links
-            "--tw-prose-counters": "#00ADB5", // counters
-            "--tw-prose-bullets": "#00ADB5", // Bullets
-            "--tw-prose-hr": "#cad2c5", // Horizontal rules
+            "--tw-prose-counters": "#F58A07", // counters
+            "--tw-prose-bullets": "#F58A07", // Bullets
+            "--tw-prose-hr": "#F58A07", // Horizontal rules
             "--tw-prose-quotes": "#DBDFE5", // Quotes
             "--tw-prose-quote-borders": "#F58A07", // Quote borders
             "--tw-prose-captions": "#52796f", // Captions

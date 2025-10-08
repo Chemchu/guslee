@@ -32,18 +32,39 @@
         id="left-section"
         class="flex flex-col justify-between min-w-3xs w-1/4 lg:w-1/5 border-r border-shade-color pt-2 px-2 min-h-0"
       >
-        <div class="bg-white">
+        <div
+          class="flex justify-between border border-shade-color focus:border-primary-color"
+        >
           <input
-            class="bg-white text-black px-2 py-1 w-full"
+            class="w-full px-2 py-1 focus:outline-hidden"
             type="text"
             name="query"
-            placeholder="Search..."
+            placeholder="Search any post..."
             hx-get="/search"
             hx-vals='{"limit": 100}'
             hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
             hx-target="#list-section"
             hx-swap="innerHTML"
           />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="cursor-pointer w-8 h-8 px-1 opacity-30 hover:opacity-80"
+            hx-get="/search"
+            hx-vals='js:{"limit": 100, "query": document.querySelector("input[name=query]").value}'
+            hx-trigger="click"
+            hx-target="#list-section"
+            hx-swap="innerHTML"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+            />
+          </svg>
         </div>
 
         <div
@@ -62,16 +83,19 @@
         </div>
       </div>
 
-      <div class="flex flex-row justify-between w-3/4 lg:w-4/5 pt-2 min-h-0">
+      <div class="flex flex-row justify-between w-3/4 lg:w-4/5 min-h-0">
         <div
           id="content-section"
-          class="prose prose-theme max-w-4xl px-4 overflow-auto"
+          class="prose prose-theme max-w-4xl px-4 pt-2 overflow-auto"
           hx-target="#content-section"
           hx-swap="innerHTML"
         >
           {{CONTENT}}
         </div>
-        <div id="right-section" class="hidden lg:block w-full">
+        <div
+          id="right-section"
+          class="hidden lg:block min-w-3xs max-w-md border-l border-shade-color"
+        >
           Right column
         </div>
       </div>
