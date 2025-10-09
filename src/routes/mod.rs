@@ -8,6 +8,8 @@ use maud::html;
 use search_engine::{SearchEngine, types::Params};
 use std::{fs, io};
 
+const PLAYER_NAME: &str = "chemchuu";
+
 pub struct AppState {
     pub app_name: String,
     pub search_engine: std::sync::Arc<SearchEngine>,
@@ -121,34 +123,43 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
 #[get("/chess/stats/{game_mode}")]
 pub async fn chess_stats_page(path: web::Path<String>) -> impl Responder {
     let game_mode = path.into_inner();
-    let player_name = "chemchuu";
-    let player_data = ChessModule::get_player_data(player_name);
-    let player_stats = ChessModule::get_player_stats_by_game_mode(player_name, game_mode.as_str());
+    let player_data = ChessModule::get_player_data(PLAYER_NAME);
+    let player_stats = ChessModule::get_player_stats_by_game_mode(PLAYER_NAME, game_mode.as_str());
 
     if player_data.is_none() || player_stats.is_none() {
-        println!("{}", player_data.is_none());
-        println!("{}", player_stats.is_none());
         let fallback_html: &str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/templates/chess_stats_fallback.html"
+            "/templates/chess_stats_fallback.md"
         ));
 
-        Html::new(fallback_html);
+        Html::new(markdown::to_html(fallback_html));
     };
 
-    let html: &str = include_str!(concat!(
+    let data = player_data.unwrap();
+    let stats = player_stats.unwrap();
+
+    let md: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/templates/chess_stats.html"
+        "/templates/chess_stats.md"
     ));
 
-    let html_stats = html! {
-        div {
-            "Last " (player_stats.unwrap().stats.count) " games"
-        }
-    };
-
-    /* html.replace("{{APPNAME}}", player_data.unwrap())
-    .replace("{{CONTENT}}", player_stats.unwrap()) */
-
-    html_stats
+    Html::new(markdown::to_html(
+        md.replace(
+            "{{CURRENT_RATING}}",
+            stats.stats.rating_last.to_string().as_str(),
+        )
+        .replace(
+            "{{PLAYED_GAMES_COUNT}}",
+            stats.stats.count.to_string().as_str(),
+        )
+        .replace(
+            "{{PLAYED_GAMES_COUNT_WHITE}}",
+            stats.stats.white_game_count.to_string().as_str(),
+        )
+        .replace(
+            "{{PLAYED_GAMES_COUNT_BLACK}}",
+            stats.stats.black_game_count.to_string().as_str(),
+        )
+        .as_str(),
+    ))
 }
