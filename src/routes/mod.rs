@@ -2,10 +2,15 @@ use actix_web::{
     HttpRequest, Responder, get,
     web::{self, Html},
 };
+use cached::proc_macro::cached;
 use chess_module::ChessModule;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::html;
-use search_engine::{SearchEngine, types::Params};
+use search_engine::{
+    SearchEngine,
+    types::{DEFAULT_SEARCH_LIMIT, Params},
+};
+use std::time::Duration;
 use std::{fs, io};
 
 const PLAYER_NAME: &str = "chemchuu";
@@ -41,7 +46,7 @@ pub async fn post(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     route: web::Path<String>,
-) -> impl Responder {
+) -> Html {
     let content: io::Result<String> = fs::read_to_string(format!("./garden/{}.md", route));
 
     let frontmatter = Options {
@@ -72,12 +77,27 @@ pub async fn post(
     }
 }
 
+#[cached(
+    key = "String",
+    convert = r##"{ 
+        format!(
+            "{}:{}",
+            params.clone().query.clone().unwrap_or("empty".to_string()),
+            params
+                .clone()
+                .limit
+                .clone()
+                .unwrap_or(DEFAULT_SEARCH_LIMIT)
+                .value()
+        )
+    }"##
+)]
 #[get("/search")]
 pub async fn search_post(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     params: web::Query<Params>,
-) -> impl Responder {
+) -> Html {
     let is_htmx_req = req.headers().get("HX-Request").is_some();
     if is_htmx_req {
         let matching_files = app_state
@@ -120,8 +140,9 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
         .replace("{{CONTENT}}", content)
 }
 
+#[cached(time = 3600, key = "String", convert = r#"{ path.clone() }"#)]
 #[get("/chess/stats/{game_mode}")]
-pub async fn chess_stats_page(path: web::Path<String>) -> impl Responder {
+pub async fn chess_stats_page(path: web::Path<String>) -> Html {
     let game_mode = path.into_inner();
     let player_data = ChessModule::get_player_data(PLAYER_NAME);
     let player_stats = ChessModule::get_player_stats_by_game_mode(PLAYER_NAME, game_mode.as_str());
@@ -132,7 +153,7 @@ pub async fn chess_stats_page(path: web::Path<String>) -> impl Responder {
             "/templates/chess_stats_fallback.md"
         ));
 
-        Html::new(markdown::to_html(fallback_html));
+        return Html::new(markdown::to_html(fallback_html));
     };
 
     let data = player_data.unwrap();

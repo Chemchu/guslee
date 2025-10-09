@@ -1,5 +1,4 @@
-use lru::LruCache;
-use std::{fs, num::NonZeroUsize, sync::Mutex};
+use std::fs;
 use surrealdb::engine::local::{Db, Mem};
 use surrealdb::{Response, Surreal};
 use walkdir::WalkDir;
@@ -13,7 +12,6 @@ pub mod utils;
 
 pub struct SearchEngine {
     db: Surreal<Db>,
-    lru_cache: Mutex<LruCache<String, SearchResult>>,
     default_results: Vec<String>,
 }
 
@@ -76,9 +74,6 @@ impl SearchEngine {
 
         SearchEngine {
             db,
-            lru_cache: Mutex::new(LruCache::new(
-                NonZeroUsize::new(100).expect("Error creating LRU cache"),
-            )),
             default_results: default_docs,
         }
     }
@@ -95,28 +90,10 @@ impl SearchEngine {
             || params.query.as_ref().unwrap().len() < 3;
 
         if is_empty_query {
-            let cache_key = format!("{}-{}-DefaultPosts", params.query.as_ref().unwrap(), limit);
-            {
-                let mut cache = self.lru_cache.lock().unwrap();
-                if let Some(val) = cache.get(&cache_key) {
-                    return val.clone();
-                }
-            }
-
             return self.query_default_docs().await;
         }
+
         let query = params.query.as_ref().unwrap();
-        let cache_key = format!("{}-{}", query, limit);
-
-        // Try to get from cache first
-        {
-            let mut cache = self.lru_cache.lock().unwrap();
-            if let Some(val) = cache.get(&cache_key) {
-                return val.clone();
-            }
-        } // Lock is released here
-
-        // Not in cache, execute query
         self.exec_query_internal(query.to_lowercase().as_str(), limit)
             .await
     }
@@ -132,28 +109,21 @@ impl SearchEngine {
                 FROM posts 
                 WHERE metadata.title @0@ '{}' 
                    OR content @1@ '{}'
-                ORDER BY combined_score DESC",
-                query, query
+                ORDER BY combined_score DESC
+                LIMIT {}",
+                query, query, result_limit
             ))
             .await
             .unwrap();
 
         let docs: Vec<Post> = response.take(0).unwrap();
 
-        let search_result = SearchResult {
+        SearchResult {
             matching_files: docs
                 .iter()
                 .map(|post| MatchingFile::new(post.metadata.title.clone(), post.file_path.clone()))
                 .collect(),
-        };
-
-        let cache_key = format!("{}-{}", query, result_limit);
-        self.lru_cache
-            .lock()
-            .unwrap()
-            .put(cache_key, search_result.clone());
-
-        search_result
+        }
     }
 
     async fn query_default_docs(&self) -> SearchResult {
@@ -182,9 +152,5 @@ impl SearchEngine {
         SearchResult {
             matching_files: files,
         }
-    }
-
-    pub fn set_lru_cache(&mut self, lru_cache: Mutex<LruCache<String, SearchResult>>) {
-        self.lru_cache = lru_cache;
     }
 }
