@@ -2,6 +2,7 @@
 title: "Expedition 33 - First impression"
 date: "2025-09-15"
 description: "Brief description of Expedition 33"
+topic: gaming
 tags:
   - gaming
   - steam

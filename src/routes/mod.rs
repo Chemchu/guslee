@@ -82,7 +82,11 @@ pub async fn post(
     convert = r##"{ 
         format!(
             "{}:{}",
-            params.clone().query.clone().unwrap_or("empty".to_string()),
+            params
+                .clone()
+                .query
+                .clone()
+                .unwrap_or("empty".to_string()),
             params
                 .clone()
                 .limit

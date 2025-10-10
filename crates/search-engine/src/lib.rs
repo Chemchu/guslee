@@ -1,5 +1,7 @@
 use std::fs;
-use surrealdb::engine::local::{Db, Mem};
+use surrealdb::engine::any::Any;
+#[cfg(debug_assertions)]
+use surrealdb::engine::any::connect;
 use surrealdb::{Response, Surreal};
 use walkdir::WalkDir;
 
@@ -11,7 +13,7 @@ pub mod types;
 pub mod utils;
 
 pub struct SearchEngine {
-    db: Surreal<Db>,
+    db: Surreal<Any>,
     default_results: Vec<String>,
 }
 
@@ -48,7 +50,13 @@ impl SearchEngine {
                 }
             }
         }
-        let db = Surreal::new::<Mem>(()).await.unwrap();
+
+        #[cfg(debug_assertions)]
+        let db = connect("ws://127.0.0.1:8000").await.unwrap();
+
+        #[cfg(not(debug_assertions))]
+        let db = connect("mem://").await.unwrap();
+
         db.use_ns("guslee").use_db("guslee").await.unwrap();
         let _  = db.query(
             "DEFINE TABLE posts SCHEMAFULL;
@@ -57,6 +65,7 @@ impl SearchEngine {
             DEFINE FIELD metadata ON posts TYPE object;
             DEFINE FIELD metadata.title ON posts TYPE string;
             DEFINE FIELD metadata.description ON posts TYPE string;
+            DEFINE FIELD metadata.topic ON posts TYPE option<string>;
             DEFINE FIELD metadata.tags ON posts TYPE array<string>;
             DEFINE FIELD metadata.date ON posts TYPE string;
             DEFINE FIELD content ON posts TYPE string;

@@ -7,4 +7,4 @@ edition = "2024"
 walkdir = "2.5.0"
 serde = { version = "1.0", features = ["derive"] }
 gray_matter = "0.3.2"
-surrealdb = { version = "2.3.10", features = ["kv-mem"], default-features = false }
+surrealdb = { version = "2.3.10", features = ["kv-mem", "protocol-ws"], default-features = false }
