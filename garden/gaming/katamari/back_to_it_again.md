@@ -2,7 +2,6 @@
 title: "Katamari what a great game"
 date: "2025-10-01"
 description: "A little bit about this PS2 gem"
-topic: gaming
 tags:
   - gaming
   - katamary

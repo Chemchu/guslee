@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use actix_web::{App, HttpServer, middleware::Logger, web};
 use log::info;
-use search_engine::SearchEngine;
+use search_engine::{SearchEngine, Topic};
 
 use crate::routes::AppState;
 
@@ -25,12 +25,15 @@ async fn main() -> std::io::Result<()> {
         SearchEngine::new(
             &posts_path,
             vec![
-                "welcome.md".to_string(),
-                "hello.md".to_string(),
-                "garden_styling.md".to_string(),
-                "journarl/2025/kilbarrack.md".to_string(),
-                "journarl/2025/first_job_in_ireland.md".to_string(),
-                "journarl/2025/rathmines.md".to_string(),
+                ("welcome.md", Option::Some(Topic::Introduction.as_str())),
+                ("hello.md", Option::Some(Topic::Introduction.as_str())),
+                (
+                    "garden_styling.md",
+                    Option::Some(Topic::Introduction.as_str()),
+                ),
+                ("kilbarrack.md", Option::None),
+                ("first_job_in_ireland.md", Option::None),
+                ("rathmines.md", Option::None),
             ],
         )
         .await,

@@ -11,7 +11,6 @@ pub struct MdMetadata {
     pub title: String,
     pub description: String,
     pub tags: Vec<String>,
-    pub topic: Option<String>,
     pub date: String,
 }
 

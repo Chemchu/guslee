@@ -2,7 +2,6 @@
 title: "Peak - Mesa update"
 date: "2025-09-15"
 description: "Amazing first free update"
-topic: gaming
 tags:
   - gaming
   - steam

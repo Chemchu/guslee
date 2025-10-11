@@ -31,15 +31,25 @@ pub struct SearchResult {
 
 #[derive(Clone)]
 pub struct MatchingFile {
+    file_name: String,
     title: String,
     path: String,
 }
 
 impl MatchingFile {
-    pub fn new(name: String, path: String) -> Self {
-        MatchingFile { title: name, path }
+    pub fn new(name: String, file_name: String, path: String) -> Self {
+        MatchingFile {
+            title: name,
+            path,
+            file_name,
+        }
     }
+
     pub fn file_name(&self) -> &str {
+        &self.file_name
+    }
+
+    pub fn title(&self) -> &str {
         &self.title
     }
 

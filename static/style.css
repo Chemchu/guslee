@@ -84,3 +84,23 @@ footer {
 .htmx-request .htmx-indicator {
   display: inline;
 }
+
+::-webkit-scrollbar {
+  width: 5;
+  height: 8;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 100vh;
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(219, 223, 229, 0.5);
+  border-radius: 100vh;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f58a07;
+  border-radius: 100vh;
+}

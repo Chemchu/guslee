@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use surrealdb::engine::any::Any;
 #[cfg(debug_assertions)]
@@ -14,11 +15,30 @@ pub mod utils;
 
 pub struct SearchEngine {
     db: Surreal<Any>,
-    default_results: Vec<String>,
+    default_results: Vec<(&'static str, Option<&'static str>)>,
+}
+
+pub enum Topic {
+    Introduction,
+    Gaming,
+    Coding,
+}
+
+impl Topic {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Topic::Introduction => "Introduction",
+            Topic::Gaming => "Gaming",
+            Topic::Coding => "Coding",
+        }
+    }
 }
 
 impl SearchEngine {
-    pub async fn new(documents_path: &str, default_docs: Vec<String>) -> SearchEngine {
+    pub async fn new(
+        documents_path: &str,
+        default_docs: Vec<(&'static str, Option<&'static str>)>,
+    ) -> SearchEngine {
         let mut posts: Vec<Post> = Vec::new();
         for entry in WalkDir::new(documents_path) {
             let entry = entry.expect("Error while accessing the WalkDir entry");
@@ -65,7 +85,6 @@ impl SearchEngine {
             DEFINE FIELD metadata ON posts TYPE object;
             DEFINE FIELD metadata.title ON posts TYPE string;
             DEFINE FIELD metadata.description ON posts TYPE string;
-            DEFINE FIELD metadata.topic ON posts TYPE option<string>;
             DEFINE FIELD metadata.tags ON posts TYPE array<string>;
             DEFINE FIELD metadata.date ON posts TYPE string;
             DEFINE FIELD content ON posts TYPE string;
@@ -130,7 +149,13 @@ impl SearchEngine {
         SearchResult {
             matching_files: docs
                 .iter()
-                .map(|post| MatchingFile::new(post.metadata.title.clone(), post.file_path.clone()))
+                .map(|post| {
+                    MatchingFile::new(
+                        post.metadata.title.clone(),
+                        post.file_name.clone(),
+                        post.file_path.clone(),
+                    )
+                })
                 .collect(),
         }
     }
@@ -139,7 +164,7 @@ impl SearchEngine {
         let default_docs_display_string = self
             .default_results
             .iter()
-            .map(|f| format!("'{}'", f))
+            .map(|(file_name, _topic)| format!("'{}'", file_name))
             .collect::<Vec<String>>()
             .join(", ");
 
@@ -147,19 +172,37 @@ impl SearchEngine {
             .db
             .query(format!(
                 "SELECT * FROM posts WHERE file_name IN [{}]",
-                default_docs_display_string
+                default_docs_display_string,
             ))
             .await
             .unwrap()
             .take::<Vec<Post>>(0)
             .unwrap()
             .iter()
-            .map(|post| (post.metadata.title.clone(), post.file_name.clone()))
-            .map(|(file_title, file_path)| MatchingFile::new(file_title, file_path.to_string()))
+            .map(|post| {
+                (
+                    post.metadata.title.clone(),
+                    post.file_name.clone(),
+                    post.file_path.clone(),
+                )
+            })
+            .map(|(file_title, file_name, file_path)| {
+                MatchingFile::new(file_title, file_name, file_path.to_string())
+            })
             .collect();
 
+        let mut map: HashMap<&str, MatchingFile> = HashMap::new();
+        files.iter().for_each(|f| {
+            map.insert(f.file_name(), f.clone());
+        });
+
+        let mut result: Vec<MatchingFile> = Vec::new();
+        for (default_doc, _topic) in self.default_results.iter() {
+            result.push(map.get(default_doc).unwrap().clone());
+        }
+
         SearchResult {
-            matching_files: files,
+            matching_files: result,
         }
     }
 }

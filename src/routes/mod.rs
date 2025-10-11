@@ -124,7 +124,7 @@ pub async fn search_post(
                         hx-target="#content-section"
                         hx-swap="innerHTML"
                         {
-                            (matching_file.file_name())
+                            (matching_file.title())
                         }
                     }
                 }
