@@ -7,7 +7,7 @@ use chess_module::ChessModule;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::html;
 use search_engine::{
-    SearchEngine,
+    SearchEngine, Topic,
     types::{DEFAULT_SEARCH_LIMIT, Params},
 };
 use std::time::Duration;
@@ -104,9 +104,59 @@ pub async fn search_post(
 ) -> Html {
     let is_htmx_req = req.headers().get("HX-Request").is_some();
     if is_htmx_req {
+        let is_empty_query = params.query.is_none()
+            || params.query.as_ref().unwrap().is_empty()
+            || params.query.as_ref().unwrap() == "*"
+            || params.query.as_ref().unwrap().len() < 3;
+
+        if is_empty_query {
+            let default_posts = [
+                ("welcome.md", Option::Some(Topic::Introduction.as_str())),
+                ("hello.md", Option::Some(Topic::Introduction.as_str())),
+                (
+                    "garden_styling.md",
+                    Option::Some(Topic::Introduction.as_str()),
+                ),
+                ("kilbarrack.md", Option::Some(Topic::LifeInIreland.as_str())),
+                (
+                    "first_job_in_ireland.md",
+                    Option::Some(Topic::LifeInIreland.as_str()),
+                ),
+                ("rathmines.md", Option::Some(Topic::LifeInIreland.as_str())),
+            ];
+            let matching_posts = app_state
+                .search_engine
+                .query_from_list(default_posts.iter().map(|(s, _t)| s.to_string()).collect())
+                .await
+                .matching_files;
+
+            let html = html! {
+                ul {
+                    @for matching_post in matching_posts {
+                        li {
+                            a href=(format!(
+                                "/{}",
+                                matching_post
+                                    .file_path()
+                                    .strip_suffix(".md")
+                                    .unwrap_or(matching_post.file_path())
+                            ))
+                            hx-target="#content-section"
+                            hx-swap="innerHTML"
+                            {
+                                (matching_post.title())
+                            }
+                        }
+                    }
+                }
+            };
+
+            return Html::new(html);
+        }
+
         let matching_files = app_state
             .search_engine
-            .exec_query(&params.into_inner())
+            .query(&params.clone())
             .await
             .matching_files;
 
@@ -160,7 +210,8 @@ pub async fn chess_stats_page(path: web::Path<String>) -> Html {
         return Html::new(markdown::to_html(fallback_html));
     };
 
-    let data = player_data.unwrap();
+    // TODO: finish chess page
+    let _data = player_data.unwrap();
     let stats = player_stats.unwrap();
 
     let md: &str = include_str!(concat!(

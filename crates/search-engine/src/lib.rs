@@ -15,13 +15,20 @@ pub mod utils;
 
 pub struct SearchEngine {
     db: Surreal<Any>,
-    default_results: Vec<(&'static str, Option<&'static str>)>,
 }
 
 pub enum Topic {
     Introduction,
     Gaming,
-    Coding,
+    Software,
+    LifeInIreland,
+    Work,
+    Chess,
+    Linux,
+    Music,
+    LifeInSpain,
+    Holidays,
+    ThisProject,
 }
 
 impl Topic {
@@ -29,16 +36,21 @@ impl Topic {
         match self {
             Topic::Introduction => "Introduction",
             Topic::Gaming => "Gaming",
-            Topic::Coding => "Coding",
+            Topic::Software => "Software",
+            Topic::LifeInIreland => "Life in Ireland",
+            Topic::Work => "Work life",
+            Topic::Chess => "Chess",
+            Topic::Linux => "Linux",
+            Topic::Music => "Music",
+            Topic::LifeInSpain => "Life in Spain",
+            Topic::Holidays => "Holidays",
+            Topic::ThisProject => "About this project",
         }
     }
 }
 
 impl SearchEngine {
-    pub async fn new(
-        documents_path: &str,
-        default_docs: Vec<(&'static str, Option<&'static str>)>,
-    ) -> SearchEngine {
+    pub async fn new(documents_path: &str) -> SearchEngine {
         let mut posts: Vec<Post> = Vec::new();
         for entry in WalkDir::new(documents_path) {
             let entry = entry.expect("Error while accessing the WalkDir entry");
@@ -100,33 +112,16 @@ impl SearchEngine {
         .await;
         let _ = db.insert::<Vec<Post>>("posts").content(posts).await;
 
-        SearchEngine {
-            db,
-            default_results: default_docs,
-        }
+        SearchEngine { db }
     }
 
-    pub async fn exec_query(&self, params: &Params) -> SearchResult {
+    pub async fn query(&self, params: &Params) -> SearchResult {
         let limit = match &params.limit {
             Some(l) => l.value(),
             None => DEFAULT_SEARCH_LIMIT.value(),
         };
 
-        let is_empty_query = params.query.is_none()
-            || params.query.as_ref().unwrap().is_empty()
-            || params.query.as_ref().unwrap() == "*"
-            || params.query.as_ref().unwrap().len() < 3;
-
-        if is_empty_query {
-            return self.query_default_docs().await;
-        }
-
-        let query = params.query.as_ref().unwrap();
-        self.exec_query_internal(query.to_lowercase().as_str(), limit)
-            .await
-    }
-
-    async fn exec_query_internal(&self, query: &str, result_limit: usize) -> SearchResult {
+        let query = params.query.as_ref().unwrap().to_lowercase();
         let mut response: Response = self
             .db
             .query(format!(
@@ -139,7 +134,7 @@ impl SearchEngine {
                    OR content @1@ '{}'
                 ORDER BY combined_score DESC
                 LIMIT {}",
-                query, query, result_limit
+                query, query, limit
             ))
             .await
             .unwrap();
@@ -160,11 +155,10 @@ impl SearchEngine {
         }
     }
 
-    async fn query_default_docs(&self) -> SearchResult {
-        let default_docs_display_string = self
-            .default_results
+    pub async fn query_from_list(&self, posts_to_search: Vec<String>) -> SearchResult {
+        let default_docs_display_string = posts_to_search
             .iter()
-            .map(|(file_name, _topic)| format!("'{}'", file_name))
+            .map(|file_name| format!("'{}'", file_name))
             .collect::<Vec<String>>()
             .join(", ");
 
@@ -197,8 +191,8 @@ impl SearchEngine {
         });
 
         let mut result: Vec<MatchingFile> = Vec::new();
-        for (default_doc, _topic) in self.default_results.iter() {
-            result.push(map.get(default_doc).unwrap().clone());
+        for default_doc in posts_to_search.iter() {
+            result.push(map.get(default_doc.as_str()).unwrap().clone());
         }
 
         SearchResult {

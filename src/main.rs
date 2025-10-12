@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use actix_web::{App, HttpServer, middleware::Logger, web};
 use log::info;
-use search_engine::{SearchEngine, Topic};
+use search_engine::SearchEngine;
 
 use crate::routes::AppState;
 
@@ -21,23 +21,7 @@ async fn main() -> std::io::Result<()> {
 
     info!("Creating in-memory full-text search engine...");
     let posts_path = format!("{}/garden", env!("CARGO_MANIFEST_DIR"));
-    let search_engine = Arc::new(
-        SearchEngine::new(
-            &posts_path,
-            vec![
-                ("welcome.md", Option::Some(Topic::Introduction.as_str())),
-                ("hello.md", Option::Some(Topic::Introduction.as_str())),
-                (
-                    "garden_styling.md",
-                    Option::Some(Topic::Introduction.as_str()),
-                ),
-                ("kilbarrack.md", Option::None),
-                ("first_job_in_ireland.md", Option::None),
-                ("rathmines.md", Option::None),
-            ],
-        )
-        .await,
-    );
+    let search_engine = Arc::new(SearchEngine::new(&posts_path).await);
 
     info!("Search engine created correctly");
     info!("🌐 Server starting on http://127.0.0.1:3000");
