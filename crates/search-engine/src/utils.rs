@@ -9,6 +9,7 @@ pub struct TagsField;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MdMetadata {
     pub title: String,
+    pub topic: Option<String>,
     pub description: String,
     pub tags: Vec<String>,
     pub date: String,

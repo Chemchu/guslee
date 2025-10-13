@@ -2,6 +2,7 @@
 title: "Styling notes"
 date: "2025-09-15"
 description: "Notes about the styling of this site, including colorschemes and fonts"
+topic: "Introduction"
 tags:
   - digital garden
   - website

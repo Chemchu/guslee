@@ -2,6 +2,7 @@
 title: "Hello world"
 date: "2025-09-15"
 description: "Basic hello world markdown file"
+topic: "Introduction"
 tags:
   - digital garden
   - website

@@ -2,6 +2,7 @@
 title: "Welcome to my website"
 date: "2025-09-15"
 description: "Brief introduction to my digital garden"
+topic: "Introduction"
 tags:
   - digital garden
   - website

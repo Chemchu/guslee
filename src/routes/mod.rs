@@ -7,10 +7,13 @@ use chess_module::ChessModule;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::html;
 use search_engine::{
-    SearchEngine, Topic,
-    types::{DEFAULT_SEARCH_LIMIT, Params},
+    SearchEngine,
+    types::{DEFAULT_SEARCH_LIMIT, MatchingFile, Params},
 };
-use std::time::Duration;
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 use std::{fs, io};
 
 const PLAYER_NAME: &str = "chemchuu";
@@ -110,47 +113,97 @@ pub async fn search_post(
             || params.query.as_ref().unwrap().len() < 3;
 
         if is_empty_query {
-            let default_posts = [
-                ("welcome.md", Option::Some(Topic::Introduction.as_str())),
-                ("hello.md", Option::Some(Topic::Introduction.as_str())),
-                (
-                    "garden_styling.md",
-                    Option::Some(Topic::Introduction.as_str()),
-                ),
-                ("kilbarrack.md", Option::Some(Topic::LifeInIreland.as_str())),
-                (
-                    "first_job_in_ireland.md",
-                    Option::Some(Topic::LifeInIreland.as_str()),
-                ),
-                ("rathmines.md", Option::Some(Topic::LifeInIreland.as_str())),
+            let default_posts = vec![
+                "welcome.md",
+                "hello.md",
+                "garden_styling.md",
+                "kilbarrack.md",
+                "first_job_in_ireland.md",
+                "rathmines.md",
             ];
             let matching_posts = app_state
                 .search_engine
-                .query_from_list(default_posts.iter().map(|(s, _t)| s.to_string()).collect())
+                .query_from_list(default_posts.clone())
                 .await
                 .matching_files;
+            let mut posts_per_topic: HashMap<String, Vec<MatchingFile>> = HashMap::default();
+            let mut posts_by_filename: HashMap<String, MatchingFile> = HashMap::default();
+
+            for m_post in matching_posts {
+                posts_by_filename.insert(m_post.file_name().to_string(), m_post.clone());
+                if let Some(topic) = m_post.topic() {
+                    posts_per_topic
+                        .entry(topic.clone())
+                        .or_default()
+                        .push(m_post);
+                }
+            }
+
+            // Pre-process to determine which topics to render
+            let mut topics_to_render: Vec<(String, Vec<MatchingFile>)> = Vec::new();
+            let mut posts_to_render: Vec<MatchingFile> = Vec::new();
+            let mut rendered_topics: HashSet<String> = HashSet::new();
+
+            for default_post in default_posts {
+                if let Some(p) = posts_by_filename.get(default_post) {
+                    if let Some(topic) = p.topic() {
+                        if !rendered_topics.contains(topic) {
+                            rendered_topics.insert(topic.clone());
+                            if let Some(topic_posts) = posts_per_topic.get(topic) {
+                                topics_to_render.push((topic.clone(), topic_posts.clone()));
+                            }
+                        }
+                    } else {
+                        posts_to_render.push(p.clone());
+                    }
+                }
+            }
 
             let html = html! {
                 ul {
-                    @for matching_post in matching_posts {
+                    @for (topic, topic_posts) in topics_to_render {
+                        li {
+                            details {
+                                summary { (topic) }
+                                ul {
+                                    @for topic_post in topic_posts {
+                                        li {
+                                            a href=(format!(
+                                                "/{}",
+                                                topic_post
+                                                    .file_path()
+                                                    .strip_suffix(".md")
+                                                    .unwrap_or(topic_post.file_path())
+                                            ))
+                                            hx-target="#content-section"
+                                            hx-swap="innerHTML"
+                                            {
+                                                (topic_post.title())
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    @for p in posts_to_render {
                         li {
                             a href=(format!(
                                 "/{}",
-                                matching_post
+                                p
                                     .file_path()
                                     .strip_suffix(".md")
-                                    .unwrap_or(matching_post.file_path())
+                                    .unwrap_or(p.file_path())
                             ))
                             hx-target="#content-section"
                             hx-swap="innerHTML"
                             {
-                                (matching_post.title())
+                                (p.title())
                             }
                         }
                     }
                 }
             };
-
             return Html::new(html);
         }
 

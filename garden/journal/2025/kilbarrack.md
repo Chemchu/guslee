@@ -2,6 +2,7 @@
 title: "First tine sharing house"
 date: "2025-09-15"
 description: "My experience living in Kilbarrack"
+topic: "Life in Ireland"
 tags:
   - travel
   - ireland

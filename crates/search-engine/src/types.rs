@@ -34,14 +34,16 @@ pub struct MatchingFile {
     file_name: String,
     title: String,
     path: String,
+    topic: Option<String>,
 }
 
 impl MatchingFile {
-    pub fn new(name: String, file_name: String, path: String) -> Self {
+    pub fn new(title: String, file_name: String, path: String, topic: Option<String>) -> Self {
         MatchingFile {
-            title: name,
+            title,
             path,
             file_name,
+            topic,
         }
     }
 
@@ -55,5 +57,9 @@ impl MatchingFile {
 
     pub fn file_path(&self) -> &str {
         &self.path
+    }
+
+    pub fn topic(&self) -> &Option<String> {
+        &self.topic
     }
 }

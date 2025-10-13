@@ -2,6 +2,7 @@
 title: "First job in Ireland!"
 date: "2025-10-01"
 description: "How I managed to get a high paying job"
+topic: "Life in Ireland"
 tags:
   - coding
   - job

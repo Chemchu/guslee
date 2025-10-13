@@ -99,6 +99,7 @@ impl SearchEngine {
             DEFINE FIELD metadata.description ON posts TYPE string;
             DEFINE FIELD metadata.tags ON posts TYPE array<string>;
             DEFINE FIELD metadata.date ON posts TYPE string;
+            DEFINE FIELD metadata.topic ON posts TYPE option<string>;
             DEFINE FIELD content ON posts TYPE string;
             DEFINE INDEX file_path_index ON TABLE posts COLUMNS file_path UNIQUE;
 
@@ -149,13 +150,14 @@ impl SearchEngine {
                         post.metadata.title.clone(),
                         post.file_name.clone(),
                         post.file_path.clone(),
+                        post.metadata.topic.clone(),
                     )
                 })
                 .collect(),
         }
     }
 
-    pub async fn query_from_list(&self, posts_to_search: Vec<String>) -> SearchResult {
+    pub async fn query_from_list(&self, posts_to_search: Vec<&str>) -> SearchResult {
         let default_docs_display_string = posts_to_search
             .iter()
             .map(|file_name| format!("'{}'", file_name))
@@ -178,10 +180,11 @@ impl SearchEngine {
                     post.metadata.title.clone(),
                     post.file_name.clone(),
                     post.file_path.clone(),
+                    post.metadata.topic.clone(),
                 )
             })
-            .map(|(file_title, file_name, file_path)| {
-                MatchingFile::new(file_title, file_name, file_path.to_string())
+            .map(|(file_title, file_name, file_path, topic)| {
+                MatchingFile::new(file_title, file_name, file_path.to_string(), topic)
             })
             .collect();
 
@@ -192,7 +195,7 @@ impl SearchEngine {
 
         let mut result: Vec<MatchingFile> = Vec::new();
         for default_doc in posts_to_search.iter() {
-            result.push(map.get(default_doc.as_str()).unwrap().clone());
+            result.push(map.get(default_doc).unwrap().clone());
         }
 
         SearchResult {
