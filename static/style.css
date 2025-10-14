@@ -104,3 +104,7 @@ footer {
   background: #f58a07;
   border-radius: 100vh;
 }
+
+details[open] summary::marker {
+  color: #f58a07;
+}

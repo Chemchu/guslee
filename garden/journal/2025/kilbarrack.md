@@ -1,5 +1,5 @@
 ---
-title: "First tine sharing house"
+title: "First time sharing house"
 date: "2025-09-15"
 description: "My experience living in Kilbarrack"
 topic: "Life in Ireland"

@@ -1,7 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: "selector",
-  content: ["./src/**/*.{html,js}", "./templates/**/*.{html,js}"],
+  content: {
+    files: ["./src/**/*.{html,js}", "./templates/**/*.{html,js}"],
+    extract: {
+      rs: (content) => content.match(/class\s*=\s*"([^"]*)"/g) || []
+    }
+  },
   theme: {
     colors: {
      'text-color': '#DBDFE5',

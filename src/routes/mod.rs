@@ -120,6 +120,7 @@ pub async fn search_post(
                 "kilbarrack.md",
                 "first_job_in_ireland.md",
                 "rathmines.md",
+                "back_to_it_again.md",
             ];
             let matching_posts = app_state
                 .search_engine
@@ -161,10 +162,16 @@ pub async fn search_post(
 
             let html = html! {
                 ul {
-                    @for (topic, topic_posts) in topics_to_render {
+                    @for (index, (topic, topic_posts)) in topics_to_render.iter().enumerate() {
                         li {
-                            details {
-                                summary { (topic) }
+                            details
+                            open[index == 0]
+                            {
+                                summary
+                                class="cursor-pointer hover:text-primary-color"
+                                {
+                                    (topic)
+                                }
                                 ul {
                                     @for topic_post in topic_posts {
                                         li {
@@ -177,6 +184,7 @@ pub async fn search_post(
                                             ))
                                             hx-target="#content-section"
                                             hx-swap="innerHTML"
+                                            class="cursor-pointer hover:text-primary-color"
                                             {
                                                 (topic_post.title())
                                             }
@@ -238,6 +246,95 @@ pub async fn search_post(
     } else {
         Html::new(String::from("Only HTMX requests for search engine"))
     }
+}
+
+fn build_posts_list(matching_posts: Vec<MatchingFile>, default_posts: Vec<&String>) -> Html {
+    let mut posts_per_topic: HashMap<String, Vec<MatchingFile>> = HashMap::default();
+    let mut posts_by_filename: HashMap<String, MatchingFile> = HashMap::default();
+
+    for m_post in matching_posts {
+        posts_by_filename.insert(m_post.file_name().to_string(), m_post.clone());
+        if let Some(topic) = m_post.topic() {
+            posts_per_topic
+                .entry(topic.clone())
+                .or_default()
+                .push(m_post);
+        }
+    }
+
+    // Pre-process to determine which topics to render
+    let mut topics_to_render: Vec<(String, Vec<MatchingFile>)> = Vec::new();
+    let mut posts_to_render: Vec<MatchingFile> = Vec::new();
+    let mut rendered_topics: HashSet<String> = HashSet::new();
+
+    for default_post in default_posts {
+        if let Some(p) = posts_by_filename.get(default_post) {
+            if let Some(topic) = p.topic() {
+                if !rendered_topics.contains(topic) {
+                    rendered_topics.insert(topic.clone());
+                    if let Some(topic_posts) = posts_per_topic.get(topic) {
+                        topics_to_render.push((topic.clone(), topic_posts.clone()));
+                    }
+                }
+            } else {
+                posts_to_render.push(p.clone());
+            }
+        }
+    }
+
+    let html = html! {
+        ul {
+            @for (index, (topic, topic_posts)) in topics_to_render.iter().enumerate() {
+                li {
+                    details
+                    open[index == 0]
+                    {
+                        summary
+                        class="cursor-pointer hover:text-primary-color"
+                        {
+                            (topic)
+                        }
+                        ul {
+                            @for topic_post in topic_posts {
+                                li {
+                                    a href=(format!(
+                                        "/{}",
+                                        topic_post
+                                            .file_path()
+                                            .strip_suffix(".md")
+                                            .unwrap_or(topic_post.file_path())
+                                    ))
+                                    hx-target="#content-section"
+                                    hx-swap="innerHTML"
+                                    class="cursor-pointer hover:text-primary-color"
+                                    {
+                                        (topic_post.title())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            @for p in posts_to_render {
+                li {
+                    a href=(format!(
+                        "/{}",
+                        p
+                            .file_path()
+                            .strip_suffix(".md")
+                            .unwrap_or(p.file_path())
+                    ))
+                    hx-target="#content-section"
+                    hx-swap="innerHTML"
+                    {
+                        (p.title())
+                    }
+                }
+            }
+        }
+    };
+    Html::new(html)
 }
 
 fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
