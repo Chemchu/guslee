@@ -176,30 +176,25 @@ impl SearchEngine {
             .unwrap()
             .iter()
             .map(|post| {
-                (
+                MatchingFile::new(
                     post.metadata.title.clone(),
                     post.file_name.clone(),
-                    post.file_path.clone(),
+                    post.file_path.to_string(),
                     post.metadata.topic.clone(),
                 )
             })
-            .map(|(file_title, file_name, file_path, topic)| {
-                MatchingFile::new(file_title, file_name, file_path.to_string(), topic)
-            })
             .collect();
 
-        let mut map: HashMap<&str, MatchingFile> = HashMap::new();
-        files.iter().for_each(|f| {
-            map.insert(f.file_name(), f.clone());
-        });
+        let map: HashMap<String, MatchingFile> = files
+            .into_iter()
+            .map(|f| (f.file_name().to_string(), f))
+            .collect();
 
-        let mut result: Vec<MatchingFile> = Vec::new();
-        for default_doc in posts_to_search.iter() {
-            result.push(map.get(default_doc).unwrap().clone());
-        }
+        let matching_files: Vec<MatchingFile> = posts_to_search
+            .iter()
+            .filter_map(|default_doc| map.get(*default_doc).cloned())
+            .collect();
 
-        SearchResult {
-            matching_files: result,
-        }
+        SearchResult { matching_files }
     }
 }

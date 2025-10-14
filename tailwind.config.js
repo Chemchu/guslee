@@ -4,7 +4,13 @@ module.exports = {
   content: {
     files: ["./src/**/*.{html,js}", "./templates/**/*.{html,js}"],
     extract: {
-      rs: (content) => content.match(/class\s*=\s*"([^"]*)"/g) || []
+      rs: (content) => {
+        const matches = content.match(/class\s*=\s*"([^"]*)"/g) || [];
+        return matches.flatMap(match => {
+          const classNames = match.match(/class\s*=\s*"([^"]*)"/)[1];
+          return classNames.split(/\s+/);
+        });
+      }
     }
   },
   theme: {

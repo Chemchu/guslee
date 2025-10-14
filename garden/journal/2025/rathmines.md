@@ -1,5 +1,5 @@
 ---
-title: "Rathmines - My third home in Ireland"
+title: "Rathmines"
 date: "2025-10-03"
 description: "My house in Rathmines"
 topic: "Life in Ireland"
