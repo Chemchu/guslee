@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Clone)]
 #[serde(untagged)]
@@ -62,4 +62,22 @@ impl MatchingFile {
     pub fn topic(&self) -> &Option<String> {
         &self.topic
     }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct GraphData {
+    pub nodes: Vec<GraphNode>,
+    pub edges: Vec<GraphEdge>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct GraphNode {
+    id: u8,
+    label: String,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct GraphEdge {
+    from: u8,
+    to: u8,
 }

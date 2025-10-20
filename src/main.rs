@@ -37,6 +37,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::landing)
             .service(routes::chess_stats_page)
             .service(routes::search_post)
+            .service(routes::graph_network)
             .service(routes::get_post) // This service should be last because it matches any string
     })
     .bind(("127.0.0.1", 3000))?

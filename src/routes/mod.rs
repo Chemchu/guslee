@@ -237,6 +237,20 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
         .replace("{{CONTENT}}", content)
 }
 
+#[get("/graph")]
+pub async fn graph_network(req: HttpRequest) -> Html {
+    let current_url = req.headers().get("HX-Current-URL");
+
+    if let Some(current_url) = current_url {
+        let result: Vec<&str> = current_url.to_str().unwrap().splitn(4, '/').collect();
+        todo!("Implement relationships in surrealdb and then query them here");
+        let file_path = format!("{}.md", result[3]);
+    }
+
+    let graph = html! {};
+    Html::new(graph)
+}
+
 #[cached(time = 3600, key = "String", convert = r#"{ path.clone() }"#)]
 #[get("/chess/stats/{game_mode}")]
 pub async fn chess_stats_page(path: web::Path<String>) -> Html {

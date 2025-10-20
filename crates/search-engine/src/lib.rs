@@ -17,38 +17,6 @@ pub struct SearchEngine {
     db: Surreal<Any>,
 }
 
-pub enum Topic {
-    Introduction,
-    Gaming,
-    Software,
-    LifeInIreland,
-    Work,
-    Chess,
-    Linux,
-    Music,
-    LifeInSpain,
-    Holidays,
-    ThisProject,
-}
-
-impl Topic {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Topic::Introduction => "Introduction",
-            Topic::Gaming => "Gaming",
-            Topic::Software => "Software",
-            Topic::LifeInIreland => "Life in Ireland",
-            Topic::Work => "Work life",
-            Topic::Chess => "Chess",
-            Topic::Linux => "Linux",
-            Topic::Music => "Music",
-            Topic::LifeInSpain => "Life in Spain",
-            Topic::Holidays => "Holidays",
-            Topic::ThisProject => "About this project",
-        }
-    }
-}
-
 impl SearchEngine {
     pub async fn new(documents_path: &str) -> SearchEngine {
         let mut posts: Vec<Post> = Vec::new();
