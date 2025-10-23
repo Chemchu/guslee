@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use surrealdb::engine::any::Any;
@@ -6,7 +7,7 @@ use surrealdb::engine::any::connect;
 use surrealdb::{Response, Surreal};
 use walkdir::WalkDir;
 
-use crate::types::{DEFAULT_SEARCH_LIMIT, SearchResult};
+use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, SearchResult};
 use crate::types::{MatchingFile, Params};
 use crate::utils::{Post, extract_full_metadata};
 
@@ -79,12 +80,39 @@ impl SearchEngine {
             DEFINE INDEX ml_content ON TABLE posts FIELDS content SEARCH ANALYZER full_text_analyzer BM25 HIGHLIGHTS;",
         )
         .await;
-        let _ = db.insert::<Vec<Post>>("posts").content(posts).await;
+        let inserted_posts = db
+            .insert::<Vec<Post>>("posts")
+            .content(posts)
+            .await
+            .unwrap();
+
+        for inserted_post in inserted_posts.iter() {
+            let mentioned_posts = get_mentioned_posts_in_post_content(inserted_post);
+            if mentioned_posts.is_empty() {
+                continue;
+            }
+
+            let source_path = inserted_post.file_path.clone();
+
+            for mentioned_path in mentioned_posts {
+                let query_string = "RELATE (SELECT id FROM posts WHERE file_path = $source)->points_to->(SELECT id FROM posts WHERE file_path = $target)";
+                let _ = db
+                    .query(query_string)
+                    .bind(("source", source_path.clone())) // Pass owned String, not &str
+                    .bind(("target", mentioned_path)) // This is already owned
+                    .await
+                    .unwrap();
+            }
+        }
+
+        // Query graph examples
+        //select ->points_to->posts.file_path AS related_posts from posts:uoksb5bh4hwasv99frxy;
+        //select ->points_to->posts.file_path AS related_posts from posts;
 
         SearchEngine { db }
     }
 
-    pub async fn query(&self, params: &Params) -> SearchResult {
+    pub async fn query_posts(&self, params: &Params) -> SearchResult {
         let limit = match &params.limit {
             Some(l) => l.value(),
             None => DEFAULT_SEARCH_LIMIT.value(),
@@ -165,4 +193,46 @@ impl SearchEngine {
 
         SearchResult { matching_files }
     }
+
+    pub async fn get_post(&self, file_path: &str) -> MatchingFile {
+        let post: Post = self
+            .db
+            .query("SELECT * FROM posts WHERE file_path = $path")
+            .bind(("path", file_path.to_string()))
+            .await
+            .unwrap()
+            .take::<Option<Post>>(0)
+            .unwrap()
+            .unwrap();
+
+        MatchingFile::new(
+            post.metadata.title.clone(),
+            post.file_name.clone(),
+            post.file_path.to_string(),
+            post.metadata.topic.clone(),
+        )
+    }
+
+    pub fn get_related_posts(file_path: &str) -> GraphData {
+        todo!();
+    }
+}
+
+fn get_mentioned_posts_in_post_content(post: &Post) -> Vec<String> {
+    let content = post.content.to_owned();
+    let regex_pattern = Regex::new(r"\[([^\]]+)\]\(([^\)]+)\)").unwrap();
+
+    let links: Vec<String> = regex_pattern
+        .captures_iter(&content)
+        .filter_map(|cap| {
+            let link = &cap[2];
+            if link.starts_with("http") || link.starts_with("https") {
+                None
+            } else {
+                Some(format!("{}.md", link))
+            }
+        })
+        .collect();
+
+    links
 }

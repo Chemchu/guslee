@@ -130,7 +130,7 @@ pub async fn search_post(
             false => {
                 app_state
                     .search_engine
-                    .query(&params.clone())
+                    .query_posts(&params.clone())
                     .await
                     .matching_files
             }
@@ -238,13 +238,17 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
 }
 
 #[get("/graph")]
-pub async fn graph_network(req: HttpRequest) -> Html {
+pub async fn graph_network(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     let current_url = req.headers().get("HX-Current-URL");
 
     if let Some(current_url) = current_url {
         let result: Vec<&str> = current_url.to_str().unwrap().splitn(4, '/').collect();
-        todo!("Implement relationships in surrealdb and then query them here");
         let file_path = format!("{}.md", result[3]);
+
+        let post = app_state.search_engine.get_post(&file_path).await;
+        println!("{}", post.file_path());
+
+        todo!("Implement relationships in surrealdb and then query them here");
     }
 
     let graph = html! {};
