@@ -72,12 +72,13 @@ pub struct GraphData {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GraphNode {
-    id: u8,
-    label: String,
+    pub id: usize,
+    pub label: String,
+    pub file_path: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GraphEdge {
-    from: u8,
-    to: u8,
+    pub from: usize,
+    pub to: usize,
 }

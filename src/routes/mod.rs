@@ -5,7 +5,7 @@ use actix_web::{
 use cached::proc_macro::cached;
 use chess_module::ChessModule;
 use markdown::{Constructs, Options, ParseOptions};
-use maud::html;
+use maud::{PreEscaped, html};
 use search_engine::{
     SearchEngine,
     types::{DEFAULT_SEARCH_LIMIT, MatchingFile, Params},
@@ -240,18 +240,68 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
 #[get("/graph")]
 pub async fn graph_network(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     let current_url = req.headers().get("HX-Current-URL");
-
-    if let Some(current_url) = current_url {
+    let graph_data = if let Some(current_url) = current_url {
         let result: Vec<&str> = current_url.to_str().unwrap().splitn(4, '/').collect();
-        let file_path = format!("{}.md", result[3]);
+        let file_name = result
+            .get(3)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&"welcome");
+        let file_path = format!("{}.md", file_name);
+        app_state.search_engine.get_related_posts(&file_path).await
+    } else {
+        search_engine::types::GraphData {
+            nodes: vec![],
+            edges: vec![],
+        }
+    };
 
-        let post = app_state.search_engine.get_post(&file_path).await;
-        println!("{}", post.file_path());
-
-        todo!("Implement relationships in surrealdb and then query them here");
-    }
-
-    let graph = html! {};
+    let nodes_json = serde_json::to_string(&graph_data.nodes).unwrap();
+    let edges_json = serde_json::to_string(&graph_data.edges).unwrap();
+    // TODO: check why the graph is broken
+    let graph = html! {
+        div #mynetwork style="width: 100%; height: 600px;" {}
+        script {
+            (PreEscaped(format!(r#"
+                (function() {{
+                    var nodes = new vis.DataSet({});
+                    var edges = new vis.DataSet({});
+                    
+                    var container = document.getElementById("mynetwork");
+                    var data = {{
+                        nodes: nodes,
+                        edges: edges,
+                    }};
+                    var options = {{}};
+                    var network = new vis.Network(container, data, options);
+                    
+                    // Add click event listener
+                    network.on("click", function(params) {{
+                        if (params.nodes.length > 0) {{
+                            var nodeId = params.nodes[0];
+                            var node = nodes.get(nodeId);
+                            
+                            if (node && node.file_path) {{
+                                // Remove .md extension and construct URL
+                                var url = "/" + node.file_path.replace(/\.md$/, "");
+                                
+                                // Use htmx.ajax with headers to update current URL
+                                htmx.ajax('GET', url, {{
+                                    target: '#content-section',
+                                    swap: 'innerHTML',
+                                    headers: {{
+                                        'HX-Current-URL': window.location.origin + url
+                                    }}
+                                }}).then(function() {{
+                                    // Push URL after successful request
+                                    window.history.pushState({{}}, '', url);
+                                }});
+                            }}
+                        }}
+                    }});
+                }})();
+            "#, nodes_json, edges_json)))
+        }
+    };
     Html::new(graph)
 }
 

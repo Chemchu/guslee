@@ -1,4 +1,5 @@
 use regex::Regex;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use surrealdb::engine::any::Any;
@@ -7,7 +8,7 @@ use surrealdb::engine::any::connect;
 use surrealdb::{Response, Surreal};
 use walkdir::WalkDir;
 
-use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, SearchResult};
+use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode, SearchResult};
 use crate::types::{MatchingFile, Params};
 use crate::utils::{Post, extract_full_metadata};
 
@@ -98,16 +99,12 @@ impl SearchEngine {
                 let query_string = "RELATE (SELECT id FROM posts WHERE file_path = $source)->points_to->(SELECT id FROM posts WHERE file_path = $target)";
                 let _ = db
                     .query(query_string)
-                    .bind(("source", source_path.clone())) // Pass owned String, not &str
-                    .bind(("target", mentioned_path)) // This is already owned
+                    .bind(("source", source_path.clone()))
+                    .bind(("target", mentioned_path))
                     .await
                     .unwrap();
             }
         }
-
-        // Query graph examples
-        //select ->points_to->posts.file_path AS related_posts from posts:uoksb5bh4hwasv99frxy;
-        //select ->points_to->posts.file_path AS related_posts from posts;
 
         SearchEngine { db }
     }
@@ -213,9 +210,55 @@ impl SearchEngine {
         )
     }
 
-    pub fn get_related_posts(file_path: &str) -> GraphData {
-        todo!();
+    pub async fn get_related_posts(&self, file_path: &str) -> GraphData {
+        let curr_post = self.get_post(file_path).await;
+
+        let query =
+            "SELECT ->points_to->posts.* as related_posts FROM posts WHERE file_path = $file_path";
+
+        let mut result = self
+            .db
+            .query(query)
+            .bind(("file_path", file_path.to_string()))
+            .await
+            .unwrap();
+
+        let related_posts: Vec<(String, String)> = result
+            .take::<Option<QueryRelatedPostResult>>(0)
+            .unwrap()
+            .map(|r| r.related_posts)
+            .unwrap_or_default()
+            .iter()
+            .map(|p| (p.metadata.title.clone(), p.file_path.clone()))
+            .collect::<Vec<(String, String)>>();
+        let main_node = GraphNode {
+            id: 1,
+            label: curr_post.title().to_string(),
+            file_path: curr_post.file_path().to_string(),
+        };
+
+        let mut nodes: Vec<GraphNode> = Vec::new();
+        let mut edges: Vec<GraphEdge> = Vec::new();
+        nodes.push(main_node);
+        for (index, node) in related_posts.iter().enumerate() {
+            nodes.push(GraphNode {
+                id: index + 2,
+                label: node.0.clone(),
+                file_path: node.1.clone(),
+            });
+            edges.push(GraphEdge {
+                from: index + 2,
+                to: 1,
+            });
+        }
+
+        GraphData { nodes, edges }
     }
+}
+
+#[derive(Deserialize)]
+struct QueryRelatedPostResult {
+    related_posts: Vec<Post>,
 }
 
 fn get_mentioned_posts_in_post_content(post: &Post) -> Vec<String> {

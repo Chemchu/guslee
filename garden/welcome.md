@@ -54,4 +54,6 @@ you want in there. I indexed the posts titles AND contents. Because of that, you
 are able to make a full-text search through my knowledge network. You are
 welcome, btw.
 
-All the styling are describied in [styling my garden](garden_styling)
+All the styling are describied in [styling my garden](garden_styling) Take a
+look at [hello](hello) and
+[this thing](gaming/expedition33/ex33_first_impression)
