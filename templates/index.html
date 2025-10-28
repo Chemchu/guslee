@@ -5,20 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{APPNAME}}</title>
     <script src="/_static/htmx.min.js"></script>
-    <script src="/_static/vis-network.min.js"></script>
+    <script src="/_static/d3-v7.min.js"></script>
+    <script src="/_static/graph.js"></script>
 
     <link rel="stylesheet" href="/_static/compiled.css" />
     <link rel="icon" type="image/x-icon" href="/_static/favicon.ico" />
 
     <link rel="manifest" href="/_static/manifest.json" />
-
-    <script>
-      document.addEventListener("htmx:afterRequest", function (evt) {
-        if (evt.detail.target.id === "content-section") {
-          document.dispatchEvent(new CustomEvent("postChanged"));
-        }
-      });
-    </script>
 
     <meta
       name="description"
@@ -115,7 +108,7 @@
           <div
             id="graph-section"
             hx-get="/graph"
-            hx-trigger="load, postChanged from:document"
+            hx-trigger="load, graphUpdate from:body"
             hx-target="#graph-section"
             hx-swap="innerHTML"
           >

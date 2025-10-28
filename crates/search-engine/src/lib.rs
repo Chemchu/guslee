@@ -247,8 +247,8 @@ impl SearchEngine {
                 file_path: node.1.clone(),
             });
             edges.push(GraphEdge {
-                from: index + 2,
-                to: 1,
+                source: index + 2,
+                target: 1,
             });
         }
 

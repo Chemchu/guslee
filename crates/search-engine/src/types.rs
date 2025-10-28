@@ -79,6 +79,6 @@ pub struct GraphNode {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GraphEdge {
-    pub from: usize,
-    pub to: usize,
+    pub source: usize,
+    pub target: usize,
 }

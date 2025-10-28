@@ -5,7 +5,7 @@ use actix_web::{
 use cached::proc_macro::cached;
 use chess_module::ChessModule;
 use markdown::{Constructs, Options, ParseOptions};
-use maud::{PreEscaped, html};
+use maud::html;
 use search_engine::{
     SearchEngine,
     types::{DEFAULT_SEARCH_LIMIT, MatchingFile, Params},
@@ -257,51 +257,15 @@ pub async fn graph_network(app_state: web::Data<AppState>, req: HttpRequest) -> 
 
     let nodes_json = serde_json::to_string(&graph_data.nodes).unwrap();
     let edges_json = serde_json::to_string(&graph_data.edges).unwrap();
-    // TODO: check why the graph is broken
+
     let graph = html! {
-        div #mynetwork style="width: 100%; height: 600px;" {}
-        script {
-            (PreEscaped(format!(r#"
-                (function() {{
-                    var nodes = new vis.DataSet({});
-                    var edges = new vis.DataSet({});
-                    
-                    var container = document.getElementById("mynetwork");
-                    var data = {{
-                        nodes: nodes,
-                        edges: edges,
-                    }};
-                    var options = {{}};
-                    var network = new vis.Network(container, data, options);
-                    
-                    // Add click event listener
-                    network.on("click", function(params) {{
-                        if (params.nodes.length > 0) {{
-                            var nodeId = params.nodes[0];
-                            var node = nodes.get(nodeId);
-                            
-                            if (node && node.file_path) {{
-                                // Remove .md extension and construct URL
-                                var url = "/" + node.file_path.replace(/\.md$/, "");
-                                
-                                // Use htmx.ajax with headers to update current URL
-                                htmx.ajax('GET', url, {{
-                                    target: '#content-section',
-                                    swap: 'innerHTML',
-                                    headers: {{
-                                        'HX-Current-URL': window.location.origin + url
-                                    }}
-                                }}).then(function() {{
-                                    // Push URL after successful request
-                                    window.history.pushState({{}}, '', url);
-                                }});
-                            }}
-                        }}
-                    }});
-                }})();
-            "#, nodes_json, edges_json)))
-        }
+        div #graph-container
+            class="text-text-color"
+            style="width: 100%; height: 500px;"
+            data-nodes=(nodes_json)
+            data-edges=(edges_json) {}
     };
+
     Html::new(graph)
 }
 
