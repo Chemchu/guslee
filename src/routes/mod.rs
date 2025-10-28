@@ -260,8 +260,7 @@ pub async fn graph_network(app_state: web::Data<AppState>, req: HttpRequest) -> 
 
     let graph = html! {
         div #graph-container
-            class="text-text-color"
-            style="width: 100%; height: 500px;"
+            style="width: 100%; height: 500px; color:"
             data-nodes=(nodes_json)
             data-edges=(edges_json) {}
     };

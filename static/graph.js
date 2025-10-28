@@ -50,21 +50,19 @@ function initializeGraph() {
         .data(nodes)
         .join('circle')
         .attr('r', 8)
-        .attr('fill', '#6fa8dc')
-        .attr('stroke', '#406897')
-        .attr('stroke-width', 2)
+        .attr('fill', '#F58A07')
         .style('cursor', 'pointer')
         .call(drag(simulation))
         .on('click', handleNodeClickNavigation)
         .on('mouseover', function() {
             d3.select(this)
                 .attr('r', 10)
-                .attr('fill', '#D2E5FF');
+                .attr('fill', '#bc6c25');
         })
         .on('mouseout', function() {
             d3.select(this)
                 .attr('r', 8)
-                .attr('fill', '#6fa8dc');
+                .attr('fill', '#F58A07');
         });
     
     const label = g.append('g')
@@ -75,6 +73,7 @@ function initializeGraph() {
         .attr('font-size', 12)
         .attr('dx', 12)
         .attr('dy', 4)
+        .style('fill', '#DBDFE5')
         .style('pointer-events', 'none')
         .style('user-select', 'none');
     
