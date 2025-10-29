@@ -103,16 +103,21 @@
         </div>
         <div
           id="right-section"
-          class="hidden lg:block min-w-3xs max-w-md border-l border-shade-color"
+          class="hidden lg:flex min-w-3xs max-w-md h-full border-l border-shade-color"
         >
           <div
-            id="graph-section"
-            hx-get="/graph"
-            hx-trigger="load, graphUpdate from:body"
-            hx-target="#graph-section"
-            hx-swap="innerHTML"
+            class="flex flex-col flex-grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
           >
-            Loading...
+            <div
+              id="graph-section"
+              hx-get="/graph"
+              hx-trigger="load, graphUpdate from:body"
+              hx-target="#graph-section"
+              hx-swap="innerHTML"
+              class="flex w-full flex-grow border-b border-shade-color"
+            >
+              Loading...
+            </div>
           </div>
         </div>
       </div>
