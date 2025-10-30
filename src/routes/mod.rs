@@ -199,6 +199,7 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
                                     hx-target="#content-section"
                                     hx-swap="innerHTML"
                                     class="pl-3 cursor-pointer hover:text-primary-color"
+                                    hx-on:click="document.getElementById('content-section').classList.add('prose', 'prose-theme')"
                                     {
                                         (topic_post.title())
                                     }
@@ -220,6 +221,7 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
                     hx-target="#content-section"
                     hx-swap="innerHTML"
                     class="cursor-pointer hover:text-primary-color"
+                    hx-on:click="document.getElementById('content-section').classList.add('prose', 'prose-theme')"
                     {
                         (p.title())
                     }
@@ -293,7 +295,12 @@ pub async fn chess_stats_page(path: web::Path<String>) -> Html {
         "/templates/chess_stats.md"
     ));
 
-    Html::new(markdown::to_html(
+    let page: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/templates/chess_page.html"
+    ));
+
+    /* Html::new(markdown::to_html(
         md.replace(
             "{{CURRENT_RATING}}",
             stats.stats.rating_last.to_string().as_str(),
@@ -311,5 +318,7 @@ pub async fn chess_stats_page(path: web::Path<String>) -> Html {
             stats.stats.black_game_count.to_string().as_str(),
         )
         .as_str(),
-    ))
+    )) */
+
+    Html::new(page)
 }

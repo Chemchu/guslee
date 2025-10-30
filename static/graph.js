@@ -132,6 +132,7 @@ function initializeGraph() {
                         'HX-Current-URL': window.location.origin + url
                     }
                 }).then(() => {
+                    document.getElementById('content-section').classList.add('prose');
                     window.history.pushState({}, '', url);
                     document.body.dispatchEvent(new CustomEvent('graphUpdate'));
                 });

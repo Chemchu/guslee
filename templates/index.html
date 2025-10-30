@@ -30,6 +30,7 @@
         hx-trigger="click"
         hx-target="#content-section"
         class="cursor-pointer hover:text-primary-color"
+        hx-on:htmx:after-request="document.getElementById('content-section').classList.remove('prose')"
       >
         CHESS
       </span>
@@ -114,7 +115,7 @@
               hx-trigger="load, graphUpdate from:body"
               hx-target="#graph-section"
               hx-swap="innerHTML"
-              class="flex w-full flex-grow border-b border-shade-color"
+              class="flex w-full flex-grow border-b border-shade-color cursor-grab active:cursor-grabbing"
             >
               Loading...
             </div>
