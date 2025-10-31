@@ -35,7 +35,8 @@ async fn main() -> std::io::Result<()> {
                 search_engine: Arc::clone(&search_engine),
             }))
             .service(routes::landing)
-            .service(routes::chess_stats_page)
+            .service(routes::chess_page)
+            .service(routes::chess_graph)
             .service(routes::search_post)
             .service(routes::graph_network)
             .service(routes::get_post) // This service should be last because it matches any string

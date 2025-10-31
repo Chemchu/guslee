@@ -3,13 +3,14 @@ use actix_web::{
     web::{self, Html},
 };
 use cached::proc_macro::cached;
-use chess_module::ChessModule;
+use chess_module::{ChessModule, PlayerStats};
 use markdown::{Constructs, Options, ParseOptions};
 use maud::html;
 use search_engine::{
     SearchEngine,
     types::{DEFAULT_SEARCH_LIMIT, MatchingFile, Params},
 };
+use serde_json::json;
 use std::{
     collections::{HashMap, HashSet},
     time::Duration,
@@ -270,14 +271,25 @@ pub async fn graph_network(app_state: web::Data<AppState>, req: HttpRequest) -> 
     Html::new(graph)
 }
 
+#[cached(time = 3600)]
+#[get("/chess")]
+pub async fn chess_page() -> Html {
+    let page: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/templates/chess_page.html"
+    ));
+
+    Html::new(page)
+}
+
 #[cached(time = 3600, key = "String", convert = r#"{ path.clone() }"#)]
 #[get("/chess/stats/{game_mode}")]
-pub async fn chess_stats_page(path: web::Path<String>) -> Html {
+pub async fn chess_graph(path: web::Path<String>) -> Html {
     let game_mode = path.into_inner();
-    let player_data = ChessModule::get_player_data(PLAYER_NAME);
-    let player_stats = ChessModule::get_player_stats_by_game_mode(PLAYER_NAME, game_mode.as_str());
+    let data = ChessModule::get_player_data(PLAYER_NAME);
+    let stats = ChessModule::get_player_stats_by_game_mode(PLAYER_NAME, game_mode.as_str());
 
-    if player_data.is_none() || player_stats.is_none() {
+    if data.is_none() || stats.is_none() {
         let fallback_html: &str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/templates/chess_stats_fallback.md"
@@ -286,39 +298,159 @@ pub async fn chess_stats_page(path: web::Path<String>) -> Html {
         return Html::new(markdown::to_html(fallback_html));
     };
 
-    // TODO: finish chess page
-    let _data = player_data.unwrap();
-    let stats = player_stats.unwrap();
+    let player_stats = stats.unwrap();
 
-    let md: &str = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/templates/chess_stats.md"
-    ));
+    let chart_data: Vec<_> = player_stats
+        .stats
+        .history
+        .iter()
+        .map(|h| {
+            let timestamp_ms = h.timestamp;
+            json!({
+                "timestamp": timestamp_ms,
+                "rating": h.rating,
+                "day": h.day
+            })
+        })
+        .collect();
 
-    let page: &str = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/templates/chess_page.html"
-    ));
+    let data_json = serde_json::to_string(&chart_data).unwrap_or_default();
 
-    /* Html::new(markdown::to_html(
-        md.replace(
-            "{{CURRENT_RATING}}",
-            stats.stats.rating_last.to_string().as_str(),
-        )
-        .replace(
-            "{{PLAYED_GAMES_COUNT}}",
-            stats.stats.count.to_string().as_str(),
-        )
-        .replace(
-            "{{PLAYED_GAMES_COUNT_WHITE}}",
-            stats.stats.white_game_count.to_string().as_str(),
-        )
-        .replace(
-            "{{PLAYED_GAMES_COUNT_BLACK}}",
-            stats.stats.black_game_count.to_string().as_str(),
-        )
-        .as_str(),
-    )) */
+    let total_games = player_stats.stats.count;
+    let win_rate = if total_games > 0 {
+        (player_stats.stats.win_count as f64 / total_games as f64) * 100.0
+    } else {
+        0.0
+    };
+    let draw_rate = if total_games > 0 {
+        (player_stats.stats.draw_count as f64 / total_games as f64) * 100.0
+    } else {
+        0.0
+    };
+    let loss_rate = if total_games > 0 {
+        (player_stats.stats.loss_count as f64 / total_games as f64) * 100.0
+    } else {
+        0.0
+    };
 
-    Html::new(page)
+    let rating_change =
+        player_stats.stats.rating_last as i32 - player_stats.stats.rating_first as i32;
+    let rating_change_sign = if rating_change >= 0 { "↑" } else { "↓" };
+    let rating_change_color = if rating_change >= 0 {
+        "text-green-500"
+    } else {
+        "text-red-500"
+    };
+
+    let rating_html = html! {
+        div class="text-text-color w-full" {
+            div class="container mx-auto max-w-6xl" {
+                div class="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8" {
+                    h2 class="text-2xl font-bold mb-4" { "Rating History" }
+                    div id="elo-chart" {}
+                }
+
+                div class="grid grid-cols-1 gap-4 mb-8" {
+                    div class="bg-gray-800 rounded-lg p-6 border border-gray-700" {
+                        div class="flex justify-between items-start mb-2" {
+                            h3 class="text-gray-400 text-sm" { "Current Rating" }
+                            span class=(format!("{} text-xs", rating_change_color)) {
+                                (rating_change_sign) " " (rating_change.abs())
+                            }
+                        }
+                        p class="text-4xl font-bold mb-1" { (player_stats.stats.rating_last) }
+                        p class="text-sm text-gray-500" {
+                            "Peak: " (player_stats.stats.rating_max)
+                        }
+                    }
+                }
+
+                // Stats Overview
+                div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-8" {
+                    h2 class="text-2xl font-bold mb-6" { "Overall Statistics" }
+                    div class="grid grid-cols-2 md:grid-cols-4 gap-6" {
+                        div {
+                            p class="text-gray-400 text-sm mb-1" { "Total Games" }
+                            p class="text-2xl font-bold" { (total_games) }
+                        }
+                        div {
+                            p class="text-gray-400 text-sm mb-1" { "Win Rate" }
+                            p class="text-2xl font-bold text-green-500" {
+                                (format!("{:.1}%", win_rate))
+                            }
+                        }
+                        div {
+                            p class="text-gray-400 text-sm mb-1" { "Draw Rate" }
+                            p class="text-2xl font-bold text-yellow-500" {
+                                (format!("{:.1}%", draw_rate))
+                            }
+                        }
+                        div {
+                            p class="text-gray-400 text-sm mb-1" { "Loss Rate" }
+                            p class="text-2xl font-bold text-red-500" {
+                                (format!("{:.1}%", loss_rate))
+                            }
+                        }
+                    }
+                }
+
+                // Additional Stats
+                div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8" {
+                    div class="bg-gray-800 rounded-lg p-6 border border-gray-700" {
+                        h3 class="text-lg font-semibold mb-3" { "Win/Loss Breakdown" }
+                        div class="space-y-2" {
+                            div class="flex justify-between" {
+                                span class="text-gray-400" { "As White:" }
+                                span {
+                                    span class="text-green-500" { (player_stats.stats.white_win_count) }
+                                    " / "
+                                    span class="text-yellow-500" { (player_stats.stats.white_draw_count) }
+                                    " / "
+                                    span class="text-red-500" { (player_stats.stats.white_loss_count) }
+                                }
+                            }
+                            div class="flex justify-between" {
+                                span class="text-gray-400" { "As Black:" }
+                                span {
+                                    span class="text-green-500" { (player_stats.stats.black_win_count) }
+                                    " / "
+                                    span class="text-yellow-500" { (player_stats.stats.black_draw_count) }
+                                    " / "
+                                    span class="text-red-500" { (player_stats.stats.black_loss_count) }
+                                }
+                            }
+                        }
+                    }
+
+                    div class="bg-gray-800 rounded-lg p-6 border border-gray-700" {
+                        h3 class="text-lg font-semibold mb-3" { "Performance" }
+                        div class="space-y-2" {
+                            div class="flex justify-between" {
+                                span class="text-gray-400" { "Avg Opponent:" }
+                                span { (format!("{:.0}", player_stats.stats.opponent_rating_avg)) }
+                            }
+                            div class="flex justify-between" {
+                                span class="text-gray-400" { "Current Streak:" }
+                                span class={
+                                    @if player_stats.stats.streak_last >= 0 { "text-green-500" }
+                                    @else { "text-red-500" }
+                                } {
+                                    (player_stats.stats.streak_last.abs())
+                                    @if player_stats.stats.streak_last >= 0 { " W" } @else { " L" }
+                                }
+                            }
+                            @if player_stats.stats.accuracy_count > 0 {
+                                div class="flex justify-between" {
+                                    span class="text-gray-400" { "Avg Accuracy:" }
+                                    span { (format!("{:.1}%", player_stats.stats.accuracy_avg)) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    Html::new(rating_html)
 }

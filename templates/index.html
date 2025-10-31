@@ -7,6 +7,7 @@
     <script src="/_static/htmx.min.js"></script>
     <script src="/_static/d3-v7.min.js"></script>
     <script src="/_static/graph.js"></script>
+    <script src="/_static/elo-chart.js"></script>
 
     <link rel="stylesheet" href="/_static/compiled.css" />
     <link rel="icon" type="image/x-icon" href="/_static/favicon.ico" />
@@ -26,7 +27,7 @@
     <div class="w-full flex justify-items-stretch justify-between p-2">
       <span> WELCOME HELLO GUS TEXT PLACEHOLDER FOO BAR </span>
       <span
-        hx-get="/chess/stats/rapid"
+        hx-get="/chess"
         hx-trigger="click"
         hx-target="#content-section"
         class="cursor-pointer hover:text-primary-color"
@@ -96,7 +97,7 @@
       <div class="flex flex-row justify-between w-3/4 lg:w-4/5 min-h-0">
         <div
           id="content-section"
-          class="prose prose-theme max-w-4xl p-8 overflow-auto"
+          class="prose prose-theme w-full max-w-4xl p-8 overflow-auto"
           hx-target="#content-section"
           hx-swap="innerHTML"
         >

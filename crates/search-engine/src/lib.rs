@@ -3,7 +3,6 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use surrealdb::engine::any::Any;
-#[cfg(debug_assertions)]
 use surrealdb::engine::any::connect;
 use surrealdb::{Response, Surreal};
 use walkdir::WalkDir;
