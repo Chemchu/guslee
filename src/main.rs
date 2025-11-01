@@ -24,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     let search_engine = Arc::new(SearchEngine::new(&posts_path).await);
 
     info!("Search engine created correctly");
-    info!("🌐 Server starting on http://127.0.0.1:3000");
+    info!("🌐 Server starting on http://0.0.0.0:3000");
 
     HttpServer::new(move || {
         App::new()
@@ -41,7 +41,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::graph_network)
             .service(routes::get_post) // This service should be last because it matches any string
     })
-    .bind(("127.0.0.1", 3000))?
+    .bind(("0.0.0.0", 3000))?
     .run()
     .await
 }
