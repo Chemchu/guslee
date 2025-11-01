@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@config "../tailwind.config.js";
 
 .fade {
   transition: opacity 0.5s ease-in-out;
@@ -20,9 +22,16 @@
 
 body {
   margin: 0; /* Remove default margin */
-  font-family: "Neue Montreal Medium", sans-serif;
+  font-family: "Iosevka Regular", "Neue Montreal Medium", sans-serif;
   font-weight: 600;
   min-height: 100vh; /* Ensure body covers full viewport */
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Tusker Grotesk", sans-serif;
 }
 
 footer {
@@ -30,10 +39,21 @@ footer {
 }
 
 @font-face {
-  font-family: "Migra Regular";
-  font-style: normal;
-  font-weight: 600;
-  src: url("migra-3.ttf") format("truetype");
+  font-family: "Iosevka Regular"; /* Give your font a name */
+  src: url("Iosevka-Regular.ttf") format("truetype");
+  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
+  font-style: normal; /* Specify the style (e.g., normal, italic) */
+  font-display: swap;
+  letter-spacing: 0em;
+}
+
+@font-face {
+  font-family: "Tusker Grotesk"; /* Give your font a name */
+  src: url("TuskerGrotesk-4500Medium.ttf") format("truetype");
+  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
+  font-style: normal; /* Specify the style (e.g., normal, italic) */
+  font-display: swap;
+  letter-spacing: 0em;
 }
 
 @font-face {
@@ -54,38 +74,8 @@ footer {
   letter-spacing: 0em;
 }
 
-@font-face {
-  font-family: "Tusker Grotesk"; /* Give your font a name */
-  src: url("TuskerGrotesk-2600Semibold.woff2") format("woff2");
-  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
-  font-style: normal; /* Specify the style (e.g., normal, italic) */
-  font-display: swap;
-  letter-spacing: 0em;
-}
-
-@font-face {
-  font-family: "Roslindale Black"; /* Give your font a name */
-  src: url("Roslindale-DisplayBlack.ttf") format("truetype");
-  font-weight: 900; /* Specify the weight (e.g., normal, bold) */
-  font-style: normal; /* Specify the style (e.g., normal, italic) */
-  font-display: swap;
-  letter-spacing: 0em;
-}
-
-.font-migra-regular {
-  font-family: "Migra Regular";
-}
-
 .font-neue-montreal-medium {
   font-family: "Neue Montreal Medium";
-}
-
-.font-tusker {
-  font-family: "Tusker Grotesk";
-}
-
-.font-roslindale-black {
-  font-family: "Roslindale Black";
 }
 
 .htmx-indicator {
@@ -93,4 +83,28 @@ footer {
 }
 .htmx-request .htmx-indicator {
   display: inline;
+}
+
+::-webkit-scrollbar {
+  width: 5;
+  height: 8;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 100vh;
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(219, 223, 229, 0.5);
+  border-radius: 100vh;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f58a07;
+  border-radius: 100vh;
+}
+
+details[open] summary::marker {
+  color: #f58a07;
 }

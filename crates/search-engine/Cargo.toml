@@ -1,0 +1,11 @@
+[package]
+name = "search-engine"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+walkdir = "2.5.0"
+serde = { version = "1.0", features = ["derive"] }
+gray_matter = "0.3.2"
+surrealdb = { version = "2.3.10", features = ["kv-mem", "protocol-ws"], default-features = false }
+regex = "1.12.2"

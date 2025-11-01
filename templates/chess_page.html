@@ -1,0 +1,12 @@
+<div class="flex flex-col w-full h-full gap-6">
+  <h1 class="text-3xl font-bold">CHESS SUMMARY</h1>
+  <div
+    id="chess-stats"
+    hx-get="/chess/stats/rapid"
+    hx-target="#chess-stats"
+    hx-trigger="intersect once, revealed"
+    hx-swap="innerHTML"
+  >
+    <div class="text-gray-400">Loading chart...</div>
+  </div>
+</div>
