@@ -1,5 +1,4 @@
 function initChessChart(chartData) {
-  console.log('Initializing chess chart with data:', chartData);
   
   d3.select('#elo-chart').selectAll('*').remove();
   
@@ -126,8 +125,6 @@ function initChessChart(chartData) {
       
       svg.selectAll('.tooltip').remove();
     });
-  
-  console.log('Chart rendered successfully');
 }
 
 document.addEventListener('htmx:afterSettle', function(evt) {
@@ -136,7 +133,6 @@ document.addEventListener('htmx:afterSettle', function(evt) {
     const dataset = JSON.parse(chartContainer.getAttribute("dataset"));
     if (chartContainer && dataset) {
       try {
-        console.log(dataset)
         initChessChart(dataset);
       } catch (e) {
         console.error('Failed to parse chart data:', e);
