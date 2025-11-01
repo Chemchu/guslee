@@ -15,7 +15,7 @@ impl ChessModule {
                 ))
                 .with_header(
                     "User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36",
                 )
                 .with_header("Accept", "application/json")
                 .with_header("Accept-Language", "en-US,en;q=0.9")

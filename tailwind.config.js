@@ -2,7 +2,7 @@
 module.exports = {
   darkMode: "selector",
   content: {
-    files: ["./src/**/*.{html,js}", "./templates/**/*.{html,js}"],
+    files: ["./src/**/*.rs", "./templates/**/*.{html,js}", "./static/**/*.{html,js}"],
     extract: {
       rs: (content) => {
         const matches = content.match(/class\s*=\s*"([^"]*)"/g) || [];

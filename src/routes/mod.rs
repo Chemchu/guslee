@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Html},
 };
 use cached::proc_macro::cached;
-use chess_module::{ChessModule, PlayerStats};
+use chess_module::ChessModule;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::html;
 use search_engine::{
@@ -333,60 +333,49 @@ pub async fn chess_graph(path: web::Path<String>) -> Html {
         0.0
     };
 
-    let rating_change =
-        player_stats.stats.rating_last as i32 - player_stats.stats.rating_first as i32;
-    let rating_change_sign = if rating_change >= 0 { "↑" } else { "↓" };
-    let rating_change_color = if rating_change >= 0 {
-        "text-green-500"
-    } else {
-        "text-red-500"
-    };
-
     let rating_html = html! {
         div class="text-text-color w-full" {
             div class="container mx-auto max-w-6xl" {
-                div class="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8" {
-                    h2 class="text-2xl font-bold mb-4" { "Rating History" }
-                    div id="elo-chart" {}
-                }
-
-                div class="grid grid-cols-1 gap-4 mb-8" {
-                    div class="bg-gray-800 rounded-lg p-6 border border-gray-700" {
-                        div class="flex justify-between items-start mb-2" {
-                            h3 class="text-gray-400 text-sm" { "Current Rating" }
-                            span class=(format!("{} text-xs", rating_change_color)) {
-                                (rating_change_sign) " " (rating_change.abs())
+                div {
+                    div class="grid grid-cols-2 md:grid-cols-4 gap-4" {
+                        div {
+                            p class="text-gray-400 text-sm" { "ELO" }
+                            p class="text-2xl font-bold" { (player_stats.stats.rating_last) }
+                        }
+                        div {
+                            p class="text-gray-400 text-sm" { "Peak ELO" }
+                            p class="text-2xl font-bold" { (player_stats.stats.rating_max) }
+                        }
+                        div {
+                            p class="text-gray-400 text-sm" { "Most used white opening" }
+                            p class="text-2xl font-bold text-red-500" {
+                                "Italian Game"
                             }
                         }
-                        p class="text-4xl font-bold mb-1" { (player_stats.stats.rating_last) }
-                        p class="text-sm text-gray-500" {
-                            "Peak: " (player_stats.stats.rating_max)
-                        }
-                    }
-                }
-
-                // Stats Overview
-                div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-8" {
-                    h2 class="text-2xl font-bold mb-6" { "Overall Statistics" }
-                    div class="grid grid-cols-2 md:grid-cols-4 gap-6" {
                         div {
-                            p class="text-gray-400 text-sm mb-1" { "Total Games" }
+                            p class="text-gray-400 text-sm" { "Most used black opening" }
+                            p class="text-2xl font-bold text-red-500" {
+                                "Modern Defense"
+                            }
+                        }
+                        div {
+                            p class="text-gray-400 text-sm" { "Games in 90 days" }
                             p class="text-2xl font-bold" { (total_games) }
                         }
                         div {
-                            p class="text-gray-400 text-sm mb-1" { "Win Rate" }
+                            p class="text-gray-400 text-sm" { "Win Rate" }
                             p class="text-2xl font-bold text-green-500" {
                                 (format!("{:.1}%", win_rate))
                             }
                         }
                         div {
-                            p class="text-gray-400 text-sm mb-1" { "Draw Rate" }
+                            p class="text-gray-400 text-sm" { "Draw Rate" }
                             p class="text-2xl font-bold text-yellow-500" {
                                 (format!("{:.1}%", draw_rate))
                             }
                         }
                         div {
-                            p class="text-gray-400 text-sm mb-1" { "Loss Rate" }
+                            p class="text-gray-400 text-sm" { "Loss Rate" }
                             p class="text-2xl font-bold text-red-500" {
                                 (format!("{:.1}%", loss_rate))
                             }
@@ -394,10 +383,13 @@ pub async fn chess_graph(path: web::Path<String>) -> Html {
                     }
                 }
 
-                // Additional Stats
-                div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8" {
-                    div class="bg-gray-800 rounded-lg p-6 border border-gray-700" {
-                        h3 class="text-lg font-semibold mb-3" { "Win/Loss Breakdown" }
+                div {
+                    div id="elo-chart" dataset=(data_json) {}
+                }
+
+                div class="grid grid-cols-1 md:grid-cols-2 gap-10" {
+                    div {
+                        h3 class="text-lg font-semibold" { "Win/Loss Breakdown" }
                         div class="space-y-2" {
                             div class="flex justify-between" {
                                 span class="text-gray-400" { "As White:" }
@@ -422,8 +414,8 @@ pub async fn chess_graph(path: web::Path<String>) -> Html {
                         }
                     }
 
-                    div class="bg-gray-800 rounded-lg p-6 border border-gray-700" {
-                        h3 class="text-lg font-semibold mb-3" { "Performance" }
+                    div {
+                        h3 class="text-lg font-semibold" { "Performance" }
                         div class="space-y-2" {
                             div class="flex justify-between" {
                                 span class="text-gray-400" { "Avg Opponent:" }

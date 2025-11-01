@@ -1,10 +1,9 @@
-<div class="flex flex-col w-full h-full gap-4">
-  <h1 class="text-3xl font-bold">CHESS STATISTICS - CHEMCHU</h1>
-
+<div class="flex flex-col w-full h-full gap-6">
+  <h1 class="text-3xl font-bold">CHESS SUMMARY</h1>
   <div
-    id="elo-chart"
+    id="chess-stats"
     hx-get="/chess/stats/rapid"
-    hx-target="#elo-chart"
+    hx-target="#chess-stats"
     hx-trigger="intersect once, revealed"
     hx-swap="innerHTML"
   >

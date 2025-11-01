@@ -3,14 +3,15 @@ function initChessChart(chartData) {
   
   d3.select('#elo-chart').selectAll('*').remove();
   
-  const data = chartData;
+  const numOfMatchesChart = 30;
+  const data = chartData.slice(numOfMatchesChart - 1, chartData.length);
   
   if (!data || data.length === 0) {
     console.warn('No data available for chart');
     return;
   }
   
-  const margin = { top: 20, right: 60, bottom: 40, left: 60 };
+  const margin = { top: 20, right: 50, bottom: 30, left: 50 };
   const width = 900 - margin.left - margin.right;
   const height = 400 - margin.top - margin.bottom;
 
@@ -41,7 +42,7 @@ function initChessChart(chartData) {
   const line = d3.line()
     .x(d => x(d.date))
     .y(d => y(d.rating))
-    .curve(d3.curveMonotoneX);
+    .curve(d3.curveBasis);
 
   svg.append('g')
     .attr('class', 'grid')
@@ -75,7 +76,7 @@ function initChessChart(chartData) {
   svg.append('path')
     .datum(data)
     .attr('fill', 'none')
-    .attr('stroke', '#22c55e')
+    .attr('stroke', '#bc6c25')
     .attr('stroke-width', 3)
     .attr('d', line);
 
@@ -87,8 +88,8 @@ function initChessChart(chartData) {
     .attr('cx', d => x(d.date))
     .attr('cy', d => y(d.rating))
     .attr('r', 3)
-    .attr('fill', '#22c55e')
-    .attr('stroke', '#1f2937')
+    .attr('fill', '#F58A07')
+    .attr('stroke', '#F58A07')
     .attr('stroke-width', 2)
     .style('cursor', 'pointer')
     .on('mouseover', function(_event, d) {
@@ -105,16 +106,16 @@ function initChessChart(chartData) {
         .attr('x', -40)
         .attr('y', -25)
         .attr('width', 80)
-        .attr('height', 20)
+        .attr('height', 40)
         .attr('fill', '#1f2937')
-        .attr('stroke', '#22c55e')
+        .attr('stroke', '#F58A07')
         .attr('rx', 4);
       
       tooltip.append('text')
         .attr('text-anchor', 'middle')
-        .attr('y', -10)
+        .attr('y', 2.5)
         .attr('fill', '#fff')
-        .style('font-size', '12px')
+        .style('font-size', '24px')
         .text(d.rating);
     })
     .on('mouseout', function() {
@@ -129,14 +130,17 @@ function initChessChart(chartData) {
   console.log('Chart rendered successfully');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  const chartContainer = document.getElementById('elo-chart');
-  if (chartContainer && chartContainer.dataset.chart) {
-    try {
-      const data = JSON.parse(chartContainer.dataset.chart);
-      initChessChart(data);
-    } catch (e) {
-      console.error('Failed to parse chart data:', e);
+document.addEventListener('htmx:afterSettle', function(evt) {
+  if (evt.detail.target.id === 'chess-stats') {
+    const chartContainer = document.getElementById('elo-chart');
+    const dataset = JSON.parse(chartContainer.getAttribute("dataset"));
+    if (chartContainer && dataset) {
+      try {
+        console.log(dataset)
+        initChessChart(dataset);
+      } catch (e) {
+        console.error('Failed to parse chart data:', e);
+      }
     }
   }
 });
