@@ -22,7 +22,7 @@
 
 body {
   margin: 0; /* Remove default margin */
-  font-family: "Iosevka Regular", "Neue Montreal Medium", sans-serif;
+  font-family: "Iosevka Regular", sans-serif;
   font-weight: 600;
   min-height: 100vh; /* Ensure body covers full viewport */
 }
@@ -40,7 +40,7 @@ footer {
 
 @font-face {
   font-family: "Iosevka Regular"; /* Give your font a name */
-  src: url("Iosevka-Regular.ttf") format("truetype");
+  src: url("Iosevka-Regular-subset.woff2") format("truetype");
   font-weight: 600; /* Specify the weight (e.g., normal, bold) */
   font-style: normal; /* Specify the style (e.g., normal, italic) */
   font-display: swap;
@@ -49,33 +49,11 @@ footer {
 
 @font-face {
   font-family: "Tusker Grotesk"; /* Give your font a name */
-  src: url("TuskerGrotesk-4500Medium.ttf") format("truetype");
+  src: url("TuskerGrotesk-subset.woff2") format("truetype");
   font-weight: 600; /* Specify the weight (e.g., normal, bold) */
   font-style: normal; /* Specify the style (e.g., normal, italic) */
   font-display: swap;
   letter-spacing: 0em;
-}
-
-@font-face {
-  font-family: "Neue Montreal Medium"; /* Give your font a name */
-  src: url("neue-montreal-v2-0-medium.ttf") format("truetype");
-  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
-  font-style: normal; /* Specify the style (e.g., normal, italic) */
-  font-display: swap;
-  letter-spacing: 0em;
-}
-
-@font-face {
-  font-family: "Neue Montreal Mono"; /* Give your font a name */
-  src: url("pp-neue-montreal-mono-book.ttf") format("truetype");
-  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
-  font-style: normal; /* Specify the style (e.g., normal, italic) */
-  font-display: swap;
-  letter-spacing: 0em;
-}
-
-.font-neue-montreal-medium {
-  font-family: "Neue Montreal Medium";
 }
 
 .htmx-indicator {
