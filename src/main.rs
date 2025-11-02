@@ -20,8 +20,9 @@ async fn main() -> std::io::Result<()> {
     info!("🚀 Starting server...");
 
     info!("Creating in-memory full-text search engine...");
-    let posts_path = format!("{}/garden", env!("CARGO_MANIFEST_DIR"));
-    let search_engine = Arc::new(SearchEngine::new(&posts_path).await);
+    let garden_path = std::env::var("GARDEN_PATH")
+        .unwrap_or_else(|_| format!("{}/garden", env!("CARGO_MANIFEST_DIR")));
+    let search_engine = Arc::new(SearchEngine::new(&garden_path).await);
 
     info!("Search engine created correctly");
     info!("🌐 Server starting on http://0.0.0.0:3000");
@@ -32,6 +33,7 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/_static", "./static").show_files_listing())
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Gustavo's digital garden"),
+                garden_path: garden_path.clone(),
                 search_engine: Arc::clone(&search_engine),
             }))
             .service(routes::landing)

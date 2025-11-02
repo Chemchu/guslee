@@ -11,22 +11,37 @@ use search_engine::{
     types::{DEFAULT_SEARCH_LIMIT, MatchingFile, Params},
 };
 use serde_json::json;
+use std::sync::OnceLock;
 use std::{
     collections::{HashMap, HashSet},
     time::Duration,
 };
 use std::{fs, io};
 
+static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
+
 const PLAYER_NAME: &str = "chemchuu";
 
 pub struct AppState {
     pub app_name: String,
+    pub garden_path: String,
     pub search_engine: std::sync::Arc<SearchEngine>,
 }
 
 #[get("/")]
 pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
-    let content: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/garden/welcome.md"));
+    let welcome_path = format!("{}/welcome.md", app_state.garden_path);
+
+    let content = match std::fs::read_to_string(&welcome_path) {
+        Ok(content) => content,
+        Err(e) => {
+            log::error!("Failed to read welcome.md: {}", e);
+            return Html::new(wrap_markdown_with_whole_page(
+                &app_state.app_name,
+                "<p>Error loading welcome page</p>",
+            ));
+        }
+    };
 
     let frontmatter = Options {
         parse: ParseOptions {
@@ -41,7 +56,7 @@ pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
 
     Html::new(wrap_markdown_with_whole_page(
         &app_state.app_name,
-        &markdown::to_html_with_options(content, &frontmatter).unwrap(),
+        &markdown::to_html_with_options(&content, &frontmatter).unwrap(),
     ))
 }
 
@@ -234,7 +249,12 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
 }
 
 fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
-    let html: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/index.html"));
+    let html = INDEX_TEMPLATE.get_or_init(|| {
+        let template_path =
+            std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
+        std::fs::read_to_string(format!("{}/index.html", template_path))
+            .expect("Failed to read index.html template")
+    });
 
     html.replace("{{APPNAME}}", app_name)
         .replace("{{CONTENT}}", content)
@@ -274,12 +294,12 @@ pub async fn graph_network(app_state: web::Data<AppState>, req: HttpRequest) -> 
 #[cached(time = 3600)]
 #[get("/chess")]
 pub async fn chess_page() -> Html {
-    let page: &str = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/templates/chess_page.html"
-    ));
+    let template_path =
+        std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
+    let page = std::fs::read_to_string(format!("{}/chess_page.html", template_path))
+        .expect("Failed to read chess_page.html template");
 
-    Html::new(page)
+    Html::new(&page)
 }
 
 #[cached(time = 3600, key = "String", convert = r#"{ path.clone() }"#)]
@@ -290,12 +310,12 @@ pub async fn chess_graph(path: web::Path<String>) -> Html {
     let stats = ChessModule::get_player_stats_by_game_mode(PLAYER_NAME, game_mode.as_str());
 
     if data.is_none() || stats.is_none() {
-        let fallback_html: &str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/templates/chess_stats_fallback.md"
-        ));
-
-        return Html::new(markdown::to_html(fallback_html));
+        let template_path =
+            std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
+        let fallback_html =
+            std::fs::read_to_string(format!("{}/chess_stats_fallback.md", template_path))
+                .unwrap_or_else(|_| "Error loading chess stats".to_string());
+        return Html::new(markdown::to_html(&fallback_html));
     };
 
     let player_stats = stats.unwrap();
