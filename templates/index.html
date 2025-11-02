@@ -24,17 +24,52 @@
     class="flex flex-col w-full h-dvh max-h-dvh bg-background-color text-text-color"
     hx-boost="true"
   >
-    <!-- Responsive header with hamburger menu on mobile -->
-    <div class="w-full flex justify-between items-center p-2">
-      <span
-        class="text-sm md:text-base lg:text-lg font-semibold truncate max-w-[40%] sm:max-w-none"
+    <!-- Responsive header with search bar on mobile -->
+    <div class="w-full flex justify-between items-center p-2 gap-2">
+      <div
+        class="md:hidden flex-grow flex justify-between border border-shade-color focus-within:border-primary-color"
       >
+        <input
+          class="w-full px-2 py-1 text-sm focus:outline-hidden"
+          type="text"
+          name="query"
+          placeholder="Search posts..."
+          hx-get="/search"
+          hx-vals='{"limit": 100}'
+          hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
+          hx-target="#mobile-search-results"
+          hx-swap="innerHTML"
+          oninput="if(this.value.trim() === '') { document.getElementById('mobile-search-results').classList.add('hidden'); } else { document.getElementById('mobile-search-results').classList.remove('hidden'); }"
+        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="cursor-pointer w-6 h-6 px-1 opacity-30 hover:opacity-80 flex-shrink-0"
+          hx-get="/search"
+          hx-vals='js:{"limit": 100, "query": document.querySelector("input[name=query]").value}'
+          hx-trigger="click"
+          hx-target="#mobile-search-results"
+          hx-swap="innerHTML"
+          onclick="if(document.querySelector('input[name=query]').value.trim() !== '') { document.getElementById('mobile-search-results').classList.remove('hidden'); }"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+          />
+        </svg>
+      </div>
+
+      <span class="hidden md:block text-base lg:text-lg font-semibold truncate">
         WELCOME HELLO GUS TEXT PLACEHOLDER FOO BAR
       </span>
 
       <button
         id="mobile-menu-btn"
-        class="md:hidden hover:text-primary-color"
+        class="md:hidden hover:text-primary-color flex-shrink-0 cursor-pointer"
         onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
       >
         <svg
@@ -53,7 +88,7 @@
         </svg>
       </button>
 
-      <!-- Desktop stuff -->
+      <!-- Desktop navigation -->
       <div class="hidden md:flex gap-4 lg:gap-6">
         <span class="cursor-pointer hover:text-primary-color whitespace-nowrap">
           NEWS
@@ -71,6 +106,14 @@
           CHESS
         </span>
       </div>
+    </div>
+
+    <!-- Mobile search results -->
+    <div
+      id="mobile-search-results"
+      class="hidden md:hidden absolute top-14 left-0 right-0 max-h-64 overflow-auto border-b border-shade-color bg-background-color z-50 shadow-lg px-2 pb-1"
+    >
+      <!-- Search results will appear here -->
     </div>
 
     <!-- Mobile menu dropdown -->

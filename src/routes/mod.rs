@@ -192,10 +192,10 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
 
     let html = html! {
         ul {
-            @for (index, (topic, topic_posts)) in topics_to_render.iter().enumerate() {
+            @for (_index, (topic, topic_posts)) in topics_to_render.iter().enumerate() {
                 li {
                     details
-                    open[index == 0]
+                    open="true"
                     {
                         summary
                         class="cursor-pointer hover:text-primary-color"
