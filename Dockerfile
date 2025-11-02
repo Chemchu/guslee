@@ -22,11 +22,6 @@ COPY --from=builder /usr/src/app/garden ./garden
 COPY --from=builder /usr/src/app/static ./static
 COPY --from=builder /usr/src/app/templates ./templates
 
-# Debug: List what was copied
-RUN ls -la /app/
-RUN ls -la /app/garden/ || echo "Garden directory is empty or doesn't exist"
-
-# Set environment variables for runtime paths (use /app, not /usr/src/app)
 ENV GARDEN_PATH=/app/garden
 ENV TEMPLATE_PATH=/app/templates
 
