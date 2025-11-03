@@ -12,7 +12,6 @@
 
     <link rel="stylesheet" href="/_static/compiled.css" />
     <link rel="icon" type="image/x-icon" href="/_static/favicon.ico" />
-
     <link rel="manifest" href="/_static/manifest.json" />
 
     <meta
@@ -31,6 +30,7 @@
         class="md:hidden flex-grow flex justify-between border border-shade-color focus-within:border-primary-color"
       >
         <input
+          id="mobile-search-input"
           class="w-full px-2 py-1 text-sm focus:outline-hidden"
           type="text"
           name="query"
@@ -40,9 +40,9 @@
           hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
           hx-target="#mobile-search-results"
           hx-swap="innerHTML"
-          oninput="if(this.value.trim() === '') { document.getElementById('mobile-search-results').classList.add('hidden'); } else { document.getElementById('mobile-search-results').classList.remove('hidden'); }"
         />
         <svg
+          id="mobile-search-icon"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -50,11 +50,10 @@
           stroke="currentColor"
           class="cursor-pointer w-6 h-6 px-1 opacity-30 hover:opacity-80 flex-shrink-0"
           hx-get="/search"
-          hx-vals='js:{"limit": 100, "query": document.querySelector("input[name=query]").value}'
+          hx-vals='js:{"limit": 100, "query": document.querySelector("#mobile-search-input").value}'
           hx-trigger="click"
           hx-target="#mobile-search-results"
           hx-swap="innerHTML"
-          onclick="if(document.querySelector('input[name=query]').value.trim() !== '') { document.getElementById('mobile-search-results').classList.remove('hidden'); }"
         >
           <path
             stroke-linecap="round"
@@ -71,7 +70,6 @@
       <button
         id="mobile-menu-btn"
         class="md:hidden hover:text-primary-color flex-shrink-0 cursor-pointer"
-        onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -91,18 +89,18 @@
 
       <!-- Desktop navigation -->
       <div class="hidden md:flex gap-4 lg:gap-6">
-        <span class="cursor-pointer hover:text-primary-color whitespace-nowrap">
-          NEWS
-        </span>
-        <span class="cursor-pointer hover:text-primary-color whitespace-nowrap">
-          PROJECTS
-        </span>
+        <span class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          >NEWS</span
+        >
+        <span class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          >PROJECTS</span
+        >
         <span
+          id="chess-link-desktop"
           hx-get="/chess"
           hx-trigger="click"
           hx-target="#content-section"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
-          hx-on:htmx:after-request="document.getElementById('content-section').classList.remove('prose')"
         >
           CHESS
         </span>
@@ -122,20 +120,19 @@
       id="mobile-menu"
       class="hidden md:hidden flex-col gap-2 p-4 border-t border-b border-shade-color"
     >
-      <span class="cursor-pointer hover:text-primary-color py-2"> NEWS </span>
-      <span class="cursor-pointer hover:text-primary-color py-2">
-        PROJECTS
-      </span>
+      <span class="cursor-pointer hover:text-primary-color py-2">NEWS</span>
+      <span class="cursor-pointer hover:text-primary-color py-2">PROJECTS</span>
       <span
+        id="chess-link-mobile"
         hx-get="/chess"
         hx-trigger="click"
         hx-target="#content-section"
         class="cursor-pointer hover:text-primary-color py-2"
-        hx-on:htmx:after-request="document.getElementById('content-section').classList.remove('prose'); document.getElementById('mobile-menu').classList.add('hidden')"
       >
         CHESS
       </span>
     </div>
+
     <div
       class="flex-grow flex flex-col md:flex-row w-full border-t border-shade-color min-h-0"
     >
@@ -147,6 +144,7 @@
           class="flex justify-between border border-shade-color focus:border-primary-color"
         >
           <input
+            id="desktop-search-input"
             class="w-full px-2 py-1 text-sm md:text-base focus:outline-hidden"
             type="text"
             name="query"
@@ -158,6 +156,7 @@
             hx-swap="innerHTML"
           />
           <svg
+            id="desktop-search-icon"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -165,7 +164,7 @@
             stroke="currentColor"
             class="cursor-pointer w-6 h-6 md:w-8 md:h-8 px-1 opacity-30 hover:opacity-80 flex-shrink-0"
             hx-get="/search"
-            hx-vals='js:{"limit": 100, "query": document.querySelector("input[name=query]").value}'
+            hx-vals='js:{"limit": 100, "query": document.querySelector("#desktop-search-input").value}'
             hx-trigger="click"
             hx-target="#list-section"
             hx-swap="innerHTML"
@@ -193,6 +192,7 @@
           </div>
         </div>
       </div>
+
       <div class="flex flex-col lg:flex-row justify-between flex-grow min-h-0">
         <div
           id="content-section"
@@ -202,6 +202,7 @@
         >
           {{CONTENT}}
         </div>
+
         <div
           id="right-section"
           class="hidden lg:flex min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
@@ -248,5 +249,52 @@
         >SOURCE</a
       >
     </div>
+    <script>
+      // Mobile search input handler
+      document
+        .getElementById("mobile-search-input")
+        .addEventListener("input", function () {
+          const results = document.getElementById("mobile-search-results");
+          if (this.value.trim() === "") {
+            results.classList.add("hidden");
+          } else {
+            results.classList.remove("hidden");
+          }
+        });
+
+      // Mobile search icon click handler
+      document
+        .getElementById("mobile-search-icon")
+        .addEventListener("click", function () {
+          const input = document.getElementById("mobile-search-input");
+          if (input.value.trim() !== "") {
+            document
+              .getElementById("mobile-search-results")
+              .classList.remove("hidden");
+          }
+        });
+
+      // Mobile menu toggle
+      document
+        .getElementById("mobile-menu-btn")
+        .addEventListener("click", function () {
+          document.getElementById("mobile-menu").classList.toggle("hidden");
+        });
+
+      // Desktop chess link - remove prose class after content loads
+      document
+        .getElementById("chess-link-desktop")
+        .addEventListener("htmx:afterRequest", function () {
+          document.getElementById("content-section").classList.remove("prose");
+        });
+
+      // Mobile chess link - remove prose class and close menu after content loads
+      document
+        .getElementById("chess-link-mobile")
+        .addEventListener("htmx:afterRequest", function () {
+          document.getElementById("content-section").classList.remove("prose");
+          document.getElementById("mobile-menu").classList.add("hidden");
+        });
+    </script>
   </body>
 </html>

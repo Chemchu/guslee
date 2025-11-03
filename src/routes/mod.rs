@@ -138,7 +138,6 @@ pub async fn search_post(
                         "kilbarrack.md",
                         "first_job_in_ireland.md",
                         "rathmines.md",
-                        "back_to_it_again.md",
                     ])
                     .await
                     .matching_files
