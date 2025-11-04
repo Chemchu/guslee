@@ -212,7 +212,7 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
                                             .unwrap_or(topic_post.file_path())
                                     ))
                                     hx-target="#content-section"
-                                    hx-swap="innerHTML"
+                                    hx-swap="innerHTML transition:true"
                                     class="pl-3 cursor-pointer hover:text-primary-color"
                                     hx-on:click="document.getElementById('content-section').classList.add('prose', 'prose-theme')"
                                     {
@@ -234,7 +234,7 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
                             .unwrap_or(p.file_path())
                     ))
                     hx-target="#content-section"
-                    hx-swap="innerHTML"
+                    hx-swap="innerHTML transition:true"
                     class="cursor-pointer hover:text-primary-color"
                     hx-on:click="document.getElementById('content-section').classList.add('prose', 'prose-theme')"
                     {
