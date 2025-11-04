@@ -123,18 +123,34 @@ function initializeGraph() {
         if (d.file_path) {
             const url = '/' + d.file_path.replace(/\.md$/, '');
             
-            // Use htmx for navigation if available
             if (typeof htmx !== 'undefined') {
-                htmx.ajax('GET', url, {
-                    target: '#content-section',
-                    swap: 'innerHTML',
-                    headers: {
-                        'HX-Current-URL': window.location.origin + url
-                    }
-                }).then(() => {
-                    document.getElementById('content-section').classList.add('prose');
-                    window.history.pushState({}, '', url);
-                });
+                if (document.startViewTransition) {
+                    document.startViewTransition(async () => {
+                        const response = await fetch(url, {
+                            headers: {
+                                'HX-Request': 'true',
+                                'HX-Current-URL': window.location.origin + url
+                            }
+                        });
+                        const html = await response.text();
+                        document.getElementById('content-section').innerHTML = html;
+                        document.getElementById('content-section').classList.add('prose');
+                        window.history.pushState({}, '', url);
+                        
+                        document.body.dispatchEvent(new CustomEvent('graphUpdate'));
+                    });
+                } else {
+                    htmx.ajax('GET', url, {
+                        target: '#content-section',
+                        swap: 'innerHTML',
+                        headers: {
+                            'HX-Current-URL': window.location.origin + url
+                        }
+                    }).then(() => {
+                        document.getElementById('content-section').classList.add('prose');
+                        window.history.pushState({}, '', url);
+                    });
+                }
             } else {
                 // Fallback to regular navigation
                 window.location.href = url;
