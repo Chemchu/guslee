@@ -32,16 +32,16 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::new("%s %r - %Dms"))
             .service(actix_files::Files::new("/_static", "./static").show_files_listing())
             .app_data(web::Data::new(AppState {
-                app_name: String::from("Gustavo's digital garden"),
+                app_name: String::from("Gus' digital garden"),
                 garden_path: garden_path.clone(),
                 search_engine: Arc::clone(&search_engine),
             }))
             .service(routes::landing)
-            .service(routes::chess_page)
-            .service(routes::chess_graph)
-            .service(routes::search_post)
-            .service(routes::graph_network)
-            .service(routes::get_post) // This service should be last because it matches any string
+            .service(routes::chess_routes::chess_page)
+            .service(routes::chess_routes::chess_graph)
+            .service(routes::posts_routes::search_post)
+            .service(routes::graph_routes::graph_network)
+            .service(routes::posts_routes::get_post) // This service should be last because it matches any string
     })
     .bind(("0.0.0.0", 3000))?
     .run()
