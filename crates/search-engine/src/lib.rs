@@ -2,6 +2,7 @@ use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
+use surrealdb::Value;
 use surrealdb::engine::any::Any;
 use surrealdb::engine::any::connect;
 use surrealdb::{Response, Surreal};
@@ -252,6 +253,17 @@ impl SearchEngine {
         }
 
         GraphData { nodes, edges }
+    }
+
+    pub async fn raw_query<T>(&self, query: &str) -> T
+    where
+        T: for<'de> serde::Deserialize<'de> + Default,
+        usize: surrealdb::opt::QueryResult<T>,
+    {
+        match self.db.query(query).await {
+            Ok(mut r) => r.take::<T>(0).unwrap_or_default(),
+            Err(_) => T::default(),
+        }
     }
 }
 

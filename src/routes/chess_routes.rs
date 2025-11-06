@@ -8,17 +8,14 @@ use maud::html;
 use serde_json::json;
 use std::time::Duration;
 
+use crate::routes::load_html_page;
+
 const PLAYER_NAME: &str = "chemchuu";
 
 #[cached(time = 3600)]
 #[get("/chess")]
 pub async fn chess_page() -> Html {
-    let template_path =
-        std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
-    let page = std::fs::read_to_string(format!("{}/chess_page.html", template_path))
-        .expect("Failed to read chess_page.html template");
-
-    Html::new(&page)
+    load_html_page("chess_page")
 }
 
 #[cached(time = 3600, key = "String", convert = r#"{ path.clone() }"#)]

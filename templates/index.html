@@ -90,7 +90,11 @@
 
       <!-- Desktop navigation -->
       <div class="hidden md:flex gap-4 lg:gap-6">
-        <span class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        <span
+          hx-get="/v2"
+          hx-trigger="click"
+          hx-target="#content-section"
+          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           >NEWS</span
         >
         <span class="cursor-pointer hover:text-primary-color whitespace-nowrap"
