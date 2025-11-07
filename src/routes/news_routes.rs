@@ -1,3 +1,5 @@
+use std::clone;
+
 use actix_web::{
     Responder, get,
     web::{self, Html},
@@ -26,17 +28,54 @@ pub async fn news_page(app_state: web::Data<AppState>) -> impl Responder {
         metadata.tags AS tags
     FROM posts
     ORDER BY date DESC";
-    let news = app_state.search_engine.raw_query::<Vec<News>>(query).await;
+    let news: Vec<News> = app_state
+        .search_engine
+        .raw_query::<Vec<News>>(query)
+        .await
+        .iter()
+        .map(|n| {
+            let path = format!("/{}", n.file_path.replace(".md", ""));
+            News {
+                title: n.title.clone(),
+                file_path: path,
+                date: n.date.clone(),
+                description: n.description.clone(),
+                tags: n.tags.clone(),
+            }
+        })
+        .clone()
+        .collect();
 
-    // TODO: remove prose when returning
     let h = html! {
-        h1 {
-            "Recent News (Work in progress)"
-        }
-        ol {
-            @for n in news {
-                li {
-                    (n.title)
+        div
+        class="flex flex-col gap-4 justify-between"
+        {
+            h1 {
+                "News"
+            }
+            ol
+            class="flex flex-col gap-4"
+            {
+                @for n in news {
+                    li
+                    class="flex flex-col gap-1"
+                    {
+                        a
+                        class="text-xl cursor-pointer"
+                        href=(n.file_path)
+                        hx-target="#content-section"
+                        hx-trigger="click"
+                        hx-swap="innerHTML transition:true"
+                        hx-on::after-request="document.getElementById('content-section').classList.add('prose')"
+                        {
+                            (n.title)
+                        }
+                        span
+                        class="text-md"
+                        {
+                            (n.date)
+                        }
+                    }
                 }
             }
         }

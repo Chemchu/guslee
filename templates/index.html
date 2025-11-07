@@ -91,10 +91,13 @@
       <!-- Desktop navigation -->
       <div class="hidden md:flex gap-4 lg:gap-6">
         <span
+          id="news-section"
+          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           hx-get="/v2"
           hx-trigger="click"
           hx-target="#content-section"
-          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          hx-swap="innerHTML transition:true"
+          hx-on::after-request="document.getElementById('content-section').classList.remove('prose')"
           >NEWS</span
         >
         <span class="cursor-pointer hover:text-primary-color whitespace-nowrap"
@@ -102,10 +105,11 @@
         >
         <span
           id="chess-link-desktop"
+          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           hx-get="/chess"
           hx-trigger="click"
           hx-target="#content-section"
-          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          hx-swap="innerHTML transition:true"
         >
           CHESS
         </span>
@@ -142,7 +146,7 @@
     >
       <div
         id="left-section"
-        class="hidden md:flex flex-col justify-between w-full md:w-96 border-r border-shade-color pt-2 px-2 min-h-0"
+        class="hidden md:flex flex-col justify-between w-full md:w-72 lg:w-80 border-r border-shade-color pt-2 px-2 min-h-0 flex-shrink-0"
       >
         <div
           class="flex justify-between border border-shade-color focus:border-primary-color"
@@ -285,20 +289,13 @@
           document.getElementById("mobile-menu").classList.toggle("hidden");
         });
 
-      // Desktop chess link - remove prose class after content loads
-      document
-        .getElementById("chess-link-desktop")
-        .addEventListener("htmx:afterRequest", function () {
-          document.getElementById("content-section").classList.remove("prose");
-        });
-
-      // Mobile chess link - remove prose class and close menu after content loads
+      // Mobile chess link - close menu after content loads
       document
         .getElementById("chess-link-mobile")
         .addEventListener("htmx:afterRequest", function () {
-          document.getElementById("content-section").classList.remove("prose");
           document.getElementById("mobile-menu").classList.add("hidden");
         });
     </script>
+    <div class="hidden text-xl">Dummy element for tailwind</div>
   </body>
 </html>

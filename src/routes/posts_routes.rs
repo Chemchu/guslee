@@ -165,7 +165,7 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
                                     hx-target="#content-section"
                                     hx-swap="innerHTML transition:true"
                                     class="pl-3 cursor-pointer hover:text-primary-color"
-                                    hx-on:click="document.getElementById('content-section').classList.add('prose', 'prose-theme')"
+                                    hx-on::after-request="document.getElementById('content-section').classList.add('prose')"
                                     {
                                         (topic_post.title())
                                     }
@@ -187,7 +187,7 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
                     hx-target="#content-section"
                     hx-swap="innerHTML transition:true"
                     class="cursor-pointer hover:text-primary-color"
-                    hx-on:click="document.getElementById('content-section').classList.add('prose', 'prose-theme')"
+                    hx-on::after-request="document.getElementById('content-section').classList.add('prose')"
                     {
                         (p.title())
                     }
