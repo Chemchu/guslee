@@ -1,4 +1,3 @@
-use std::clone;
 
 use actix_web::{
     Responder, get,

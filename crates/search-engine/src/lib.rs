@@ -2,7 +2,6 @@ use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
-use surrealdb::Value;
 use surrealdb::engine::any::Any;
 use surrealdb::engine::any::connect;
 use surrealdb::{Response, Surreal};
