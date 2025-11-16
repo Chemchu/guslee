@@ -65,7 +65,6 @@ pub async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl
                         hx-target="#content-section"
                         hx-trigger="click"
                         hx-swap="innerHTML transition:true"
-                        hx-on::after-request="document.getElementById('content-section').classList.add('prose')"
                         {
                             div
                             class="flex gap-2"
