@@ -21,7 +21,7 @@
     />
     <meta name="view-transition" content="same-origin" />
   </head>
-  <body
+  <div
     class="flex flex-col w-full h-dvh max-h-dvh bg-background-color text-text-color"
     hx-boost="true"
   >
@@ -89,8 +89,8 @@
       </button>
 
       <!-- Desktop navigation -->
-      <div class="hidden md:flex gap-4 lg:gap-6">
-        <span
+      <ul class="hidden md:flex gap-2 lg:gap-3">
+        <li
           id="news-section"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           hx-get="/v2"
@@ -98,12 +98,14 @@
           hx-target="#content-section"
           hx-swap="innerHTML transition:true"
           hx-on::after-request="document.getElementById('content-section').classList.remove('prose')"
-          >NEWS</span
+          >NEWS</li
         >
-        <span class="cursor-pointer hover:text-primary-color whitespace-nowrap"
-          >PROJECTS</span
+        <li class="text-primary-color">&#8226;</li>
+        <li class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          >PROJECTS</li
         >
-        <span
+        <li class="text-primary-color">&#8226;</li>
+        <li
           id="chess-link-desktop"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           hx-get="/chess"
@@ -112,8 +114,8 @@
           hx-swap="innerHTML transition:true"
         >
           CHESS
-        </span>
-      </div>
+        </li>
+      </ul>
     </div>
 
     <!-- Mobile search results -->
