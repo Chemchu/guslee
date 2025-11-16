@@ -19,11 +19,6 @@ pub struct AppState {
     pub search_engine: std::sync::Arc<SearchEngine>,
 }
 
-#[get("/v2")]
-pub async fn landing_v2() -> impl Responder {
-    load_html_page("news")
-}
-
 #[get("/")]
 pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
     let welcome_path = format!("{}/welcome.md", app_state.garden_path);
@@ -32,7 +27,7 @@ pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
         Ok(content) => content,
         Err(e) => {
             log::error!("Failed to read welcome.md: {}", e);
-            return Html::new(wrap_markdown_with_whole_page(
+            return Html::new(wrap_content_into_full_page(
                 &app_state.app_name,
                 "<p>Error loading welcome page</p>",
             ));
@@ -50,13 +45,13 @@ pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
         ..Default::default()
     };
 
-    Html::new(wrap_markdown_with_whole_page(
+    Html::new(wrap_content_into_full_page(
         &app_state.app_name,
         &markdown::to_html_with_options(&content, &frontmatter).unwrap(),
     ))
 }
 
-fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
+pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {
     let html = INDEX_TEMPLATE.get_or_init(|| {
         let template_path =
             std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
@@ -68,7 +63,7 @@ fn wrap_markdown_with_whole_page(app_name: &str, content: &str) -> String {
         .replace("{{CONTENT}}", content)
 }
 
-fn load_html_page(html_file: &str) -> Html {
+pub fn load_html_page(html_file: &str) -> Html {
     let template_path =
         std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
     let page = std::fs::read_to_string(format!("{}/{}.html", template_path, html_file))

@@ -1,12 +1,12 @@
 use actix_web::{
-    Responder, get,
+    HttpRequest, Responder, get,
     web::{self, Html},
 };
 use maud::PreEscaped;
 use maud::html;
 use serde::{Deserialize, Serialize};
 
-use crate::routes::AppState;
+use crate::routes::{AppState, wrap_content_into_full_page};
 
 #[derive(Serialize, Deserialize)]
 struct News {
@@ -18,7 +18,7 @@ struct News {
 }
 
 #[get("/news")]
-pub async fn news_page(app_state: web::Data<AppState>) -> impl Responder {
+pub async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
     let query = "SELECT 
         file_path,
         metadata.date AS date,
@@ -102,5 +102,10 @@ pub async fn news_page(app_state: web::Data<AppState>) -> impl Responder {
         }
     };
 
-    Html::new(h)
+    let is_htmx_req = req.headers().get("HX-Request").is_some();
+    if is_htmx_req {
+        Html::new(h)
+    } else {
+        Html::new(wrap_content_into_full_page(&app_state.app_name, &h.0))
+    }
 }

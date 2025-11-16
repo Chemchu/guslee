@@ -9,6 +9,7 @@
     <script src="/_static/graph.js"></script>
     <script src="/_static/elo-chart.js"></script>
     <script src="/_static/mobile-search.js"></script>
+    <script src="/_static/prose-style-watcher.js"></script>
 
     <link rel="stylesheet" href="/_static/compiled.css" />
     <link rel="stylesheet" href="/_static/animations.css" />
@@ -21,7 +22,7 @@
     />
     <meta name="view-transition" content="same-origin" />
   </head>
-  <div
+  <body
     class="flex flex-col w-full h-dvh max-h-dvh bg-background-color text-text-color"
     hx-boost="true"
   >
@@ -89,33 +90,34 @@
       </button>
 
       <!-- Desktop navigation -->
-      <ul class="hidden md:flex gap-2 lg:gap-3">
-        <li
+      <div class="hidden md:flex gap-2 lg:gap-3">
+        <a
           id="news-section"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
-          hx-get="/v2"
+          href="/news"
           hx-trigger="click"
           hx-target="#content-section"
           hx-swap="innerHTML transition:true"
           hx-on::after-request="document.getElementById('content-section').classList.remove('prose')"
-          >NEWS</li
         >
-        <li class="text-primary-color">&#8226;</li>
-        <li class="cursor-pointer hover:text-primary-color whitespace-nowrap"
-          >PROJECTS</li
-        >
-        <li class="text-primary-color">&#8226;</li>
-        <li
+          NEWS
+        </a>
+        <span class="text-primary-color">&#8226;</span>
+        <a class="cursor-pointer hover:text-primary-color whitespace-nowrap">
+          PROJECTS
+        </a>
+        <span class="text-primary-color">&#8226;</span>
+        <a
           id="chess-link-desktop"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
-          hx-get="/chess"
+          href="/chess"
           hx-trigger="click"
           hx-target="#content-section"
           hx-swap="innerHTML transition:true"
         >
           CHESS
-        </li>
-      </ul>
+        </a>
+      </div>
     </div>
 
     <!-- Mobile search results -->
@@ -206,7 +208,7 @@
       <div class="flex flex-col lg:flex-row justify-between flex-grow min-h-0">
         <div
           id="content-section"
-          class="prose prose-theme w-full max-w-full md:max-w-4xl p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
+          class="prose-theme w-full max-w-full md:max-w-4xl p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
           hx-target="#content-section"
           hx-swap="innerHTML"
         >
@@ -298,6 +300,8 @@
           document.getElementById("mobile-menu").classList.add("hidden");
         });
     </script>
-    <div class="hidden text-xl">Dummy element for tailwind</div>
+    <div class="hidden text-xl prose prose-theme">
+      Dummy element for tailwind
+    </div>
   </body>
 </html>

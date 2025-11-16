@@ -37,7 +37,6 @@ async fn main() -> std::io::Result<()> {
                 search_engine: Arc::clone(&search_engine),
             }))
             .service(routes::landing)
-            .service(routes::landing_v2)
             .service(routes::news_routes::news_page)
             .service(routes::chess_routes::chess_page)
             .service(routes::chess_routes::chess_graph)

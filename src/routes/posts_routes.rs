@@ -9,7 +9,7 @@ use search_engine::types::{DEFAULT_SEARCH_LIMIT, MatchingFile, Params};
 use std::collections::{HashMap, HashSet};
 use std::{fs, io};
 
-use crate::routes::{AppState, wrap_markdown_with_whole_page};
+use crate::routes::{AppState, wrap_content_into_full_page};
 
 #[get("/{post:.*}")]
 pub async fn get_post(
@@ -38,7 +38,7 @@ pub async fn get_post(
         })
     } else {
         Html::new(match content {
-            Ok(md) => wrap_markdown_with_whole_page(
+            Ok(md) => wrap_content_into_full_page(
                 &app_state.app_name,
                 &markdown::to_html_with_options(&md, &frontmatter).unwrap(),
             ),

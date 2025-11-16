@@ -190,27 +190,32 @@ impl SearchEngine {
         SearchResult { matching_files }
     }
 
-    pub async fn get_post(&self, file_path: &str) -> MatchingFile {
-        let post: Post = self
+    pub async fn get_post(&self, file_path: &str) -> Option<MatchingFile> {
+        let post: Option<Post> = self
             .db
             .query("SELECT * FROM posts WHERE file_path = $path")
             .bind(("path", file_path.to_string()))
             .await
             .unwrap()
             .take::<Option<Post>>(0)
-            .unwrap()
             .unwrap();
 
-        MatchingFile::new(
-            post.metadata.title.clone(),
-            post.file_name.clone(),
-            post.file_path.to_string(),
-            post.metadata.topic.clone(),
-        )
+        match post {
+            Some(p) => Some(MatchingFile::new(
+                p.metadata.title.clone(),
+                p.file_name.clone(),
+                p.file_path.to_string(),
+                p.metadata.topic.clone(),
+            )),
+            None => None,
+        }
     }
 
-    pub async fn get_related_posts(&self, file_path: &str) -> GraphData {
-        let curr_post = self.get_post(file_path).await;
+    pub async fn get_graph_from_related_posts(&self, file_path: &str) -> GraphData {
+        let curr_post = self
+            .get_post(file_path)
+            .await
+            .unwrap_or_else(|| panic!("{} is not a proper post", file_path));
 
         let query =
             "SELECT ->points_to->posts.* as related_posts FROM posts WHERE file_path = $file_path";

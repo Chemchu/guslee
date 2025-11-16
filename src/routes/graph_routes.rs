@@ -16,7 +16,10 @@ pub async fn graph_network(app_state: web::Data<AppState>, req: HttpRequest) -> 
             .filter(|s| !s.is_empty())
             .unwrap_or(&"welcome");
         let file_path = format!("{}.md", file_name);
-        app_state.search_engine.get_related_posts(&file_path).await
+        app_state
+            .search_engine
+            .get_graph_from_related_posts(&file_path)
+            .await
     } else {
         search_engine::types::GraphData {
             nodes: vec![],
