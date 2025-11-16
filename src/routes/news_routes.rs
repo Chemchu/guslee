@@ -1,8 +1,8 @@
-
 use actix_web::{
     Responder, get,
     web::{self, Html},
 };
+use maud::PreEscaped;
 use maud::html;
 use serde::{Deserialize, Serialize};
 
@@ -50,7 +50,7 @@ pub async fn news_page(app_state: web::Data<AppState>) -> impl Responder {
         class="flex flex-col gap-4 justify-between"
         {
             h1 {
-                "News"
+                "Latest stuff"
             }
             ol
             class="flex flex-col gap-4"
@@ -60,17 +60,39 @@ pub async fn news_page(app_state: web::Data<AppState>) -> impl Responder {
                     class="flex flex-col gap-1"
                     {
                         a
-                        class="text-xl cursor-pointer"
+                        class="text-xl cursor-pointer hover:text-primary-color"
                         href=(n.file_path)
                         hx-target="#content-section"
                         hx-trigger="click"
                         hx-swap="innerHTML transition:true"
                         hx-on::after-request="document.getElementById('content-section').classList.add('prose')"
                         {
-                            (n.title)
+                            div
+                            class="flex gap-2"
+                            {
+                                span class="text-primary-color"
+                                {
+                                    (PreEscaped(r#"&#8226;"#))
+                                }
+                                (n.title)
+                            }
+                        }
+                        div
+                        class="md:flex md:gap-4 justify-between"
+                        {
+                            span
+                            class="text-md"
+                            {
+                                (n.description)
+                            }
+                            span
+                            class="text-md hidden md:flex"
+                            {
+                                (n.date)
+                            }
                         }
                         span
-                        class="text-md"
+                        class="flex md:hidden text-md"
                         {
                             (n.date)
                         }
