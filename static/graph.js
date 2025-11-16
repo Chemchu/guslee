@@ -158,10 +158,18 @@ function initializeGraph() {
 }
 
 document.addEventListener('htmx:afterSettle', function(evt) {
-    if (evt.detail.target.id === 'content-section') {
-        document.body.dispatchEvent(new CustomEvent('graphUpdate'));
-    }
-    if (evt.detail.target.id === 'graph-section') {
-        initializeGraph();
-    }
+  // TODO: check the behavior of the web and decide if this is needed
+  let currentUrl = evt.currentTarget.URL;
+  let nonPostPage = nonProseUrls.find(url => currentUrl.endsWith(url))
+  if(nonPostPage) {
+    return;
+  }
+  // Until here
+  
+  if (evt.detail.target.id === 'content-section') {
+    document.body.dispatchEvent(new CustomEvent('graphUpdate'));
+  }
+  if (evt.detail.target.id === 'graph-section') {
+    initializeGraph();
+  }
 });

@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{APPNAME}}</title>
+    <script>
+      // Global variable for special non-post routes
+      let nonProseUrls = ["/news", "/chess"];
+    </script>
     <script src="/_static/htmx.min.js"></script>
     <script src="/_static/d3-v7.min.js"></script>
     <script src="/_static/graph.js"></script>
@@ -92,6 +96,17 @@
       <!-- Desktop navigation -->
       <div class="hidden md:flex gap-2 lg:gap-3">
         <a
+          id="home-section"
+          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          href="/welcome"
+          hx-trigger="click"
+          hx-target="#content-section"
+          hx-swap="innerHTML transition:true"
+        >
+          HOME
+        </a>
+        <span class="text-primary-color">&#8226;</span>
+        <a
           id="news-section"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/news"
@@ -131,17 +146,26 @@
       id="mobile-menu"
       class="hidden md:hidden flex-col gap-2 p-4 border-t border-b border-shade-color"
     >
-      <span class="cursor-pointer hover:text-primary-color py-2">NEWS</span>
-      <span class="cursor-pointer hover:text-primary-color py-2">PROJECTS</span>
-      <span
+      <a
+        id="news-section-mobile"
+        class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        href="/news"
+        hx-trigger="click"
+        hx-target="#content-section"
+        hx-swap="innerHTML transition:true"
+        class="cursor-pointer hover:text-primary-color py-2"
+        >NEWS</a
+      >
+      <a class="cursor-pointer hover:text-primary-color py-2">PROJECTS</a>
+      <a
         id="chess-link-mobile"
-        hx-get="/chess"
+        href="/chess"
         hx-trigger="click"
         hx-target="#content-section"
         class="cursor-pointer hover:text-primary-color py-2"
       >
         CHESS
-      </span>
+      </a>
     </div>
 
     <div

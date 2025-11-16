@@ -1,6 +1,4 @@
 let currentPage = location.href;
-let nonProseUrls = ["/news", "/chess"];
-
 document.addEventListener("DOMContentLoaded", (_event) => {
   handleProseClasses(currentPage);
 });
