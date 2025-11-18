@@ -38,6 +38,7 @@ async fn main() -> std::io::Result<()> {
             }))
             .service(routes::landing)
             .service(routes::news_routes::news_page)
+            .service(routes::metadata_routes::render_metadata)
             .service(routes::chess_routes::chess_page)
             .service(routes::chess_routes::chess_graph)
             .service(routes::posts_routes::search_post)

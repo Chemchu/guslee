@@ -7,8 +7,13 @@
     <script>
       // Global variable for special non-post routes
       let nonProseUrls = ["/news", "/chess"];
+
+      function getCurrentPost() {
+        return "holaaa";
+      }
     </script>
     <script src="/_static/htmx.min.js"></script>
+    <script src="/_static/htmx-path-params-ext.js"></script>
     <script src="/_static/d3-v7.min.js"></script>
     <script src="/_static/graph.js"></script>
     <script src="/_static/elo-chart.js"></script>
@@ -240,7 +245,7 @@
 
         <div
           id="right-section"
-          class="hidden lg:flex min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
+          class="hidden lg:flex flex-col min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
         >
           <div
             class="flex flex-col flex-grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
@@ -248,10 +253,23 @@
             <div
               id="graph-section"
               hx-get="/graph"
-              hx-trigger="load, graphUpdate from:body"
+              hx-trigger="load, contentUpdated from:body"
               hx-target="#graph-section"
               hx-swap="innerHTML"
               class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
+            >
+              Loading...
+            </div>
+          </div>
+          <div hx-ext="path-params" class="flex flex-col flex-grow w-full">
+            <div
+              id="metadata-section"
+              hx-get="/metadata/{post}"
+              hx-trigger="load, contentUpdated from:body"
+              hx-target="#metadata-section"
+              hx-swap="innerHTML"
+              hx-vals="js:{post: getCurrentPost()}"
+              class="flex w-full flex-grow"
             >
               Loading...
             </div>

@@ -8,6 +8,7 @@ use std::sync::OnceLock;
 
 pub mod chess_routes;
 pub mod graph_routes;
+pub mod metadata_routes;
 pub mod news_routes;
 pub mod posts_routes;
 
