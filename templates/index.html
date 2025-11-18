@@ -7,10 +7,6 @@
     <script>
       // Global variable for special non-post routes
       let nonProseUrls = ["/news", "/chess"];
-
-      function getCurrentPost() {
-        return "holaaa";
-      }
     </script>
     <script src="/_static/htmx.min.js"></script>
     <script src="/_static/htmx-path-params-ext.js"></script>
@@ -248,14 +244,16 @@
           class="hidden lg:flex flex-col min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
         >
           <div
+            hx-ext="path-params"
             class="flex flex-col flex-grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
           >
             <div
               id="graph-section"
-              hx-get="/graph"
+              hx-get="/graph/{post}"
               hx-trigger="load, contentUpdated from:body"
               hx-target="#graph-section"
               hx-swap="innerHTML"
+              hx-vals="js:{post: window.location.pathname.substring(1)}"
               class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
             >
               Loading...
@@ -268,7 +266,7 @@
               hx-trigger="load, contentUpdated from:body"
               hx-target="#metadata-section"
               hx-swap="innerHTML"
-              hx-vals="js:{post: getCurrentPost()}"
+              hx-vals="js:{post: window.location.pathname.substring(1)}"
               class="flex w-full flex-grow"
             >
               Loading...
