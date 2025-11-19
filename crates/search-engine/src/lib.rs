@@ -7,8 +7,8 @@ use surrealdb::engine::any::connect;
 use surrealdb::{Response, Surreal};
 use walkdir::WalkDir;
 
+use crate::types::Params;
 use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode, SearchResult};
-use crate::types::{MatchingFile, Params};
 use crate::utils::{Post, extract_full_metadata};
 
 pub mod types;
@@ -135,17 +135,7 @@ impl SearchEngine {
         let docs: Vec<Post> = response.take(0).unwrap();
 
         SearchResult {
-            matching_files: docs
-                .iter()
-                .map(|post| {
-                    MatchingFile::new(
-                        post.metadata.title.clone(),
-                        post.file_name.clone(),
-                        post.file_path.clone(),
-                        post.metadata.topic.clone(),
-                    )
-                })
-                .collect(),
+            matching_posts: docs,
         }
     }
 
@@ -156,7 +146,7 @@ impl SearchEngine {
             .collect::<Vec<String>>()
             .join(", ");
 
-        let files: Vec<MatchingFile> = self
+        let files: Vec<Post> = self
             .db
             .query(format!(
                 "SELECT * FROM posts WHERE file_name IN [{}]",
@@ -165,50 +155,31 @@ impl SearchEngine {
             .await
             .unwrap()
             .take::<Vec<Post>>(0)
-            .unwrap()
-            .iter()
-            .map(|post| {
-                MatchingFile::new(
-                    post.metadata.title.clone(),
-                    post.file_name.clone(),
-                    post.file_path.to_string(),
-                    post.metadata.topic.clone(),
-                )
-            })
-            .collect();
+            .unwrap();
 
-        let map: HashMap<String, MatchingFile> = files
+        let map: HashMap<String, Post> = files
             .into_iter()
-            .map(|f| (f.file_name().to_string(), f))
+            .map(|f| (f.file_name.to_string(), f))
             .collect();
 
-        let matching_files: Vec<MatchingFile> = posts_to_search
+        let matching_files: Vec<Post> = posts_to_search
             .iter()
             .filter_map(|default_doc| map.get(*default_doc).cloned())
             .collect();
 
-        SearchResult { matching_files }
+        SearchResult {
+            matching_posts: matching_files,
+        }
     }
 
-    pub async fn get_post(&self, file_path: &str) -> Option<MatchingFile> {
-        let post: Option<Post> = self
-            .db
+    pub async fn get_post(&self, file_path: &str) -> Option<Post> {
+        self.db
             .query("SELECT * FROM posts WHERE file_path = $path")
             .bind(("path", file_path.to_string()))
             .await
             .unwrap()
             .take::<Option<Post>>(0)
-            .unwrap();
-
-        match post {
-            Some(p) => Some(MatchingFile::new(
-                p.metadata.title.clone(),
-                p.file_name.clone(),
-                p.file_path.to_string(),
-                p.metadata.topic.clone(),
-            )),
-            None => None,
-        }
+            .unwrap()
     }
 
     pub async fn get_graph_from_related_posts(&self, file_path: &str) -> GraphData {
@@ -237,8 +208,8 @@ impl SearchEngine {
             .collect::<Vec<(String, String)>>();
         let main_node = GraphNode {
             id: 1,
-            label: curr_post.title().to_string(),
-            file_path: curr_post.file_path().to_string(),
+            label: curr_post.metadata.title.to_string(),
+            file_path: curr_post.file_path.to_string(),
         };
 
         let mut nodes: Vec<GraphNode> = Vec::new();

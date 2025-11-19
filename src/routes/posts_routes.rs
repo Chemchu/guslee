@@ -5,7 +5,10 @@ use actix_web::{
 use cached::proc_macro::cached;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::html;
-use search_engine::types::{DEFAULT_SEARCH_LIMIT, MatchingFile, Params};
+use search_engine::{
+    types::{DEFAULT_SEARCH_LIMIT, Params},
+    utils::Post,
+};
 use std::collections::{HashMap, HashSet};
 use std::{fs, io};
 
@@ -91,14 +94,14 @@ pub async fn search_post(
                         "rathmines.md",
                     ])
                     .await
-                    .matching_files
+                    .matching_posts
             }
             false => {
                 app_state
                     .search_engine
                     .query_posts(&params.clone())
                     .await
-                    .matching_files
+                    .matching_posts
             }
         };
 
@@ -108,12 +111,12 @@ pub async fn search_post(
     }
 }
 
-fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
-    let mut posts_per_topic: HashMap<String, Vec<MatchingFile>> = HashMap::default();
-    let mut posts_by_filename: HashMap<String, MatchingFile> = HashMap::default();
+fn build_posts_list(matching_posts: Vec<Post>) -> Html {
+    let mut posts_per_topic: HashMap<String, Vec<Post>> = HashMap::default();
+    let mut posts_by_filename: HashMap<String, Post> = HashMap::default();
     for m_post in matching_posts.clone() {
-        posts_by_filename.insert(m_post.file_name().to_string(), m_post.clone());
-        if let Some(topic) = m_post.topic() {
+        posts_by_filename.insert(m_post.file_name.to_string(), m_post.clone());
+        if let Some(topic) = &m_post.metadata.topic {
             posts_per_topic
                 .entry(topic.clone())
                 .or_default()
@@ -121,13 +124,13 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
         }
     }
 
-    let mut topics_to_render: Vec<(String, Vec<MatchingFile>)> = Vec::new();
-    let mut posts_to_render: Vec<MatchingFile> = Vec::new();
+    let mut topics_to_render: Vec<(String, Vec<Post>)> = Vec::new();
+    let mut posts_to_render: Vec<Post> = Vec::new();
     let mut rendered_topics: HashSet<String> = HashSet::new();
 
     for matching_post in matching_posts {
-        if let Some(p) = posts_by_filename.get(matching_post.file_name()) {
-            if let Some(topic) = p.topic() {
+        if let Some(p) = posts_by_filename.get(&matching_post.file_name) {
+            if let Some(topic) = &p.metadata.topic {
                 if !rendered_topics.contains(topic) {
                     rendered_topics.insert(topic.clone());
                     if let Some(topic_posts) = posts_per_topic.get(topic) {
@@ -158,15 +161,15 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
                                     a href=(format!(
                                         "/{}",
                                         topic_post
-                                            .file_path()
+                                            .file_path
                                             .strip_suffix(".md")
-                                            .unwrap_or(topic_post.file_path())
+                                            .unwrap_or(&topic_post.file_path)
                                     ))
                                     hx-target="#content-section"
                                     hx-swap="innerHTML transition:true"
                                     class="pl-3 cursor-pointer hover:text-primary-color"
                                     {
-                                        (topic_post.title())
+                                        (topic_post.metadata.title)
                                     }
                                 }
                             }
@@ -179,15 +182,15 @@ fn build_posts_list(matching_posts: Vec<MatchingFile>) -> Html {
                     a href=(format!(
                         "/{}",
                         p
-                            .file_path()
+                            .file_path
                             .strip_suffix(".md")
-                            .unwrap_or(p.file_path())
+                            .unwrap_or(&p.file_path)
                     ))
                     hx-target="#content-section"
                     hx-swap="innerHTML transition:true"
                     class="cursor-pointer hover:text-primary-color"
                     {
-                        (p.title())
+                        (p.metadata.title)
                     }
                 }
             }

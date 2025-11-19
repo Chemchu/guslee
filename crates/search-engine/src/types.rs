@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::utils::Post;
+
 #[derive(Deserialize, Clone)]
 #[serde(untagged)]
 pub enum Limit {
@@ -26,42 +28,7 @@ impl Limit {
 
 #[derive(Clone)]
 pub struct SearchResult {
-    pub matching_files: Vec<MatchingFile>,
-}
-
-#[derive(Clone)]
-pub struct MatchingFile {
-    file_name: String,
-    title: String,
-    path: String,
-    topic: Option<String>,
-}
-
-impl MatchingFile {
-    pub fn new(title: String, file_name: String, path: String, topic: Option<String>) -> Self {
-        MatchingFile {
-            title,
-            path,
-            file_name,
-            topic,
-        }
-    }
-
-    pub fn file_name(&self) -> &str {
-        &self.file_name
-    }
-
-    pub fn title(&self) -> &str {
-        &self.title
-    }
-
-    pub fn file_path(&self) -> &str {
-        &self.path
-    }
-
-    pub fn topic(&self) -> &Option<String> {
-        &self.topic
-    }
+    pub matching_posts: Vec<Post>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
