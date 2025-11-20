@@ -15,20 +15,35 @@ pub async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<Str
         Some(p) => {
             let html = html! {
                 div
-                class="flex flex-col text-lg"
+                class="flex flex-col gap-4"
                 {
-                    span
+                    h4
                     class="text-2xl"
                     {
-                        "Metadata"
+                        "About this post"
                     }
-                    span {
-                        "Title: " (p.metadata.title)
+                    div
+                    class="flex flex-col text-md"
+                    {
+                        details open="true" {
+                            summary class="text-lg" {
+                                "Title"
+                            }
+                            (p.metadata.title)
+                        }
+                        details open="true" {
+                            summary class="text-lg" {
+                                "Description"
+                            }
+                            (p.metadata.description)
+                        }
+                        details open="true" {
+                            summary class="text-lg" {
+                                "Date"
+                            }
+                            (p.metadata.date)
+                        }
                     }
-                    span {
-                        "Description: " (p.metadata.description)
-                    }
-
                 }
             };
 
