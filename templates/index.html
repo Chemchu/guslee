@@ -70,10 +70,6 @@
         </svg>
       </div>
 
-      <span class="hidden md:block text-base lg:text-lg font-semibold truncate">
-        WELCOME HELLO GUS TEXT PLACEHOLDER FOO BAR
-      </span>
-
       <button
         id="mobile-menu-btn"
         class="md:hidden hover:text-primary-color flex-shrink-0 cursor-pointer"
@@ -133,6 +129,16 @@
           CHESS
         </a>
       </div>
+      <span
+        id="schedule-section"
+        hx-get="/schedule"
+        hx-trigger="load"
+        hx-target="#schedule-section"
+        hx-swap="innerHTML"
+        class="hidden md:block text-base lg:text-lg font-semibold truncate"
+      >
+        Loading schedule...
+      </span>
     </div>
 
     <!-- Mobile search results -->
@@ -339,7 +345,7 @@
           document.getElementById("mobile-menu").classList.add("hidden");
         });
     </script>
-    <div class="hidden text-xl prose prose-theme">
+    <div class="hidden text-xl prose prose-theme italic">
       Dummy element for tailwind
     </div>
   </body>

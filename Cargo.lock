@@ -1678,6 +1678,7 @@ dependencies = [
  "actix-web",
  "cached",
  "chess-module",
+ "chrono",
  "log",
  "markdown",
  "maud",

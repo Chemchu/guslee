@@ -43,6 +43,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::chess_routes::chess_graph)
             .service(routes::posts_routes::search_post)
             .service(routes::graph_routes::graph_network)
+            .service(routes::routines_routes::get_current_schedule_activity)
             .service(routes::posts_routes::get_post) // This service should be last because it matches any string
     })
     .bind(("0.0.0.0", 3000))?

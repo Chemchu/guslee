@@ -11,6 +11,7 @@ pub mod graph_routes;
 pub mod metadata_routes;
 pub mod news_routes;
 pub mod posts_routes;
+pub mod routines_routes;
 
 static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
 
