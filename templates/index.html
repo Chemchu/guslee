@@ -7,6 +7,19 @@
     <script>
       // Global variable for special non-post routes
       let nonProseUrls = ["/news", "/chess"];
+
+      function getAdaptedPathname() {
+        let postName = window.location.pathname.replace("/posts/", "");
+        if (postName.endsWith("/")) {
+          postName = postName.slice(0, -1);
+        }
+
+        if (postName == "") {
+          postName = "welcome";
+        }
+
+        return postName;
+      }
     </script>
     <script src="/_static/htmx.min.js"></script>
     <script src="/_static/htmx-path-params-ext.js"></script>
@@ -259,7 +272,7 @@
               hx-trigger="load, contentUpdated from:body"
               hx-target="#graph-section"
               hx-swap="innerHTML"
-              hx-vals="js:{post: window.location.pathname.substring(1)}"
+              hx-vals="js:{post: getAdaptedPathname()}"
               class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
             >
               Loading...
@@ -272,7 +285,7 @@
               hx-trigger="load, contentUpdated from:body"
               hx-target="#metadata-section"
               hx-swap="innerHTML"
-              hx-vals="js:{post: window.location.pathname.substring(1)}"
+              hx-vals="js:{post: getAdaptedPathname()}"
               class="flex w-full flex-grow p-2"
             >
               Loading...

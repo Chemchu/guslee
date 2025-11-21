@@ -1,5 +1,5 @@
 use actix_web::{
-    HttpRequest, get,
+    HttpRequest, Responder, get,
     web::{self, Html},
 };
 use cached::proc_macro::cached;
@@ -14,7 +14,7 @@ use std::{fs, io};
 
 use crate::routes::{AppState, wrap_content_into_full_page};
 
-#[get("/{post:.*}")]
+#[get("/posts/{post:.*}")]
 pub async fn get_post(
     app_state: web::Data<AppState>,
     req: HttpRequest,
@@ -37,7 +37,7 @@ pub async fn get_post(
     if is_htmx_req {
         Html::new(match content {
             Ok(md) => markdown::to_html_with_options(&md, &frontmatter).unwrap(),
-            Err(_err) => String::from("Fallback page"),
+            Err(_err) => String::from("Post not found"),
         })
     } else {
         Html::new(match content {
@@ -45,7 +45,7 @@ pub async fn get_post(
                 &app_state.app_name,
                 &markdown::to_html_with_options(&md, &frontmatter).unwrap(),
             ),
-            Err(_err) => String::from("Fallback page"),
+            Err(_err) => String::from("Post not found"),
         })
     }
 }
@@ -159,7 +159,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
                             @for topic_post in topic_posts {
                                 li {
                                     a href=(format!(
-                                        "/{}",
+                                        "/posts/{}",
                                         topic_post
                                             .file_path
                                             .strip_suffix(".md")
@@ -180,7 +180,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
             @for p in posts_to_render {
                 li {
                     a href=(format!(
-                        "/{}",
+                        "/posts/{}",
                         p
                             .file_path
                             .strip_suffix(".md")
@@ -197,4 +197,9 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
         }
     };
     Html::new(html)
+}
+
+#[get("/{url:.*}")]
+pub async fn fallback_route() -> impl Responder {
+    String::from("Fallback page")
 }
