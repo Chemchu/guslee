@@ -61,7 +61,7 @@ pub async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl
                     {
                         a
                         class="text-xl cursor-pointer hover:text-primary-color"
-                        href=(n.file_path)
+                        href=(format!("/posts/{}", n.file_path))
                         hx-target="#content-section"
                         hx-trigger="click"
                         hx-swap="innerHTML transition:true"
