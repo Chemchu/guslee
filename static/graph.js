@@ -169,7 +169,7 @@ document.addEventListener("contentUpdated", function (_evt) {
 
 document.addEventListener("htmx:afterSettle", function (evt) {
   // Once the graph container loades, we can init the actual graph
-  if (evt.detail.target.id === "graph-section") {
+  if (evt.detail.target.id === "upper-right-section") {
     renderGraph();
   }
 });

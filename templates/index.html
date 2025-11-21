@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{APPNAME}}</title>
     <script>
-      function getAdaptedPathname() {
+      function getAdaptedPostPathname() {
         let postName = window.location.pathname.replace("/posts/", "");
         if (postName.endsWith("/")) {
           postName = postName.slice(0, -1);
@@ -265,12 +265,12 @@
             class="flex flex-col flex-grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
           >
             <div
-              id="graph-section"
-              hx-get="/graph/{post}"
+              id="upper-right-section"
+              hx-get="/{graph}/{post}"
               hx-trigger="load, contentUpdated from:document"
-              hx-target="#graph-section"
+              hx-target="#upper-right-section"
               hx-swap="innerHTML"
-              hx-vals="js:{post: getAdaptedPathname()}"
+              hx-vals="js:{graph: 'graph', post: getAdaptedPostPathname()}"
               class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
             >
               Loading...
@@ -278,12 +278,12 @@
           </div>
           <div hx-ext="path-params" class="flex flex-col flex-grow w-full">
             <div
-              id="metadata-section"
-              hx-get="/metadata/{post}"
+              id="bottom-right-section"
+              hx-get="/{metadata}/{post}"
               hx-trigger="load, contentUpdated from:document"
-              hx-target="#metadata-section"
+              hx-target="#bottom-right-section"
               hx-swap="innerHTML"
-              hx-vals="js:{post: getAdaptedPathname()}"
+              hx-vals="js:{metadata: 'metadata', post: getAdaptedPostPathname()}"
               class="flex w-full flex-grow p-2"
             >
               Loading...
