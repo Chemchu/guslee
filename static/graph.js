@@ -1,4 +1,4 @@
-function initializeGraph() {
+function renderGraph() {
   const container = document.getElementById("graph-container");
   if (!container) {
     console.log("No graph container found");
@@ -140,7 +140,7 @@ function initializeGraph() {
             document.getElementById("content-section").innerHTML = html;
             window.history.pushState({}, "", url);
 
-            document.body.dispatchEvent(new CustomEvent("contentUpdated"));
+            /*             document.dispatchEvent(new CustomEvent("contentUpdated")); */
           });
         } else {
           htmx
@@ -163,19 +163,13 @@ function initializeGraph() {
   }
 }
 
-document.addEventListener("htmx:afterSettle", function (evt) {
-  // TODO: check the behavior of the web and decide if this is needed
-  let currentUrl = evt.currentTarget.URL;
-  let nonPostPage = nonProseUrls.find((url) => currentUrl.endsWith(url));
-  if (nonPostPage) {
-    return;
-  }
-  // Until here
+document.addEventListener("contentUpdated", function (_evt) {
+  renderGraph();
+});
 
-  if (evt.detail.target.id === "content-section") {
-    document.body.dispatchEvent(new CustomEvent("contentUpdated"));
-  }
+document.addEventListener("htmx:afterSettle", function (evt) {
+  // Once the graph container loades, we can init the actual graph
   if (evt.detail.target.id === "graph-section") {
-    initializeGraph();
+    renderGraph();
   }
 });

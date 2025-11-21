@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{APPNAME}}</title>
     <script>
-      // Global variable for special non-post routes
-      let nonProseUrls = ["/news", "/chess"];
-
       function getAdaptedPathname() {
         let postName = window.location.pathname.replace("/posts/", "");
         if (postName.endsWith("/")) {
@@ -21,6 +18,7 @@
         return postName;
       }
     </script>
+    <script src="/_static/app-events.js"></script>
     <script src="/_static/htmx.min.js"></script>
     <script src="/_static/htmx-path-params-ext.js"></script>
     <script src="/_static/d3-v7.min.js"></script>
@@ -108,7 +106,7 @@
         <a
           id="home-section"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
-          href="/welcome"
+          href="/posts/welcome"
           hx-trigger="click"
           hx-target="#content-section"
           hx-swap="innerHTML transition:true"
@@ -269,7 +267,7 @@
             <div
               id="graph-section"
               hx-get="/graph/{post}"
-              hx-trigger="load, contentUpdated from:body"
+              hx-trigger="load, contentUpdated from:document"
               hx-target="#graph-section"
               hx-swap="innerHTML"
               hx-vals="js:{post: getAdaptedPathname()}"
@@ -282,7 +280,7 @@
             <div
               id="metadata-section"
               hx-get="/metadata/{post}"
-              hx-trigger="load, contentUpdated from:body"
+              hx-trigger="load, contentUpdated from:document"
               hx-target="#metadata-section"
               hx-swap="innerHTML"
               hx-vals="js:{post: getAdaptedPathname()}"
