@@ -73,27 +73,34 @@ pub async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl
                                 {
                                     (PreEscaped(r#"&#8226;"#))
                                 }
-                                (n.title)
+                                div
+                                class="md:flex md:gap-4 w-full justify-between"
+                                {
+                                    div
+                                    class="flex flex-col w-full"
+                                    {
+                                        span
+                                        {
+                                            (n.title)
+                                        }
+                                        span
+                                        class="text-base"
+                                        {
+                                            (n.description)
+                                        }
+                                    }
+                                    span
+                                    class="text-base hidden md:flex"
+                                    {
+                                        (n.date)
+                                    }
+                                }
+                                span
+                                class="flex md:hidden text-base"
+                                {
+                                    (n.date)
+                                }
                             }
-                        }
-                        div
-                        class="md:flex md:gap-4 justify-between"
-                        {
-                            span
-                            class="text-md"
-                            {
-                                (n.description)
-                            }
-                            span
-                            class="text-md hidden md:flex"
-                            {
-                                (n.date)
-                            }
-                        }
-                        span
-                        class="flex md:hidden text-md"
-                        {
-                            (n.date)
                         }
                     }
                 }
