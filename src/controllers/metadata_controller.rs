@@ -4,7 +4,7 @@ use actix_web::{
 };
 use maud::html;
 
-use crate::routes::AppState;
+use crate::controllers::AppState;
 
 #[get("/metadata/{post}")]
 pub async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
@@ -20,7 +20,7 @@ pub async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<Str
                     h4
                     class="text-2xl"
                     {
-                        "About this post"
+                        "Metadata"
                     }
                     div
                     class="flex flex-col text-md"

@@ -6,12 +6,13 @@ use markdown::{Constructs, Options, ParseOptions};
 use search_engine::SearchEngine;
 use std::sync::OnceLock;
 
-pub mod chess_routes;
-pub mod graph_routes;
-pub mod metadata_routes;
-pub mod news_routes;
-pub mod posts_routes;
-pub mod routines_routes;
+pub mod chess_controller;
+pub mod graph_controller;
+pub mod metadata_controller;
+pub mod music_controller;
+pub mod news_controller;
+pub mod posts_controller;
+pub mod routines_controller;
 
 static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
 

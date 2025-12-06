@@ -4,7 +4,7 @@ use actix_web::{
 };
 use maud::html;
 
-use crate::routes::AppState;
+use crate::controllers::AppState;
 
 #[get("/graph/{current_url_pathname}")]
 pub async fn graph_network(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {

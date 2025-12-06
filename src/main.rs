@@ -4,9 +4,9 @@ use actix_web::{App, HttpServer, middleware::Logger, web};
 use log::info;
 use search_engine::SearchEngine;
 
-use crate::routes::AppState;
+use crate::controllers::AppState;
 
-mod routes;
+mod controllers;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -36,16 +36,17 @@ async fn main() -> std::io::Result<()> {
                 garden_path: garden_path.clone(),
                 search_engine: Arc::clone(&search_engine),
             }))
-            .service(routes::landing)
-            .service(routes::news_routes::news_page)
-            .service(routes::metadata_routes::render_metadata)
-            .service(routes::chess_routes::chess_page)
-            .service(routes::chess_routes::chess_graph)
-            .service(routes::posts_routes::search_post)
-            .service(routes::graph_routes::graph_network)
-            .service(routes::routines_routes::get_current_schedule_activity)
-            .service(routes::posts_routes::get_post)
-            .service(routes::posts_routes::fallback_route) // This service should be last because it matches any string
+            .service(controllers::landing)
+            .service(controllers::news_controller::news_page)
+            .service(controllers::metadata_controller::render_metadata)
+            .service(controllers::chess_controller::chess_page)
+            .service(controllers::chess_controller::chess_graph)
+            .service(controllers::posts_controller::search_post)
+            .service(controllers::graph_controller::graph_network)
+            .service(controllers::music_controller::get_user_profile)
+            .service(controllers::routines_controller::get_current_schedule_activity)
+            .service(controllers::posts_controller::get_post)
+            .service(controllers::posts_controller::fallback_route) // This service should be last because it matches any string
     })
     .bind(("0.0.0.0", 3000))?
     .run()

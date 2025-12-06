@@ -125,8 +125,15 @@
           NEWS
         </a>
         <span class="text-primary-color">&#8226;</span>
-        <a class="cursor-pointer hover:text-primary-color whitespace-nowrap">
-          PROJECTS
+        <a
+          id="chess-link-desktop"
+          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          href="/chess"
+          hx-trigger="click"
+          hx-target="#content-section"
+          hx-swap="innerHTML transition:true"
+        >
+          CHESS
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
@@ -137,7 +144,18 @@
           hx-target="#content-section"
           hx-swap="innerHTML transition:true"
         >
-          CHESS
+          MUSIC
+        </a>
+        <span class="text-primary-color">&#8226;</span>
+        <a
+          id="chess-link-desktop"
+          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          href="/chess"
+          hx-trigger="click"
+          hx-target="#content-section"
+          hx-swap="innerHTML transition:true"
+        >
+          GAMES
         </a>
       </div>
       <span
@@ -174,7 +192,6 @@
         class="cursor-pointer hover:text-primary-color py-2"
         >NEWS</a
       >
-      <a class="cursor-pointer hover:text-primary-color py-2">PROJECTS</a>
       <a
         id="chess-link-mobile"
         href="/chess"
@@ -183,6 +200,24 @@
         class="cursor-pointer hover:text-primary-color py-2"
       >
         CHESS
+      </a>
+      <a
+        id="chess-link-mobile"
+        href="/chess"
+        hx-trigger="click"
+        hx-target="#content-section"
+        class="cursor-pointer hover:text-primary-color py-2"
+      >
+        MUSIC
+      </a>
+      <a
+        id="chess-link-mobile"
+        href="/chess"
+        hx-trigger="click"
+        hx-target="#content-section"
+        class="cursor-pointer hover:text-primary-color py-2"
+      >
+        GAMES
       </a>
     </div>
 

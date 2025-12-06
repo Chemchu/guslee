@@ -8,7 +8,7 @@ use maud::html;
 use serde_json::json;
 use std::time::Duration;
 
-use crate::routes::{AppState, load_html_page, wrap_content_into_full_page};
+use crate::controllers::{AppState, load_html_page, wrap_content_into_full_page};
 
 const PLAYER_NAME: &str = "chemchuu";
 

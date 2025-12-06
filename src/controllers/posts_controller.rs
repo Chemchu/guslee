@@ -12,7 +12,7 @@ use search_engine::{
 use std::collections::{HashMap, HashSet};
 use std::{fs, io};
 
-use crate::routes::{AppState, wrap_content_into_full_page};
+use crate::controllers::{AppState, wrap_content_into_full_page};
 
 #[get("/posts/{post:.*}")]
 pub async fn get_post(

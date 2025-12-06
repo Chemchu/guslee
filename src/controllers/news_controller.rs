@@ -6,7 +6,7 @@ use maud::PreEscaped;
 use maud::html;
 use serde::{Deserialize, Serialize};
 
-use crate::routes::{AppState, wrap_content_into_full_page};
+use crate::controllers::{AppState, wrap_content_into_full_page};
 
 #[derive(Serialize, Deserialize)]
 struct News {
