@@ -145,10 +145,11 @@ impl SearchEngine {
     }
 
     pub async fn get_graph_from_related_posts(&self, file_path: &str) -> GraphData {
-        let curr_post = self
-            .get_post(file_path)
-            .await
-            .unwrap_or_else(|| panic!("{} is not a proper post", file_path));
+        let curr_post = self.get_post(file_path).await;
+
+        if curr_post.is_none() {
+            return GraphData::empty();
+        }
 
         let query =
             "SELECT ->points_to->posts.* as related_posts FROM posts WHERE file_path = $file_path";
@@ -170,8 +171,8 @@ impl SearchEngine {
             .collect::<Vec<(String, String)>>();
         let main_node = GraphNode {
             id: 1,
-            label: curr_post.metadata.title.to_string(),
-            file_path: curr_post.file_path.to_string(),
+            label: curr_post.as_ref().unwrap().metadata.title.to_string(),
+            file_path: curr_post.unwrap().file_path.to_string(),
         };
 
         let mut nodes: Vec<GraphNode> = Vec::new();

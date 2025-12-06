@@ -30,6 +30,15 @@ pub struct GraphData {
     pub edges: Vec<GraphEdge>,
 }
 
+impl GraphData {
+    pub fn empty() -> GraphData {
+        GraphData {
+            nodes: vec![],
+            edges: vec![],
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GraphNode {
     pub id: usize,
