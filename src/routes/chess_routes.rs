@@ -1,5 +1,5 @@
 use actix_web::{
-    get,
+    HttpRequest, get,
     web::{self, Html},
 };
 use cached::proc_macro::cached;
@@ -8,14 +8,33 @@ use maud::html;
 use serde_json::json;
 use std::time::Duration;
 
-use crate::routes::load_html_page;
+use crate::routes::{AppState, load_html_page, wrap_content_into_full_page};
 
 const PLAYER_NAME: &str = "chemchuu";
 
-#[cached(time = 3600)]
+#[cached(
+    time = 3600,
+    key = "String",
+    convert = r##"{ 
+        format!(
+            "is_htmx_req-{}",
+            req.headers().get("HX-Request").is_some()
+        )
+    }"##
+)]
 #[get("/chess")]
-pub async fn chess_page() -> Html {
-    load_html_page("chess_page")
+pub async fn chess_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
+    let chess_html = load_html_page("chess_page");
+
+    let is_htmx_req = req.headers().get("HX-Request").is_some();
+    if is_htmx_req {
+        Html::new(chess_html)
+    } else {
+        Html::new(wrap_content_into_full_page(
+            &app_state.app_name,
+            &chess_html,
+        ))
+    }
 }
 
 #[cached(time = 3600, key = "String", convert = r#"{ path.clone() }"#)]

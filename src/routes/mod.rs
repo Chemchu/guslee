@@ -65,11 +65,10 @@ pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {
         .replace("{{CONTENT}}", content)
 }
 
-pub fn load_html_page(html_file: &str) -> Html {
+pub fn load_html_page(html_file: &str) -> String {
     let template_path =
         std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
-    let page = std::fs::read_to_string(format!("{}/{}.html", template_path, html_file))
-        .expect("Failed to read chess_page.html template");
 
-    Html::new(&page)
+    std::fs::read_to_string(format!("{}/{}.html", template_path, html_file))
+        .expect("Failed to read chess_page.html template")
 }

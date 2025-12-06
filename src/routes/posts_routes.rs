@@ -198,6 +198,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
                                     ))
                                     hx-target="#content-section"
                                     hx-swap="innerHTML transition:true"
+                                    title=(topic_post.metadata.title)
                                     class="block pl-3 cursor-pointer hover:text-primary-color overflow-hidden truncate"
                                     {
                                         (topic_post.metadata.title)
@@ -219,6 +220,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
                     ))
                     hx-target="#content-section"
                     hx-swap="innerHTML transition:true"
+                    title=(p.metadata.title)
                     class="block cursor-pointer hover:text-primary-color overflow-hidden truncate"
                     {
                         (p.metadata.title)
