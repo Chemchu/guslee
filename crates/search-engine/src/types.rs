@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::utils::Post;
-
 #[derive(Deserialize, Clone)]
 #[serde(untagged)]
 pub enum Limit {
@@ -24,11 +22,6 @@ impl Limit {
             Limit::String(_val) => DEFAULT_SEARCH_LIMIT.value(),
         }
     }
-}
-
-#[derive(Clone)]
-pub struct SearchResult {
-    pub matching_posts: Vec<Post>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

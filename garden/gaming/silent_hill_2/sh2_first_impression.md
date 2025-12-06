@@ -2,6 +2,7 @@
 title: "Silent Hill 2 - James's personal hell"
 date: "2025-10-01"
 description: "A bit on SH2"
+topic: "Games"
 tags:
   - gaming
   - horror

@@ -1,6 +1,6 @@
 use actix_web::{
     HttpRequest, Responder, get,
-    web::{self, Html},
+    web::{self, Data, Html},
 };
 use cached::proc_macro::cached;
 use markdown::{Constructs, Options, ParseOptions};
@@ -82,33 +82,64 @@ pub async fn search_post(
             || params.query.as_ref().unwrap().len() < 3;
 
         let matching_posts = match is_empty_query {
-            true => {
-                app_state
-                    .search_engine
-                    .query_from_list(vec![
-                        "welcome.md",
-                        "hello.md",
-                        "garden_styling.md",
-                        "kilbarrack.md",
-                        "first_job_in_ireland.md",
-                        "rathmines.md",
-                    ])
-                    .await
-                    .matching_posts
-            }
-            false => {
-                app_state
-                    .search_engine
-                    .query_posts(&params.clone())
-                    .await
-                    .matching_posts
-            }
+            true => get_default_posts(app_state).await,
+            false => app_state.search_engine.query_posts(&params.clone()).await,
         };
 
         build_posts_list(matching_posts)
     } else {
         Html::new(String::from("Only HTMX requests for search engine"))
     }
+}
+
+async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
+    let posts_to_search = [
+        "welcome.md",
+        "hello.md",
+        "garden_styling.md",
+        "kilbarrack.md",
+        "first_job_in_ireland.md",
+        "rathmines.md",
+    ];
+    let default_posts_string = posts_to_search
+        .iter()
+        .map(|file_name| format!("'{}'", file_name))
+        .collect::<Vec<String>>()
+        .join(", ");
+
+    let default_posts = app_state
+        .search_engine
+        .raw_query::<Vec<Post>>(
+            format!(
+                "SELECT * FROM posts WHERE file_name IN [{}]",
+                default_posts_string,
+            )
+            .as_str(),
+        )
+        .await;
+
+    let posts_map: HashMap<String, Post> = default_posts
+        .into_iter()
+        .map(|f| (f.file_name.to_string(), f))
+        .collect();
+
+    let ordered_files: Vec<Post> = posts_to_search
+        .iter()
+        .filter_map(|default_doc| posts_map.get(*default_doc).cloned())
+        .collect();
+
+    let all_missing_posts: Vec<Post> = app_state
+        .search_engine
+        .raw_query::<Vec<Post>>(
+            format!(
+                "SELECT * FROM posts WHERE file_name NOT IN [{}]",
+                default_posts_string,
+            )
+            .as_str(),
+        )
+        .await;
+
+    [ordered_files, all_missing_posts].concat()
 }
 
 fn build_posts_list(matching_posts: Vec<Post>) -> Html {
@@ -167,7 +198,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
                                     ))
                                     hx-target="#content-section"
                                     hx-swap="innerHTML transition:true"
-                                    class="pl-3 cursor-pointer hover:text-primary-color"
+                                    class="block pl-3 cursor-pointer hover:text-primary-color overflow-hidden truncate"
                                     {
                                         (topic_post.metadata.title)
                                     }
@@ -188,7 +219,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
                     ))
                     hx-target="#content-section"
                     hx-swap="innerHTML transition:true"
-                    class="cursor-pointer hover:text-primary-color"
+                    class="block cursor-pointer hover:text-primary-color overflow-hidden truncate"
                     {
                         (p.metadata.title)
                     }

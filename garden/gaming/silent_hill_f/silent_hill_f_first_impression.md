@@ -2,6 +2,7 @@
 title: "Silent Hill f - Hinako is a killing machine"
 date: "2025-10-01"
 description: "A bit on SHf and Hinako the school student"
+topic: "Games"
 tags:
   - gaming
   - horror

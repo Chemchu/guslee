@@ -1,6 +1,5 @@
 use regex::Regex;
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::fs;
 use surrealdb::engine::any::Any;
 use surrealdb::engine::any::connect;
@@ -8,7 +7,7 @@ use surrealdb::{Response, Surreal};
 use walkdir::WalkDir;
 
 use crate::types::Params;
-use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode, SearchResult};
+use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode};
 use crate::utils::{Post, extract_full_metadata};
 
 pub mod types;
@@ -108,7 +107,7 @@ impl SearchEngine {
         SearchEngine { db }
     }
 
-    pub async fn query_posts(&self, params: &Params) -> SearchResult {
+    pub async fn query_posts(&self, params: &Params) -> Vec<Post> {
         let limit = match &params.limit {
             Some(l) => l.value(),
             None => DEFAULT_SEARCH_LIMIT.value(),
@@ -132,44 +131,7 @@ impl SearchEngine {
             .await
             .unwrap();
 
-        let docs: Vec<Post> = response.take(0).unwrap();
-
-        SearchResult {
-            matching_posts: docs,
-        }
-    }
-
-    pub async fn query_from_list(&self, posts_to_search: Vec<&str>) -> SearchResult {
-        let default_docs_display_string = posts_to_search
-            .iter()
-            .map(|file_name| format!("'{}'", file_name))
-            .collect::<Vec<String>>()
-            .join(", ");
-
-        let files: Vec<Post> = self
-            .db
-            .query(format!(
-                "SELECT * FROM posts WHERE file_name IN [{}]",
-                default_docs_display_string,
-            ))
-            .await
-            .unwrap()
-            .take::<Vec<Post>>(0)
-            .unwrap();
-
-        let map: HashMap<String, Post> = files
-            .into_iter()
-            .map(|f| (f.file_name.to_string(), f))
-            .collect();
-
-        let matching_files: Vec<Post> = posts_to_search
-            .iter()
-            .filter_map(|default_doc| map.get(*default_doc).cloned())
-            .collect();
-
-        SearchResult {
-            matching_posts: matching_files,
-        }
+        response.take(0).unwrap()
     }
 
     pub async fn get_post(&self, file_path: &str) -> Option<Post> {

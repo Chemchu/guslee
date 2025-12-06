@@ -2,6 +2,7 @@
 title: "Hollow Knight Silksong - Second impression"
 date: "2025-09-15"
 description: "Brief description of Silksong"
+topic: "Games"
 tags:
   - gaming
   - steam

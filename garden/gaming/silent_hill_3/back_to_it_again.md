@@ -2,6 +2,7 @@
 title: "Silent Hill 2 - Heather the GOAT"
 date: "2025-10-01"
 description: "A bit on SH3 and Heather Mason"
+topic: "Games"
 tags:
   - gaming
   - horror
