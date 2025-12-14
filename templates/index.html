@@ -54,11 +54,12 @@
           name="query"
           placeholder="Search posts..."
           hx-get="/search"
-          hx-vals='{"limit": 100}'
+          hx-vals="{'limit': 100}"
           hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
           hx-target="#mobile-search-results"
           hx-swap="innerHTML"
         />
+
         <svg
           id="mobile-search-icon"
           xmlns="http://www.w3.org/2000/svg"
@@ -68,7 +69,7 @@
           stroke="currentColor"
           class="cursor-pointer w-6 h-6 px-1 opacity-30 hover:opacity-80 flex-shrink-0"
           hx-get="/search"
-          hx-vals='js:{"limit": 100, "query": document.querySelector("#mobile-search-input").value}'
+          hx-vals="js:{'limit': 100, 'query': document.querySelector('#mobile-search-input').value}"
           hx-trigger="click"
           hx-target="#mobile-search-results"
           hx-swap="innerHTML"
@@ -137,7 +138,7 @@
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
-          id="chess-link-desktop"
+          id="music-link-desktop"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/chess"
           hx-trigger="click"
@@ -148,7 +149,7 @@
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
-          id="chess-link-desktop"
+          id="games-link-desktop"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/chess"
           hx-trigger="click"
@@ -189,7 +190,6 @@
         hx-trigger="click"
         hx-target="#content-section"
         hx-swap="innerHTML transition:true"
-        class="cursor-pointer hover:text-primary-color py-2"
         >NEWS</a
       >
       <a
@@ -202,7 +202,7 @@
         CHESS
       </a>
       <a
-        id="chess-link-mobile"
+        id="music-link-mobile"
         href="/chess"
         hx-trigger="click"
         hx-target="#content-section"
@@ -211,7 +211,7 @@
         MUSIC
       </a>
       <a
-        id="chess-link-mobile"
+        id="games-link-mobile"
         href="/chess"
         hx-trigger="click"
         hx-target="#content-section"
@@ -238,7 +238,7 @@
             name="query"
             placeholder="Search any post..."
             hx-get="/search"
-            hx-vals='{"limit": 100}'
+            hx-vals="{'limit': 100}"
             hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
             hx-target="#list-section"
             hx-swap="innerHTML"
@@ -252,7 +252,7 @@
             stroke="currentColor"
             class="cursor-pointer w-6 h-6 md:w-8 md:h-8 px-1 opacity-30 hover:opacity-80 flex-shrink-0"
             hx-get="/search"
-            hx-vals='js:{"limit": 100, "query": document.querySelector("#desktop-search-input").value}'
+            hx-vals="js:{'limit': 100, 'query': document.querySelector('#desktop-search-input').value}"
             hx-trigger="click"
             hx-target="#list-section"
             hx-swap="innerHTML"
