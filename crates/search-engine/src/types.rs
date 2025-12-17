@@ -51,3 +51,9 @@ pub struct GraphEdge {
     pub source: usize,
     pub target: usize,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct EdgeFilePath {
+    pub source: String,
+    pub target: String,
+}

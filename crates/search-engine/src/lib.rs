@@ -6,6 +6,7 @@ use surrealdb::engine::any::connect;
 use surrealdb::{Response, Surreal};
 use walkdir::WalkDir;
 
+use crate::types::EdgeFilePath;
 use crate::types::Params;
 use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode};
 use crate::utils::{Post, extract_full_metadata};
@@ -144,8 +145,50 @@ impl SearchEngine {
             .unwrap()
     }
 
-    pub async fn get_graph_from_related_posts(&self, file_path: &str) -> GraphData {
-        let curr_post = self.get_post(file_path).await;
+    pub async fn get_overall_graph_data(&self) -> GraphData {
+        let mut posts_result = self.db.query("SELECT * FROM posts").await.unwrap();
+        let posts: Vec<Post> = posts_result.take(0).unwrap();
+
+        let mut edges_result = self
+            .db
+            .query("SELECT in.file_path AS source, out.file_path AS target FROM points_to")
+            .await
+            .unwrap();
+
+        let edges_raw: Vec<EdgeFilePath> = edges_result.take(0).unwrap_or_default();
+
+        self.build_graph_data(posts, edges_raw).await
+    }
+
+    async fn build_graph_data(&self, posts: Vec<Post>, edges_raw: Vec<EdgeFilePath>) -> GraphData {
+        let mut nodes = Vec::new();
+        let mut id_map = std::collections::HashMap::new();
+
+        for (index, post) in posts.iter().enumerate() {
+            let id = index + 1;
+            id_map.insert(post.file_path.clone(), id);
+
+            nodes.push(GraphNode {
+                id,
+                label: post.metadata.title.clone(),
+                file_path: post.file_path.clone(),
+            });
+        }
+
+        let mut edges = Vec::new();
+        for edge in edges_raw {
+            if let (Some(&source), Some(&target)) =
+                (id_map.get(&edge.source), id_map.get(&edge.target))
+            {
+                edges.push(GraphEdge { source, target });
+            }
+        }
+
+        GraphData { nodes, edges }
+    }
+
+    pub async fn get_graph_from_related_posts(&self, main_node_file_path: &str) -> GraphData {
+        let curr_post = self.get_post(main_node_file_path).await;
 
         if curr_post.is_none() {
             return GraphData::empty();
@@ -157,7 +200,7 @@ impl SearchEngine {
         let mut result = self
             .db
             .query(query)
-            .bind(("file_path", file_path.to_string()))
+            .bind(("file_path", main_node_file_path.to_string()))
             .await
             .unwrap();
 

@@ -11,6 +11,7 @@
           postName = postName.slice(0, -1);
         }
 
+        // redirects "/" endpoint to welcome post
         if (postName == "") {
           postName = "welcome";
         }
@@ -127,6 +128,17 @@
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
+          id="grader-view-section"
+          class="hover:text-primary-color whitespace-nowrap cursor-grab active:cursor-grabbing"
+          href="/garden-view"
+          hx-trigger="click"
+          hx-target="#content-section"
+          hx-swap="innerHTML transition:true"
+        >
+          GARDEN VIEW
+        </a>
+        <span class="text-primary-color">&#8226;</span>
+        <a
           id="chess-link-desktop"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/chess"
@@ -191,6 +203,15 @@
         hx-target="#content-section"
         hx-swap="innerHTML transition:true"
         >NEWS</a
+      >
+      <a
+        id="garden-view-section-mobile"
+        class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        href="/garden-view"
+        hx-trigger="click"
+        hx-target="#content-section"
+        hx-swap="innerHTML transition:true"
+        >GARDEN VIEW</a
       >
       <a
         id="chess-link-mobile"

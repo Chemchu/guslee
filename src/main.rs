@@ -43,6 +43,7 @@ async fn main() -> std::io::Result<()> {
             .service(controllers::chess_controller::chess_graph)
             .service(controllers::posts_controller::search_post)
             .service(controllers::graph_controller::graph_network)
+            .service(controllers::graph_controller::garden_view)
             .service(controllers::music_controller::get_user_profile)
             .service(controllers::routines_controller::get_current_schedule_activity)
             .service(controllers::posts_controller::get_post)

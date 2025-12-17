@@ -9,6 +9,11 @@ setInterval(function () {
     currentPage = window.location.pathname;
     handleProseClasses(currentPage);
     handleRightSectionClasses(currentPage);
+
+    // Trigger resize event after classes change
+    setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 100); // Small delay to let layout settle
   }
 }, 60);
 

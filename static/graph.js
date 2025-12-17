@@ -1,5 +1,5 @@
-function renderGraph() {
-  const container = document.getElementById("graph-container");
+function renderGraph(targetContainerId) {
+  const container = document.getElementById(targetContainerId);
   if (!container) {
     console.log("No graph container found");
     return;
@@ -8,17 +8,27 @@ function renderGraph() {
   // Parse data from data attributes. This data comes from the maud (rust) /graph endpoint
   const nodes = JSON.parse(container.dataset.nodes || "[]");
   const links = JSON.parse(container.dataset.edges || "[]");
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+
+  // Function to get current dimensions
+  function getDimensions() {
+    return {
+      width: container.clientWidth,
+      height: container.clientHeight,
+    };
+  }
+
+  let { width, height } = getDimensions();
 
   // Clear any existing SVG (important for re-initialization)
   container.innerHTML = "";
 
   const svg = d3
-    .select("#graph-container")
+    .select("#" + targetContainerId)
     .append("svg")
     .attr("width", width)
-    .attr("height", height);
+    .attr("height", height)
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 
   const g = svg.append("g"); // Zoom functionality
 
@@ -39,11 +49,11 @@ function renderGraph() {
       d3
         .forceLink(links)
         .id((d) => d.id)
-        .distance(100),
+        .distance(50),
     )
-    .force("charge", d3.forceManyBody().strength(-300))
+    .force("charge", d3.forceManyBody().strength(-150))
     .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("collision", d3.forceCollide().radius(30));
+    .force("collision", d3.forceCollide().radius(15));
 
   const link = g
     .append("g")
@@ -96,6 +106,28 @@ function renderGraph() {
     label.attr("x", (d) => d.x).attr("y", (d) => d.y);
   });
 
+  // Resize handler
+  function handleResize() {
+    const { width: newWidth, height: newHeight } = getDimensions();
+
+    // Update SVG dimensions
+    svg
+      .attr("width", newWidth)
+      .attr("height", newHeight)
+      .attr("viewBox", `0 0 ${newWidth} ${newHeight}`);
+
+    // Update force center
+    simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+    simulation.alpha(0.3).restart();
+  }
+
+  // Debounce resize to avoid excessive recalculations
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(handleResize, 250);
+  });
+
   function drag(simulation) {
     function dragStarted(event) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -139,8 +171,6 @@ function renderGraph() {
             const html = await response.text();
             document.getElementById("content-section").innerHTML = html;
             window.history.pushState({}, "", url);
-
-            /*             document.dispatchEvent(new CustomEvent("contentUpdated")); */
           });
         } else {
           htmx
@@ -164,12 +194,17 @@ function renderGraph() {
 }
 
 document.addEventListener("contentUpdated", function (_evt) {
-  renderGraph();
+  renderGraph("graph-container");
+  renderGraph("garden-view-section");
 });
 
 document.addEventListener("htmx:afterSettle", function (evt) {
   // Once the graph container loades, we can init the actual graph
   if (evt.detail.target.id === "upper-right-section") {
-    renderGraph();
+    renderGraph("graph-container");
+  }
+
+  if (evt.detail.target.id === "garden-view-section") {
+    renderGraph("garden-view-section");
   }
 });
