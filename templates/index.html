@@ -4,21 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{APPNAME}}</title>
-    <script>
-      function getAdaptedPostPathname() {
-        let postName = window.location.pathname.replace("/posts/", "");
-        if (postName.endsWith("/")) {
-          postName = postName.slice(0, -1);
-        }
-
-        // redirects "/" endpoint to welcome post
-        if (postName == "") {
-          postName = "welcome";
-        }
-
-        return postName;
-      }
-    </script>
     <script src="/_static/app-events.js"></script>
     <script src="/_static/htmx.min.js"></script>
     <script src="/_static/htmx-path-params-ext.js"></script>
@@ -108,9 +93,9 @@
         <a
           id="home-section"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
-          href="/posts/welcome"
+          href="/posts/welcome/page"
           hx-trigger="click"
-          hx-target="#content-section"
+          hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
           HOME
@@ -121,7 +106,7 @@
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/news"
           hx-trigger="click"
-          hx-target="#content-section"
+          hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
           NEWS
@@ -132,7 +117,7 @@
           class="hover:text-primary-color whitespace-nowrap cursor-grab active:cursor-grabbing"
           href="/garden-view"
           hx-trigger="click"
-          hx-target="#content-section"
+          hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
           GARDEN VIEW
@@ -143,7 +128,7 @@
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/chess"
           hx-trigger="click"
-          hx-target="#content-section"
+          hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
           CHESS
@@ -154,7 +139,7 @@
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/chess"
           hx-trigger="click"
-          hx-target="#content-section"
+          hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
           MUSIC
@@ -165,7 +150,7 @@
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/chess"
           hx-trigger="click"
-          hx-target="#content-section"
+          hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
           GAMES
@@ -200,7 +185,7 @@
         class="cursor-pointer hover:text-primary-color whitespace-nowrap"
         href="/news"
         hx-trigger="click"
-        hx-target="#content-section"
+        hx-target="#main-section"
         hx-swap="innerHTML transition:true"
         >NEWS</a
       >
@@ -209,7 +194,7 @@
         class="cursor-pointer hover:text-primary-color whitespace-nowrap"
         href="/garden-view"
         hx-trigger="click"
-        hx-target="#content-section"
+        hx-target="#main-section"
         hx-swap="innerHTML transition:true"
         >GARDEN VIEW</a
       >
@@ -217,7 +202,7 @@
         id="chess-link-mobile"
         href="/chess"
         hx-trigger="click"
-        hx-target="#content-section"
+        hx-target="#main-section"
         class="cursor-pointer hover:text-primary-color py-2"
       >
         CHESS
@@ -226,7 +211,7 @@
         id="music-link-mobile"
         href="/chess"
         hx-trigger="click"
-        hx-target="#content-section"
+        hx-target="#main-section"
         class="cursor-pointer hover:text-primary-color py-2"
       >
         MUSIC
@@ -235,7 +220,7 @@
         id="games-link-mobile"
         href="/chess"
         hx-trigger="click"
-        hx-target="#content-section"
+        hx-target="#main-section"
         class="cursor-pointer hover:text-primary-color py-2"
       >
         GAMES
@@ -302,50 +287,11 @@
         </div>
       </div>
 
-      <div class="flex flex-col lg:flex-row justify-between flex-grow min-h-0">
-        <div
-          id="content-section"
-          class="prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
-          hx-target="#content-section"
-          hx-swap="innerHTML"
-        >
-          {{CONTENT}}
-        </div>
-
-        <div
-          id="right-section"
-          class="hidden flex-col min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
-        >
-          <div
-            hx-ext="path-params"
-            class="flex flex-col flex-grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
-          >
-            <div
-              id="upper-right-section"
-              hx-get="/{graph}/{post}"
-              hx-trigger="load, contentUpdated from:document"
-              hx-target="#upper-right-section"
-              hx-swap="innerHTML"
-              hx-vals="js:{graph: 'graph', post: getAdaptedPostPathname()}"
-              class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
-            >
-              Loading...
-            </div>
-          </div>
-          <div hx-ext="path-params" class="flex flex-col flex-grow w-full">
-            <div
-              id="bottom-right-section"
-              hx-get="/{metadata}/{post}"
-              hx-trigger="load, contentUpdated from:document"
-              hx-target="#bottom-right-section"
-              hx-swap="innerHTML"
-              hx-vals="js:{metadata: 'metadata', post: getAdaptedPostPathname()}"
-              class="flex w-full flex-grow p-2"
-            >
-              Loading...
-            </div>
-          </div>
-        </div>
+      <div
+        id="main-section"
+        class="flex flex-col lg:flex-row justify-between flex-grow min-h-0"
+      >
+        {{CONTENT}}
       </div>
     </div>
     <div

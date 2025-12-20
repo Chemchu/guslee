@@ -6,7 +6,7 @@ use maud::html;
 
 use crate::controllers::AppState;
 
-#[get("/graph/{current_url_pathname}")]
+#[get("/graph/{current_url_pathname:.*}")]
 pub async fn graph_network(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
     let graph_data = {
         let file_path = format!("{}.md", path.as_str());

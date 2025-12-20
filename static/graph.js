@@ -157,7 +157,7 @@ function renderGraph(targetContainerId) {
     event.stopPropagation();
 
     if (d.file_path) {
-      const url = "/posts/" + d.file_path.replace(/\.md$/, "");
+      const url = "/posts/" + d.file_path.replace(/\.md$/, "") + "/page";
 
       if (typeof htmx !== "undefined") {
         if (document.startViewTransition) {
@@ -169,13 +169,13 @@ function renderGraph(targetContainerId) {
               },
             });
             const html = await response.text();
-            document.getElementById("content-section").innerHTML = html;
+            document.getElementById("main-section").innerHTML = html;
             window.history.pushState({}, "", url);
           });
         } else {
           htmx
             .ajax("GET", url, {
-              target: "#content-section",
+              target: "#main-section",
               swap: "innerHTML",
               headers: {
                 "HX-Current-URL": window.location.origin + url,
@@ -193,10 +193,10 @@ function renderGraph(targetContainerId) {
   }
 }
 
-document.addEventListener("contentUpdated", function (_evt) {
+/* document.addEventListener("contentUpdated", function (_evt) {
   renderGraph("graph-container");
   renderGraph("garden-view-section");
-});
+}); */
 
 document.addEventListener("htmx:afterSettle", function (evt) {
   // Once the graph container loades, we can init the actual graph

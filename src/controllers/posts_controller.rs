@@ -4,7 +4,7 @@ use actix_web::{
 };
 use cached::proc_macro::cached;
 use markdown::{Constructs, Options, ParseOptions};
-use maud::html;
+use maud::{PreEscaped, html};
 use search_engine::{
     types::{DEFAULT_SEARCH_LIMIT, Params},
     utils::Post,
@@ -14,36 +14,27 @@ use std::{fs, io};
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
-#[get("/posts/{post:.*}")]
-pub async fn get_post(
+#[get("/posts/{post:.*}/page")]
+pub async fn get_post_page(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     route: web::Path<String>,
 ) -> Html {
     let content: io::Result<String> = fs::read_to_string(format!("./garden/{}.md", route));
 
-    let frontmatter = Options {
-        parse: ParseOptions {
-            constructs: Constructs {
-                frontmatter: true,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
     let is_htmx_req = req.headers().get("HX-Request").is_some();
     if is_htmx_req {
         Html::new(match content {
-            Ok(md) => markdown::to_html_with_options(&md, &frontmatter).unwrap(),
+            Ok(md) => post_page_shell(md, route.to_string()).into_string(),
             Err(_err) => String::from("Post not found"),
         })
     } else {
         Html::new(match content {
             Ok(md) => wrap_content_into_full_page(
                 &app_state.app_name,
-                &markdown::to_html_with_options(&md, &frontmatter).unwrap(),
+                post_page_shell(md, route.to_string())
+                    .into_string()
+                    .as_str(),
             ),
             Err(_err) => String::from("Post not found"),
         })
@@ -190,13 +181,13 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
                             @for topic_post in topic_posts {
                                 li {
                                     a href=(format!(
-                                        "/posts/{}",
+                                        "/posts/{}/page",
                                         topic_post
                                             .file_path
                                             .strip_suffix(".md")
                                             .unwrap_or(&topic_post.file_path)
                                     ))
-                                    hx-target="#content-section"
+                                    hx-target="#main-section"
                                     hx-swap="innerHTML transition:true"
                                     title=(topic_post.metadata.title)
                                     class="block pl-3 cursor-pointer hover:text-primary-color overflow-hidden truncate"
@@ -212,13 +203,13 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
             @for p in posts_to_render {
                 li {
                     a href=(format!(
-                        "/posts/{}",
+                        "/posts/{}/page",
                         p
                             .file_path
                             .strip_suffix(".md")
                             .unwrap_or(&p.file_path)
                     ))
-                    hx-target="#content-section"
+                    hx-target="#main-section"
                     hx-swap="innerHTML transition:true"
                     title=(p.metadata.title)
                     class="block cursor-pointer hover:text-primary-color overflow-hidden truncate"
@@ -235,4 +226,59 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
 #[get("/{url:.*}")]
 pub async fn fallback_route() -> impl Responder {
     String::from("Fallback page")
+}
+
+fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
+    let frontmatter = Options {
+        parse: ParseOptions {
+            constructs: Constructs {
+                frontmatter: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    html! {
+        div
+        id="content-section"
+        class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
+            {
+               (PreEscaped(markdown::to_html_with_options(&md, &frontmatter).unwrap()))
+            }
+        div
+        id="right-section"
+        class="flex flex-col min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
+        {
+            div
+            class="flex flex-col flex-grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
+            {
+                div
+                id="upper-right-section"
+                hx-get=(format!("/graph/{}", post_path))
+                hx-trigger="load, contentUpdated from:document"
+                hx-target="#upper-right-section"
+                hx-swap="innerHTML"
+                class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
+                {
+                    "Loading..."
+                }
+            }
+            div
+            class="flex flex-col flex-grow w-full"
+            {
+                div
+                id="bottom-right-section"
+                hx-get=(format!("/metadata/{}", post_path))
+                hx-trigger="load, contentUpdated from:document"
+                hx-target="#bottom-right-section"
+                hx-swap="innerHTML"
+                class="flex w-full flex-grow p-2"
+                {
+                    "Loading..."
+                }
+            }
+        }
+    }
 }
