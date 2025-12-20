@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
                 garden_path: garden_path.clone(),
                 search_engine: Arc::clone(&search_engine),
             }))
-            .service(controllers::landing)
+            .service(controllers::posts_controller::landing)
             .service(controllers::news_controller::news_page)
             .service(controllers::metadata_controller::render_metadata)
             .service(controllers::chess_controller::chess_page)
@@ -44,6 +44,7 @@ async fn main() -> std::io::Result<()> {
             .service(controllers::posts_controller::search_post)
             .service(controllers::graph_controller::graph_network)
             .service(controllers::graph_controller::garden_view)
+            .service(controllers::graph_controller::garden_view_dispatcher)
             .service(controllers::music_controller::get_user_profile)
             .service(controllers::routines_controller::get_current_schedule_activity)
             .service(controllers::posts_controller::get_post_page)

@@ -5,9 +5,9 @@ function renderGraph(targetContainerId) {
     return;
   }
 
-  // Use getAttribute instead of dataset for large JSON strings
-  const nodes = JSON.parse(container.getAttribute("data-nodes") || "[]");
-  const links = JSON.parse(container.getAttribute("data-edges") || "[]");
+  // Parse data from data attributes. This data comes from the maud (rust) /graph endpoint
+  const nodes = JSON.parse(container.dataset.nodes || "[]");
+  const links = JSON.parse(container.dataset.edges || "[]");
 
   // Function to get current dimensions
   function getDimensions() {
@@ -196,10 +196,12 @@ function renderGraph(targetContainerId) {
 document.addEventListener("htmx:afterSettle", function (evt) {
   // Once the graph container loades, we can init the actual graph
   if (evt.detail.target.id === "upper-right-section") {
+    console.log("graph");
     renderGraph("graph-container");
   }
 
   if (evt.detail.target.id === "garden-view-section") {
-    renderGraph("garden-view-content");
+    console.log("lol");
+    renderGraph("garden-view-section");
   }
 });

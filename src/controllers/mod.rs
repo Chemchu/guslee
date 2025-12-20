@@ -22,38 +22,6 @@ pub struct AppState {
     pub search_engine: std::sync::Arc<SearchEngine>,
 }
 
-#[get("/")]
-pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
-    let welcome_path = format!("{}/welcome.md", app_state.garden_path);
-
-    let content = match std::fs::read_to_string(&welcome_path) {
-        Ok(content) => content,
-        Err(e) => {
-            log::error!("Failed to read welcome.md: {}", e);
-            return Html::new(wrap_content_into_full_page(
-                &app_state.app_name,
-                "<p>Error loading welcome page</p>",
-            ));
-        }
-    };
-
-    let frontmatter = Options {
-        parse: ParseOptions {
-            constructs: Constructs {
-                frontmatter: true,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
-    Html::new(wrap_content_into_full_page(
-        &app_state.app_name,
-        &markdown::to_html_with_options(&content, &frontmatter).unwrap(),
-    ))
-}
-
 pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {
     let html = INDEX_TEMPLATE.get_or_init(|| {
         let template_path =

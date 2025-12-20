@@ -47,9 +47,11 @@ pub async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl
 
     let h = html! {
         div
-        class="flex flex-col gap-4 justify-between"
+        class="flex flex-col gap-4 justify-between p-4 md:p-6 lg:p-8 overflow-auto w-full"
         {
-            h1 {
+            h1
+            class="text-4xl pb-4"
+            {
                 "Latest stuff"
             }
             ol

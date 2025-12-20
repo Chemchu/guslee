@@ -1,10 +1,10 @@
 let currentPage = window.location.pathname;
 document.addEventListener("DOMContentLoaded", (_event) => {
-  handleProseClasses(currentPage);
-  handleRightSectionClasses(currentPage);
+  /* handleProseClasses(currentPage);
+  handleRightSectionClasses(currentPage); */
 });
 
-setInterval(function () {
+/* setInterval(function () {
   if (currentPage != window.location.pathname) {
     currentPage = window.location.pathname;
     handleProseClasses(currentPage);
@@ -15,7 +15,7 @@ setInterval(function () {
       window.dispatchEvent(new Event("resize"));
     }, 100); // Small delay to let layout settle
   }
-}, 60);
+}, 60); */
 
 function handleProseClasses(currentPage) {
   let isPostPage = currentPage.includes("/posts/") || currentPage == "/";
