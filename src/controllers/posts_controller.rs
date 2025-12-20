@@ -14,7 +14,7 @@ use std::{fs, io};
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
-#[get("/posts/{post:.*}/page")]
+#[get("/posts/{post:.*}")]
 pub async fn get_post_page(
     app_state: web::Data<AppState>,
     req: HttpRequest,
@@ -181,7 +181,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
                             @for topic_post in topic_posts {
                                 li {
                                     a href=(format!(
-                                        "/posts/{}/page",
+                                        "/posts/{}",
                                         topic_post
                                             .file_path
                                             .strip_suffix(".md")
@@ -203,7 +203,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
             @for p in posts_to_render {
                 li {
                     a href=(format!(
-                        "/posts/{}/page",
+                        "/posts/{}",
                         p
                             .file_path
                             .strip_suffix(".md")

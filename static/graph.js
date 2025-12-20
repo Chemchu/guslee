@@ -157,7 +157,7 @@ function renderGraph(targetContainerId) {
     event.stopPropagation();
 
     if (d.file_path) {
-      const url = "/posts/" + d.file_path.replace(/\.md$/, "") + "/page";
+      const url = "/posts/" + d.file_path.replace(/\.md$/, "");
 
       if (typeof htmx !== "undefined") {
         if (document.startViewTransition) {
