@@ -48,7 +48,7 @@ async fn main() -> std::io::Result<()> {
             .service(controllers::music_controller::get_user_profile)
             .service(controllers::routines_controller::get_current_schedule_activity)
             .service(controllers::posts_controller::get_post_page)
-            .service(controllers::posts_controller::fallback_route) // This service should be last because it matches any string
+            .service(controllers::posts_controller::fallback_route) // This service should be last one in the list because it matches any string
     })
     .bind(("0.0.0.0", 3000))?
     .run()
