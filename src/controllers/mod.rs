@@ -1,8 +1,3 @@
-use actix_web::{
-    Responder, get,
-    web::{self, Html},
-};
-use markdown::{Constructs, Options, ParseOptions};
 use search_engine::SearchEngine;
 use std::sync::OnceLock;
 
@@ -18,6 +13,7 @@ static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
 
 pub struct AppState {
     pub app_name: String,
+    pub lichess_token: String,
     pub garden_path: String,
     pub search_engine: std::sync::Arc<SearchEngine>,
 }

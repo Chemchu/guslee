@@ -7,6 +7,7 @@ use search_engine::SearchEngine;
 use crate::controllers::AppState;
 
 mod controllers;
+mod helpers;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -17,15 +18,26 @@ async fn main() -> std::io::Result<()> {
         .init()
         .unwrap();
 
-    info!("🚀 Starting server...");
+    info!("Starting server...");
+
+    info!("Loading environment variables...");
+    let env_vars = helpers::read_env_file();
+
+    let lichess_token = env_vars
+        .get("LICHESS_API_TOKEN")
+        .expect("LICHESS_API_TOKEN not defined")
+        .to_string();
+
+    let garden_path = env_vars
+        .get("GARDEN_PATH")
+        .expect("GARDEN_PATH not defined")
+        .to_string();
 
     info!("Creating in-memory full-text search engine...");
-    let garden_path = std::env::var("GARDEN_PATH")
-        .unwrap_or_else(|_| format!("{}/garden", env!("CARGO_MANIFEST_DIR")));
     let search_engine = Arc::new(SearchEngine::new(&garden_path).await);
 
     info!("Search engine created correctly");
-    info!("🌐 Server starting on http://0.0.0.0:3000");
+    info!("Server starting on port 3000");
 
     HttpServer::new(move || {
         App::new()
@@ -33,6 +45,7 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/_static", "./static").show_files_listing())
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Gus' digital garden"),
+                lichess_token: lichess_token.clone(),
                 garden_path: garden_path.clone(),
                 search_engine: Arc::clone(&search_engine),
             }))
