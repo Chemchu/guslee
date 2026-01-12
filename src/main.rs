@@ -33,13 +33,8 @@ async fn main() -> std::io::Result<()> {
         .expect("LICHESS_USERNAME not defined")
         .to_string();
 
-    let garden_path = env_vars
-        .get("GARDEN_PATH")
-        .expect("GARDEN_PATH not defined")
-        .to_string();
-
     info!("Creating in-memory full-text search engine...");
-    let search_engine = Arc::new(SearchEngine::new(&garden_path).await);
+    let search_engine = Arc::new(SearchEngine::new("./garden").await);
 
     info!("Search engine created correctly");
     info!("Server starting on port 3000");
@@ -52,7 +47,6 @@ async fn main() -> std::io::Result<()> {
                 app_name: String::from("Gus' digital garden"),
                 lichess_token: lichess_token.clone(),
                 lichess_username: lichess_username.clone(),
-                garden_path: garden_path.clone(),
                 search_engine: Arc::clone(&search_engine),
             }))
             .service(controllers::posts_controller::landing)

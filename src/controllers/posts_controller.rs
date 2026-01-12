@@ -16,9 +16,7 @@ use crate::controllers::{AppState, wrap_content_into_full_page};
 
 #[get("/")]
 pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
-    let welcome_path = format!("{}/welcome.md", app_state.garden_path);
-
-    let content = match std::fs::read_to_string(&welcome_path) {
+    let content = match std::fs::read_to_string("./garden/welcome.md") {
         Ok(content) => content,
         Err(e) => {
             log::error!("Failed to read welcome.md: {}", e);
