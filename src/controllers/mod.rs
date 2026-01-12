@@ -14,6 +14,7 @@ static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
 pub struct AppState {
     pub app_name: String,
     pub lichess_token: String,
+    pub lichess_username: String,
     pub garden_path: String,
     pub search_engine: std::sync::Arc<SearchEngine>,
 }

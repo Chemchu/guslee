@@ -28,6 +28,11 @@ async fn main() -> std::io::Result<()> {
         .expect("LICHESS_API_TOKEN not defined")
         .to_string();
 
+    let lichess_username = env_vars
+        .get("LICHESS_USERNAME")
+        .expect("LICHESS_USERNAME not defined")
+        .to_string();
+
     let garden_path = env_vars
         .get("GARDEN_PATH")
         .expect("GARDEN_PATH not defined")
@@ -46,6 +51,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Gus' digital garden"),
                 lichess_token: lichess_token.clone(),
+                lichess_username: lichess_username.clone(),
                 garden_path: garden_path.clone(),
                 search_engine: Arc::clone(&search_engine),
             }))
