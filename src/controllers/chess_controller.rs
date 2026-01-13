@@ -15,7 +15,7 @@ use crate::controllers::{AppState, load_html_page, wrap_content_into_full_page};
     key = "String",
     convert = r##"{ 
         format!(
-            "is_htmx_req-{}",
+            "chess-is_htmx_req-{}",
             req.headers().get("HX-Request").is_some()
         )
     }"##
@@ -39,7 +39,10 @@ pub async fn chess_page(app_state: web::Data<AppState>, req: HttpRequest) -> Htm
 #[get("/chess/stats/{game_mode}")]
 pub async fn chess_graph(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
     let game_mode = path.into_inner();
-    let data = ChessModule::get_player_data(&app_state.lichess_token, &app_state.lichess_username);
+    let data = ChessModule::get_player_data(
+        &app_state.lichess_state.lichess_token,
+        &app_state.lichess_state.lichess_username,
+    );
 
     if data.is_none() {
         let template_path =

@@ -1684,6 +1684,7 @@ dependencies = [
  "log",
  "markdown",
  "maud",
+ "music-module",
  "search-engine",
  "serde",
  "serde_json",
@@ -2445,6 +2446,16 @@ dependencies = [
  "mime",
  "spin",
  "version_check",
+]
+
+[[package]]
+name = "music-module"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "minreq",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

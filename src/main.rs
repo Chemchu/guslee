@@ -33,6 +33,16 @@ async fn main() -> std::io::Result<()> {
         .expect("LICHESS_USERNAME not defined")
         .to_string();
 
+    let spotify_client_id = env_vars
+        .get("SPOTIFY_CLIENT_ID")
+        .expect("SPOTIFY_CLIENT_ID not defined")
+        .to_string();
+
+    let spotify_client_secret = env_vars
+        .get("SPOTIFY_CLIENT_SECRET")
+        .expect("SPOTIFY_CLIENT_SECRET not defined")
+        .to_string();
+
     info!("Creating in-memory full-text search engine...");
     let search_engine = Arc::new(SearchEngine::new("./garden").await);
 
@@ -45,8 +55,15 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/_static", "./static").show_files_listing())
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Gus' digital garden"),
-                lichess_token: lichess_token.clone(),
-                lichess_username: lichess_username.clone(),
+                lichess_state: controllers::LichessState {
+                    lichess_token: lichess_token.clone(),
+                    lichess_username: lichess_username.clone(),
+                },
+                spotify_state: controllers::SpotifyState {
+                    spotify_client_id: spotify_client_id.clone(),
+                    spotify_client_secret: spotify_client_secret.clone(),
+                    spotify_session: ("invalid_token".to_string(), 0),
+                },
                 search_engine: Arc::clone(&search_engine),
             }))
             .service(controllers::posts_controller::landing)

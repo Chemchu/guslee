@@ -32,9 +32,13 @@ fn load_vars_from_environment() -> HashMap<String, String> {
 
     let lichess_api_token = std::env::var("LICHESS_API_TOKEN").unwrap();
     let lichess_username = std::env::var("LICHESS_USERNAME").unwrap();
+    let spotify_client_id = std::env::var("SPOTIFY_CLIENT_ID").unwrap();
+    let spotify_client_secret = std::env::var("SPOTIFY_CLIENT_SECRET").unwrap();
 
     env_vars.insert("LICHESS_API_TOKEN".to_string(), lichess_api_token);
     env_vars.insert("LICHESS_USERNAME".to_string(), lichess_username);
+    env_vars.insert("SPOTIFY_CLIENT_ID".to_string(), spotify_client_id);
+    env_vars.insert("SPOTIFY_CLIENT_SECRET".to_string(), spotify_client_secret);
 
     env_vars
 }
