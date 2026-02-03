@@ -33,6 +33,11 @@ async fn main() -> std::io::Result<()> {
         .expect("LICHESS_USERNAME not defined")
         .to_string();
 
+    let spotify_user_id = env_vars
+        .get("SPOTIFY_USER_ID")
+        .expect("SPOTIFY_USER_ID not defined")
+        .to_string();
+
     let spotify_client_id = env_vars
         .get("SPOTIFY_CLIENT_ID")
         .expect("SPOTIFY_CLIENT_ID not defined")
@@ -43,8 +48,24 @@ async fn main() -> std::io::Result<()> {
         .expect("SPOTIFY_CLIENT_SECRET not defined")
         .to_string();
 
+    let spotify_refresh_token = env_vars
+        .get("SPOTIFY_REFRESH_TOKEN")
+        .expect("SPOTIFY_REFRESH_TOKEN not defined")
+        .to_string();
+
     info!("Creating in-memory full-text search engine...");
     let search_engine = Arc::new(SearchEngine::new("./garden").await);
+
+    info!("Initializing Spotify state...");
+    let spotify_state = Arc::new(tokio::sync::Mutex::new(
+        music_module::SpotifyState::from_refresh_token(
+            spotify_user_id,
+            spotify_client_id,
+            spotify_client_secret,
+            spotify_refresh_token,
+        ),
+    ));
+    info!("Spotify state initialized");
 
     info!("Search engine created correctly");
     info!("Server starting on port 3000");
@@ -55,15 +76,11 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/_static", "./static").show_files_listing())
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Gus' digital garden"),
-                lichess_state: controllers::LichessState {
+                lichess_state: chess_module::LichessState {
                     lichess_token: lichess_token.clone(),
                     lichess_username: lichess_username.clone(),
                 },
-                spotify_state: controllers::SpotifyState {
-                    spotify_client_id: spotify_client_id.clone(),
-                    spotify_client_secret: spotify_client_secret.clone(),
-                    spotify_session: ("invalid_token".to_string(), 0),
-                },
+                spotify_state: Arc::clone(&spotify_state),
                 search_engine: Arc::clone(&search_engine),
             }))
             .service(controllers::posts_controller::landing)

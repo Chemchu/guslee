@@ -270,7 +270,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
             }
         div
         id="right-section"
-        class="flex flex-col min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
+        class="hidden lg:flex flex-col min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
         {
             div
             class="flex flex-col flex-grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"

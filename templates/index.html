@@ -6,7 +6,6 @@
     <title>{{APPNAME}}</title>
     <script src="/_static/app-events.js"></script>
     <script src="/_static/htmx.min.js"></script>
-    <!--     <script src="/_static/htmx-path-params-ext.js"></script> -->
     <script src="/_static/d3-v7.min.js"></script>
     <script src="/_static/graph.js"></script>
     <script src="/_static/elo-chart.js"></script>
@@ -114,7 +113,7 @@
         <span class="text-primary-color">&#8226;</span>
         <a
           id="grader-view-section"
-          class="hover:text-primary-color whitespace-nowrap cursor-grab active:cursor-grabbing"
+          class="hover:text-primary-color whitespace-nowrap cursor-pointer active:cursor-grabbing"
           href="/garden-view-dispatcher"
           hx-trigger="click"
           hx-target="#main-section"
@@ -137,7 +136,7 @@
         <a
           id="music-link-desktop"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
-          href="/chess"
+          href="/music/profile"
           hx-trigger="click"
           hx-target="#main-section"
           hx-swap="innerHTML transition:true"
@@ -209,7 +208,7 @@
       </a>
       <a
         id="music-link-mobile"
-        href="/chess"
+        href="/music/profile"
         hx-trigger="click"
         hx-target="#main-section"
         class="cursor-pointer hover:text-primary-color py-2"
@@ -359,7 +358,7 @@
         });
     </script>
     <div
-      class="hidden text-xl lg:text-4xl pb-4 prose prose-theme italic md:text-base truncate overflow-hidden"
+      class="hidden text-xl lg:text-4xl pb-4 prose prose-theme italic md:text-base truncate overflow-hidden gap-10"
     >
       Dummy element for tailwind
     </div>

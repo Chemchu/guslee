@@ -42,18 +42,21 @@ pub async fn chess_graph(app_state: web::Data<AppState>, path: web::Path<String>
     let data = ChessModule::get_player_data(
         &app_state.lichess_state.lichess_token,
         &app_state.lichess_state.lichess_username,
-    );
+    )
+    .await;
 
-    if data.is_none() {
-        let template_path =
-            std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
-        let fallback_html =
-            std::fs::read_to_string(format!("{}/chess_stats_fallback.md", template_path))
-                .unwrap_or_else(|_| "Error loading chess stats".to_string());
-        return Html::new(markdown::to_html(&fallback_html));
-    }
-
-    let (player_stats, rating_history) = data.unwrap();
+    let (player_stats, rating_history) = match data {
+        Ok(data) => data,
+        Err(err) => {
+            eprintln!("Error fetching chess data: {}", err);
+            let template_path =
+                std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
+            let fallback_html =
+                std::fs::read_to_string(format!("{}/chess_stats_fallback.md", template_path))
+                    .unwrap_or_else(|_| "Error loading chess stats".to_string());
+            return Html::new(markdown::to_html(&fallback_html));
+        }
+    };
 
     let game_mode_normalized = match game_mode.as_str() {
         "kingOfTheHill" => "King of the Hill",
