@@ -1,13 +1,26 @@
-name: Docker Build and Test
+name: Build, Test, and Deploy
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
-  test:
+  rust-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      
+      - name: Run tests
+        run: cargo test
+
+  docker-test:
+    needs: rust-test
     runs-on: ubuntu-latest
     
     steps:
@@ -55,7 +68,6 @@ jobs:
       
       - name: Check application health
         run: |
-          # Wait for app to be ready
           for i in {1..30}; do
             if curl -f http://localhost:3000 2>/dev/null; then
               echo "Application is responding!"
@@ -64,8 +76,6 @@ jobs:
             echo "Waiting for application... attempt $i"
             sleep 2
           done
-          
-          # Verify it's actually responding
           curl -f http://localhost:3000 || exit 1
       
       - name: Show container logs
@@ -75,3 +85,21 @@ jobs:
       - name: Stop container
         if: always()
         run: docker stop guslee-test || true
+
+  deploy:
+    needs: [rust-test, docker-test]
+    runs-on: ubuntu-latest
+    # Only deploy on push to main (not on PRs)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
