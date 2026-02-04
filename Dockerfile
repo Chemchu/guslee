@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1-bookworm AS chef
 WORKDIR /usr/src/app
 
 FROM chef AS planner
@@ -11,9 +11,8 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin guslee
 
-# Runtime image
+# Runtime image - same base as builder
 FROM debian:bookworm-slim
-
 RUN useradd -ms /bin/bash app
 WORKDIR /app
 
@@ -23,9 +22,7 @@ COPY --from=builder /usr/src/app/static ./static
 COPY --from=builder /usr/src/app/templates ./templates
 
 ENV TEMPLATE_PATH=/app/templates
-
 RUN chown -R app:app /app
 USER app
-
 EXPOSE 3000
 CMD ["./guslee"]
