@@ -22,7 +22,6 @@ COPY --from=builder /usr/src/app/garden ./garden
 COPY --from=builder /usr/src/app/static ./static
 COPY --from=builder /usr/src/app/templates ./templates
 
-ENV GARDEN_PATH=/app/garden
 ENV TEMPLATE_PATH=/app/templates
 
 RUN chown -R app:app /app
