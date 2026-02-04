@@ -90,7 +90,8 @@ pub fn render_mock_spotify_profile(
                     }
                     div class="flex flex-col gap-3" {
                         @for (i, song) in top_tracks.items.iter().enumerate() {
-                            div class="group bg-white/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-white/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-green-500/10 border border-white/5 hover:border-primary-color" {
+                            a href=(song.external_urls.spotify) target="_blank" rel="noopener noreferrer"
+                                class="group bg-white/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-white/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-green-500/10 border border-white/5 hover:border-primary-color" {
                                 div class="text-xl font-bold text-primary-color w-8 text-center" {
                                     (i + 1)
                                 }
@@ -123,7 +124,8 @@ pub fn render_mock_spotify_profile(
                     }
                     div class="flex flex-col gap-3" {
                         @for (i, artist) in top_artists.items.iter().enumerate() {
-                            div class="group bg-white/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-white/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-purple-500/10 border border-white/5 hover:border-primary-color" {
+                            a href=(artist.external_urls.spotify) target="_blank" rel="noopener noreferrer"
+                                class="group bg-white/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-white/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-purple-500/10 border border-white/5 hover:border-primary-color" {
                                 div class="text-xl font-bold text-primary-color w-8 text-center" {
                                     (i + 1)
                                 }
