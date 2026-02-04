@@ -1,18 +1,77 @@
-# See https://fly.io/docs/app-guides/continuous-deployment-with-github-actions/
+name: Docker Build and Test
 
-name: Fly Deploy
 on:
   push:
-    branches:
-      - main
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
 jobs:
-  deploy:
-    name: Deploy app
+  test:
     runs-on: ubuntu-latest
-    concurrency: deploy-group # optional: ensure only one action runs at a time
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: guslee:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Check glibc version
+        run: docker run --rm guslee:test ldd --version
+      
+      - name: Verify binary dependencies
+        run: |
+          echo "Checking binary dependencies..."
+          docker run --rm guslee:test ldd ./guslee
+          echo "Verifying no missing dependencies..."
+          ! docker run --rm guslee:test ldd ./guslee | grep "not found"
+      
+      - name: Verify files exist
+        run: |
+          docker run --rm guslee:test ls -la /app
+          docker run --rm guslee:test test -f ./guslee
+          docker run --rm guslee:test test -d ./garden
+          docker run --rm guslee:test test -d ./static
+          docker run --rm guslee:test test -d ./templates
+      
+      - name: Start container
+        run: |
+          docker run -d -p 3000:3000 --name guslee-test guslee:test
+          sleep 5
+      
+      - name: Check container is running
+        run: docker ps | grep guslee-test
+      
+      - name: Check application health
+        run: |
+          # Wait for app to be ready
+          for i in {1..30}; do
+            if curl -f http://localhost:3000 2>/dev/null; then
+              echo "Application is responding!"
+              break
+            fi
+            echo "Waiting for application... attempt $i"
+            sleep 2
+          done
+          
+          # Verify it's actually responding
+          curl -f http://localhost:3000 || exit 1
+      
+      - name: Show container logs
+        if: always()
+        run: docker logs guslee-test
+      
+      - name: Stop container
+        if: always()
+        run: docker stop guslee-test || true
