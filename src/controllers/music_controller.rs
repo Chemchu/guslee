@@ -4,7 +4,7 @@ use actix_web::{
 };
 use cached::proc_macro::cached;
 use maud::{PreEscaped, html};
-use music_module::{SpotifyUser, TopTracksResponse};
+use music_module::{SpotifyUser, TopArtistsResponse, TopTracksResponse};
 use std::time::Duration;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
@@ -23,7 +23,8 @@ use crate::controllers::{AppState, wrap_content_into_full_page};
 pub async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     let mut spotify_state = app_state.spotify_state.lock().await;
     let user_profile = spotify_state.fetch_user_profile().await;
-    let top_tracks = spotify_state.fetch_top_n_tracks(5).await;
+    let top_tracks = spotify_state.fetch_top_tracks(5).await;
+    let top_artists = spotify_state.fetch_top_artists(5).await;
 
     let html_to_render = match user_profile.is_err() || top_tracks.is_err() {
         true => {
@@ -33,7 +34,11 @@ pub async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) 
                 }
             }
         }
-        false => render_mock_spotify_profile(user_profile.unwrap(), top_tracks.unwrap()),
+        false => render_mock_spotify_profile(
+            user_profile.unwrap(),
+            top_tracks.unwrap(),
+            top_artists.unwrap(),
+        ),
     };
 
     let is_htmx_req = req.headers().get("HX-Request").is_some();
@@ -50,58 +55,100 @@ pub async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) 
 pub fn render_mock_spotify_profile(
     user: SpotifyUser,
     top_tracks: TopTracksResponse,
+    top_artists: TopArtistsResponse,
 ) -> PreEscaped<String> {
     html! {
-        div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
-            div {
+        div class="flex flex-col w-full gap-8 md:p-6 lg:p-8 overflow-auto" {
+            div class="bg-gradient-to-r from-green-900/20 to-green-800/20 backdrop-blur-sm rounded-2xl p-6" {
                 div class="flex items-center gap-6" {
-                    img src=(user.images.into_iter().next().unwrap().url) class="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-4xl font-bold shadow-lg" {
-                    }
+                    img src=(user.images.into_iter().next().unwrap().url)
+                        class="w-28 h-28 rounded-full ring-2 ring-green-500/30 shadow-2xl shadow-green-500/20" {}
                     div class="flex-1" {
-                        h2 class="text-3xl font-bold mb-2" { (user.display_name) }
-                        p class="text-gray-300 mb-3" { (title_case(&format!("{} subscriber", user.product))) }
+                        h2 class="text-4xl font-bold mb-2 bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text" {
+                            (user.display_name)
+                        }
+                        p class="text-gray-300 mb-3 text-lg" {
+                            (title_case(&format!("{} subscriber", user.product)))
+                        }
                         div class="flex gap-6 text-sm text-gray-400" {
-                            div {
-                                span class="font-semibold text-white" { (user.followers.total) }
-                                " Followers"
+                            div class="flex items-center gap-2" {
+                                span class="font-bold text-xl" { (user.followers.total) }
+                                span { "Followers" }
                             }
                         }
                     }
                 }
             }
 
-            div {
-                h2 class="text-3xl font-bold text-green-400" { (format!("Top {} Songs", top_tracks.items.len())) }
-                @for (i, song) in top_tracks.items.iter().enumerate() {
-                    div class="bg-white bg-opacity-5 rounded-xl p-4 flex items-center gap-4 hover:bg-opacity-10 transition-all duration-200 hover:translate-x-1"         {
-                        div class="text-2xl font-bold text-green-400 w-8" { (i + 1) }
-                        img src=(song.album.images.first().unwrap().url) class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-2xl" {
+            div class="grid grid-cols-1 lg:grid-cols-2 gap-8" {
+                div class="flex flex-col gap-4" {
+                    div class="flex items-center gap-3 mb-2" {
+                        div class="w-1 h-8 bg-gradient-to-b from-green-400 to-emerald-500 rounded-full" {}
+                        h2 class="text-2xl font-bold text-white" {
+                            "Top " (top_tracks.items.len()) " Songs"
                         }
-                        div class="flex-1" {
-                            h3 class="font-bold text-lg" { (song.name) }
-                            p class="text-gray-400 text-sm" { (song.artists.first().unwrap().name ) }
-                        }
-
-                        div class="text-right" {
-                            p class="font-semibold" { (ms_to_min(&song.duration_ms)) }
+                    }
+                    div class="flex flex-col gap-3" {
+                        @for (i, song) in top_tracks.items.iter().enumerate() {
+                            div class="group bg-white/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-white/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-green-500/10 border border-white/5 hover:border-primary-color" {
+                                div class="text-xl font-bold text-primary-color w-8 text-center" {
+                                    (i + 1)
+                                }
+                                img src=(song.album.images.first().unwrap().url)
+                                    class="w-14 h-14 rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300" {}
+                                div class="flex-1 min-w-0" {
+                                    h3 class="font-semibold text-base text-white truncate group-hover:text-green-400 transition-colors" {
+                                        (song.name)
+                                    }
+                                    p class="text-gray-400 text-sm truncate" {
+                                        (song.artists.first().unwrap().name)
+                                    }
+                                }
+                                div class="text-right" {
+                                    p class="font-medium text-sm text-gray-300" {
+                                        (ms_to_min(&song.duration_ms))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-            }
 
-            // Footer Stats
-            div class="grid grid-cols-3 gap-4" {
-                div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl px-6 text-center" {
-                    p class="text-3xl font-bold text-green-400" { "2,456" }
-                    p class="text-gray-400 text-sm mt-1" { "Total Songs" }
-                }
-                div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl px-6 text-center" {
-                    p class="text-3xl font-bold text-green-400" { "156h" }
-                    p class="text-gray-400 text-sm mt-1" { "Listening Time" }
-                }
-                div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl px-6 text-center" {
-                    p class="text-3xl font-bold text-green-400" { "342" }
-                    p class="text-gray-400 text-sm mt-1" { "Artists" }
+                div class="flex flex-col gap-4" {
+                    div class="flex items-center gap-3 mb-2" {
+                        div class="w-1 h-8 bg-gradient-to-b from-purple-400 to-pink-500 rounded-full" {}
+                        h2 class="text-2xl font-bold text-white" {
+                            "Top " (top_artists.items.len()) " Artists"
+                        }
+                    }
+                    div class="flex flex-col gap-3" {
+                        @for (i, artist) in top_artists.items.iter().enumerate() {
+                            div class="group bg-white/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-white/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-purple-500/10 border border-white/5 hover:border-primary-color" {
+                                div class="text-xl font-bold text-primary-color w-8 text-center" {
+                                    (i + 1)
+                                }
+                                img src=(artist.images.first().unwrap().url)
+                                    class="w-14 h-14 rounded-full shadow-md group-hover:shadow-xl transition-shadow duration-300 group-hover:ring-purple-400/50" {}
+                                div class="flex-1 min-w-0" {
+                                    h3 class="font-semibold text-base text-white truncate group-hover:text-purple-400 transition-colors" {
+                                        (artist.name)
+                                    }
+                                    p class="text-gray-400 text-sm truncate" {
+                                        @if let Some(genre) = artist.genres.first() {
+                                            (genre)
+                                        } @else {
+                                            "Artist"
+                                        }
+                                    }
+                                }
+                                div class="text-right" {
+                                    p class="font-medium text-sm text-gray-300" {
+                                        (artist.popularity) "%"
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

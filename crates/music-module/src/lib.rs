@@ -36,6 +36,50 @@ pub struct TopTracksResponse {
     pub offset: u32,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TopArtistsResponse {
+    pub items: Vec<TopArtistResponse>,
+    pub total: u32,
+    pub limit: u32,
+    pub offset: u32,
+    pub href: String,
+    pub previous: Option<String>,
+    pub next: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TopArtistResponse {
+    pub external_urls: ExternalUrls,
+    pub followers: Followers,
+    pub genres: Vec<String>,
+    pub href: String,
+    pub id: String,
+    pub images: Vec<Image>,
+    pub name: String,
+    pub popularity: u32,
+    #[serde(rename = "type")]
+    pub artist_type: String,
+    pub uri: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExternalUrls {
+    pub spotify: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Followers {
+    pub href: Option<String>,
+    pub total: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Image {
+    pub url: String,
+    pub height: u32,
+    pub width: u32,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SpotifyTrack {
     pub name: String,
@@ -124,10 +168,7 @@ impl SpotifyState {
     async fn get_initial_tokens(&self, auth_code: &str) -> Result<TokenResponse, reqwest::Error> {
         let body = format!(
             "grant_type=authorization_code&code={}&redirect_uri={}&client_id={}&client_secret={}",
-            auth_code,
-            "https://localhost:8888", // Redirect URI
-            self.spotify_client_id,
-            self.spotify_client_secret
+            auth_code, "https://localhost:8888", self.spotify_client_id, self.spotify_client_secret
         );
 
         let client = reqwest::Client::new();
@@ -199,11 +240,29 @@ impl SpotifyState {
         Ok(content)
     }
 
-    pub async fn fetch_top_n_tracks(
+    pub async fn fetch_top_tracks(
         &mut self,
         limit: usize,
     ) -> Result<TopTracksResponse, Box<dyn std::error::Error>> {
-        let url = format!("https://api.spotify.com/v1/me/top/tracks?limit={}", limit);
+        self.fetch_top_items_generic("tracks", limit).await
+    }
+
+    pub async fn fetch_top_artists(
+        &mut self,
+        limit: usize,
+    ) -> Result<TopArtistsResponse, Box<dyn std::error::Error>> {
+        self.fetch_top_items_generic("artists", limit).await
+    }
+
+    async fn fetch_top_items_generic<T: serde::de::DeserializeOwned>(
+        &mut self,
+        item_type: &str,
+        limit: usize,
+    ) -> Result<T, Box<dyn std::error::Error>> {
+        let url = format!(
+            "https://api.spotify.com/v1/me/top/{}?limit={}",
+            item_type, limit
+        );
         let session = self.get_spotify_session().await?;
         let client = reqwest::Client::new();
         let response = client
@@ -211,14 +270,8 @@ impl SpotifyState {
             .header("Authorization", format!("Bearer {}", session))
             .send()
             .await?;
-
-        // Debug: Print the response text
         let text = response.text().await?;
-        eprintln!("Spotify API response: {}", text);
-
-        // Try to parse it
-        let content: TopTracksResponse = serde_json::from_str(&text)?;
-
+        let content: T = serde_json::from_str(&text)?;
         Ok(content)
     }
 }
