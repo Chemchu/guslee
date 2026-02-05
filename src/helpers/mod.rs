@@ -28,19 +28,20 @@ pub fn read_env_file() -> HashMap<String, String> {
 // This function tries to load the environment variables already present in the system.
 // It is useful if the environment in which the app is deployed does not have a .env file defined
 fn load_vars_from_environment() -> HashMap<String, String> {
-    let mut env_vars: HashMap<String, String> = HashMap::new();
+    let required_vars = [
+        "LICHESS_API_TOKEN",
+        "LICHESS_USERNAME",
+        "SPOTIFY_CLIENT_ID",
+        "SPOTIFY_CLIENT_SECRET",
+        "SPOTIFY_USER_ID",
+        "SPOTIFY_REFRESH_TOKEN",
+    ];
 
-    let lichess_api_token = std::env::var("LICHESS_API_TOKEN").unwrap();
-    let lichess_username = std::env::var("LICHESS_USERNAME").unwrap();
-    let spotify_client_id = std::env::var("SPOTIFY_CLIENT_ID").unwrap();
-    let spotify_client_secret = std::env::var("SPOTIFY_CLIENT_SECRET").unwrap();
-    let spotify_user_id = std::env::var("SPOTIFY_USER_ID").unwrap();
-
-    env_vars.insert("LICHESS_API_TOKEN".to_string(), lichess_api_token);
-    env_vars.insert("LICHESS_USERNAME".to_string(), lichess_username);
-    env_vars.insert("SPOTIFY_CLIENT_ID".to_string(), spotify_client_id);
-    env_vars.insert("SPOTIFY_CLIENT_SECRET".to_string(), spotify_client_secret);
-    env_vars.insert("SPOTIFY_USER_ID".to_string(), spotify_user_id);
-
-    env_vars
+    required_vars
+        .iter()
+        .map(|&var| {
+            let value = std::env::var(var).unwrap_or_else(|_| panic!("{} not defined", var));
+            (var.to_string(), value)
+        })
+        .collect()
 }
