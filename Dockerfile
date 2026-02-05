@@ -13,6 +13,11 @@ RUN cargo build --release --bin guslee
 
 # Runtime image - same base as builder
 FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN useradd -ms /bin/bash app
 WORKDIR /app
 
