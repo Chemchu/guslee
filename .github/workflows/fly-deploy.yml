@@ -1,11 +1,9 @@
 name: Build, Test, and Deploy
-
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
 jobs:
   rust-test:
     runs-on: ubuntu-latest
@@ -18,7 +16,6 @@ jobs:
       
       - name: Run tests
         run: cargo test
-
   docker-test:
     needs: rust-test
     runs-on: ubuntu-latest
@@ -60,11 +57,29 @@ jobs:
       
       - name: Start container
         run: |
-          docker run -d -p 3000:3000 --name guslee-test guslee:test
-          sleep 5
+          docker run -d -p 3000:3000 \
+            -e LICHESS_API_TOKEN="test_lichess_token_12345" \
+            -e LICHESS_USERNAME="test_user" \
+            -e SPOTIFY_USER_ID="test_spotify_user_id" \
+            -e SPOTIFY_CLIENT_ID="test_client_id" \
+            -e SPOTIFY_CLIENT_SECRET="test_client_secret" \
+            -e SPOTIFY_REFRESH_TOKEN="test_refresh_token" \
+            --name guslee-test guslee:test
       
       - name: Check container is running
-        run: docker ps | grep guslee-test
+        run: |
+          sleep 2
+          if [ "$(docker inspect -f '{{.State.Running}}' guslee-test)" == "true" ]; then
+            echo "Container is running"
+            docker ps --filter "name=guslee-test"
+          else
+            echo "Container failed to start"
+            echo "Container status:"
+            docker ps -a --filter "name=guslee-test"
+            echo "Container logs:"
+            docker logs guslee-test
+            exit 1
+          fi
       
       - name: Check application health
         run: |
@@ -73,10 +88,14 @@ jobs:
               echo "Application is responding!"
               break
             fi
+            if [ $i -eq 30 ]; then
+              echo "Application failed to respond"
+              docker logs guslee-test
+              exit 1
+            fi
             echo "Waiting for application... attempt $i"
             sleep 2
           done
-          curl -f http://localhost:3000 || exit 1
       
       - name: Show container logs
         if: always()
@@ -85,7 +104,6 @@ jobs:
       - name: Stop container
         if: always()
         run: docker stop guslee-test || true
-
   deploy:
     needs: [rust-test, docker-test]
     runs-on: ubuntu-latest
