@@ -7,6 +7,7 @@ fn main() {
     println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=static/style.css");
     println!("cargo:rerun-if-changed=templates");
+    println!("cargo:rerun-if-changed=src");
 
     #[cfg(unix)]
     let shell = "sh";

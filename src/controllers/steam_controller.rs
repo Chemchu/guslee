@@ -8,6 +8,27 @@ use std::time::Duration;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
+struct SteamProfile {
+    personaname: &'static str,
+    realname: Option<&'static str>,
+    avatar_full: &'static str,
+    profileurl: &'static str,
+    steamid: &'static str,
+    personastate: u32,
+    timecreated: Option<u64>,
+    loccountrycode: Option<&'static str>,
+    level: u32,
+    game_count: u32,
+}
+
+struct RecentGame {
+    name: &'static str,
+    appid: &'static str,
+    playtime_2weeks: u32,  // in minutes
+    playtime_forever: u32, // in minutes
+    img_icon_url: &'static str,
+}
+
 #[cached(
     time = 3600,
     key = "String",
@@ -86,7 +107,7 @@ fn render_mock_steam_profile() -> PreEscaped<String> {
             div class="flex flex-col gap-6" {
                 h1 class="text-4xl font-bold text-white" { "Steam Profile" }
 
-                div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg shadow-2xl p-6 border border-slate-700" {
+                div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg shadow-2xl p-6 border border-purple-700" {
                     div class="flex flex-col md:flex-row gap-6 items-start" {
                         div class="flex-shrink-0" {
                             div class="relative" {
@@ -240,27 +261,6 @@ fn render_mock_steam_profile() -> PreEscaped<String> {
             }
         }
     }
-}
-
-struct SteamProfile {
-    personaname: &'static str,
-    realname: Option<&'static str>,
-    avatar_full: &'static str,
-    profileurl: &'static str,
-    steamid: &'static str,
-    personastate: u32,
-    timecreated: Option<u64>,
-    loccountrycode: Option<&'static str>,
-    level: u32,
-    game_count: u32,
-}
-
-struct RecentGame {
-    name: &'static str,
-    appid: &'static str,
-    playtime_2weeks: u32,  // in minutes
-    playtime_forever: u32, // in minutes
-    img_icon_url: &'static str,
 }
 
 fn format_playtime(minutes: u32) -> String {

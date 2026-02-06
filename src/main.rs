@@ -53,6 +53,11 @@ async fn main() -> std::io::Result<()> {
         .expect("SPOTIFY_REFRESH_TOKEN not defined")
         .to_string();
 
+    let steam_token = env_vars
+        .get("STEAM_API_KEY")
+        .expect("STEAM_API_KEY not defined")
+        .to_string();
+
     info!("Creating in-memory full-text search engine...");
     let search_engine = Arc::new(PostsSearchEngine::new("./garden").await);
 
@@ -81,6 +86,7 @@ async fn main() -> std::io::Result<()> {
                     lichess_username: lichess_username.clone(),
                 },
                 spotify_state: Arc::clone(&spotify_state),
+                steam_state: steam_token.clone(),
                 post_search_engine: Arc::clone(&search_engine),
             }))
             .service(controllers::posts_controller::landing)
