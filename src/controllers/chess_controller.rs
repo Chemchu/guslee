@@ -165,7 +165,7 @@ pub async fn chess_graph(app_state: web::Data<AppState>, path: web::Path<String>
     };
 
     let rating_html = html! {
-        div class="text-text-color w-full" {
+        div class="text-bright-color w-full" {
             div class="container mx-auto max-w-6xl" {
                 div {
                     div class="grid grid-cols-2 md:grid-cols-4 gap-4" {

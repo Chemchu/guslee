@@ -244,23 +244,23 @@ impl SpotifyState {
         &mut self,
         limit: usize,
     ) -> Result<TopTracksResponse, Box<dyn std::error::Error>> {
-        self.fetch_top_items_generic("tracks", limit).await
+        self.fetch_top_items("tracks", limit).await
     }
 
     pub async fn fetch_top_artists(
         &mut self,
         limit: usize,
     ) -> Result<TopArtistsResponse, Box<dyn std::error::Error>> {
-        self.fetch_top_items_generic("artists", limit).await
+        self.fetch_top_items("artists", limit).await
     }
 
-    async fn fetch_top_items_generic<T: serde::de::DeserializeOwned>(
+    async fn fetch_top_items<T: serde::de::DeserializeOwned>(
         &mut self,
         item_type: &str,
         limit: usize,
     ) -> Result<T, Box<dyn std::error::Error>> {
         let url = format!(
-            "https://api.spotify.com/v1/me/top/{}?limit={}",
+            "https://api.spotify.com/v1/me/top/{}?limit={}&time_range=long_term",
             item_type, limit
         );
         let session = self.get_spotify_session().await?;
