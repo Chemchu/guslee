@@ -1,6 +1,6 @@
 use chess_module::LichessState;
 use music_module::SpotifyState;
-use search_engine::SearchEngine;
+use search_engine::PostsSearchEngine;
 use std::sync::{Arc, OnceLock};
 
 pub mod chess_controller;
@@ -10,6 +10,7 @@ pub mod music_controller;
 pub mod news_controller;
 pub mod posts_controller;
 pub mod routines_controller;
+pub mod steam_controller;
 
 static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
 
@@ -17,7 +18,8 @@ pub struct AppState {
     pub app_name: String,
     pub lichess_state: LichessState,
     pub spotify_state: Arc<tokio::sync::Mutex<SpotifyState>>,
-    pub search_engine: Arc<SearchEngine>,
+    pub steam_state: String,
+    pub post_search_engine: Arc<PostsSearchEngine>,
 }
 
 pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {

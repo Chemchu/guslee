@@ -35,6 +35,7 @@ fn load_vars_from_environment() -> HashMap<String, String> {
         "SPOTIFY_CLIENT_SECRET",
         "SPOTIFY_USER_ID",
         "SPOTIFY_REFRESH_TOKEN",
+        "STEAM_API_KEY",
     ];
 
     required_vars

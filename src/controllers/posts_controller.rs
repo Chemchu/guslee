@@ -95,7 +95,12 @@ pub async fn search_post(
 
         let matching_posts = match is_empty_query {
             true => get_default_posts(app_state).await,
-            false => app_state.search_engine.query_posts(&params.clone()).await,
+            false => {
+                app_state
+                    .post_search_engine
+                    .query_posts(&params.clone())
+                    .await
+            }
         };
 
         build_posts_list(matching_posts)
@@ -120,7 +125,7 @@ async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
         .join(", ");
 
     let default_posts = app_state
-        .search_engine
+        .post_search_engine
         .raw_query::<Vec<Post>>(
             format!(
                 "SELECT * FROM posts WHERE file_name IN [{}]",
@@ -141,7 +146,7 @@ async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
         .collect();
 
     let all_missing_posts: Vec<Post> = app_state
-        .search_engine
+        .post_search_engine
         .raw_query::<Vec<Post>>(
             format!(
                 "SELECT * FROM posts WHERE file_name NOT IN [{}]",

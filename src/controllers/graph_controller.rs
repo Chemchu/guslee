@@ -11,7 +11,7 @@ pub async fn graph_network(app_state: web::Data<AppState>, path: web::Path<Strin
     let graph_data = {
         let file_path = format!("{}.md", path.as_str());
         app_state
-            .search_engine
+            .post_search_engine
             .get_graph_from_related_posts(&file_path)
             .await
     };
@@ -56,7 +56,7 @@ pub async fn garden_view_dispatcher(
 
 #[get("/garden-view")]
 pub async fn garden_view(app_state: web::Data<AppState>) -> Html {
-    let graph_data = app_state.search_engine.get_overall_graph_data().await;
+    let graph_data = app_state.post_search_engine.get_overall_graph_data().await;
     let nodes_json = serde_json::to_string(&graph_data.nodes).unwrap();
     let edges_json = serde_json::to_string(&graph_data.edges).unwrap();
 

@@ -28,7 +28,7 @@ pub async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl
     FROM posts
     ORDER BY date DESC";
     let news: Vec<News> = app_state
-        .search_engine
+        .post_search_engine
         .raw_query::<Vec<News>>(query)
         .await
         .iter()

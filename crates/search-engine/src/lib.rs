@@ -14,12 +14,12 @@ use crate::utils::{Post, extract_full_metadata};
 pub mod types;
 pub mod utils;
 
-pub struct SearchEngine {
+pub struct PostsSearchEngine {
     db: Surreal<Any>,
 }
 
-impl SearchEngine {
-    pub async fn new(documents_path: &str) -> SearchEngine {
+impl PostsSearchEngine {
+    pub async fn new(documents_path: &str) -> PostsSearchEngine {
         let mut posts: Vec<Post> = Vec::new();
         for entry in WalkDir::new(documents_path) {
             let entry = entry.expect("Error while accessing the WalkDir entry");
@@ -105,7 +105,7 @@ impl SearchEngine {
             }
         }
 
-        SearchEngine { db }
+        PostsSearchEngine { db }
     }
 
     pub async fn query_posts(&self, params: &Params) -> Vec<Post> {

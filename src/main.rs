@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use actix_web::{App, HttpServer, middleware::Logger, web};
 use log::info;
-use search_engine::SearchEngine;
+use search_engine::PostsSearchEngine;
 
 use crate::controllers::AppState;
 
@@ -54,7 +54,7 @@ async fn main() -> std::io::Result<()> {
         .to_string();
 
     info!("Creating in-memory full-text search engine...");
-    let search_engine = Arc::new(SearchEngine::new("./garden").await);
+    let search_engine = Arc::new(PostsSearchEngine::new("./garden").await);
 
     info!("Initializing Spotify state...");
     let spotify_state = Arc::new(tokio::sync::Mutex::new(
@@ -81,11 +81,12 @@ async fn main() -> std::io::Result<()> {
                     lichess_username: lichess_username.clone(),
                 },
                 spotify_state: Arc::clone(&spotify_state),
-                search_engine: Arc::clone(&search_engine),
+                post_search_engine: Arc::clone(&search_engine),
             }))
             .service(controllers::posts_controller::landing)
             .service(controllers::news_controller::news_page)
             .service(controllers::metadata_controller::render_metadata)
+            .service(controllers::steam_controller::steam_page)
             .service(controllers::chess_controller::chess_page)
             .service(controllers::chess_controller::chess_graph)
             .service(controllers::posts_controller::search_post)
