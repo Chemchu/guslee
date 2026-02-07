@@ -78,7 +78,7 @@ pub fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                                     hx-get="/music/time-range/artists/long_term/next"
                                     hx-target="this"
                                     hx-swap="outerHTML" {
-                                        "One year"
+                                        "Last year"
                                 }
                             }
                         }
@@ -104,7 +104,7 @@ pub fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                                     hx-get="/music/time-range/tracks/long_term/next"
                                     hx-target="this"
                                     hx-swap="outerHTML" {
-                                        "One year"
+                                        "Last year"
                                 }
                             }
                         }
@@ -197,8 +197,8 @@ pub async fn cycle_time_range(
     let (next_term, label) = match current_term {
         "long_term" => ("medium_term", "Last 6 months"),
         "medium_term" => ("short_term", "Last 4 weeks"),
-        "short_term" => ("long_term", "One year"),
-        _ => ("long_term", "One year"),
+        "short_term" => ("long_term", "Last year"),
+        _ => ("long_term", "Last year"),
     };
 
     let mut spotify_state = app_state.spotify_state.lock().await;
