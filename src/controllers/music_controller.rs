@@ -14,7 +14,7 @@ use crate::controllers::{AppState, wrap_content_into_full_page};
     key = "String",
     convert = r##"{ 
         format!(
-            "music-is_htmx_req-{}",
+            "music_profile-is_htmx_req-{}",
             req.headers().get("HX-Request").is_some()
         )
     }"##
@@ -61,12 +61,12 @@ pub fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                                 (user.display_name)
                             }
                         }
-                        p class="text-gray-300 mb-3 text-lg" {
+                        p class="text-gray-300 text-lg" {
                             (title_case(&format!("{} subscriber", user.product)))
                         }
                         div class="flex gap-6 text-sm text-gray-400" {
                             div class="flex items-center gap-2" {
-                                span class="font-bold text-xl" { (user.followers.total) }
+                                span class="font-bold" { (user.followers.total) }
                                 span { "Followers" }
                             }
                         }
@@ -75,19 +75,45 @@ pub fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
             }
 
             div class="grid grid-cols-1 lg:grid-cols-2 gap-8" {
-                div id="top-artists"
+                div class="flex flex-col gap-4" {
+                    div class="flex items-center gap-3 mb-2" {
+                        div class="w-1 h-16 bg-primary-color rounded-full" {}
+                        div class="flex flex-col gap-1 w-full" {
+                            h2 class="text-2xl font-bold text-bright-color" {
+                                "Top Artists"
+                            }
+                            h3 class="text-lg font-bold text-bright-color" {
+                                "One year"
+                            }
+                        }
+                    }
+                    div id="top-artists"
                     hx-get="/music/user-top/artists/long_term"
                     hx-target="this"
                     hx-trigger="load"
                     hx-swap="innerHTML" {
-
+                        "Loading..."
+                    }
                 }
-                div id="top-tracks"
+                div class="flex flex-col gap-4" {
+                    div class="flex items-center gap-3 mb-2" {
+                        div class="w-1 h-16 bg-primary-color rounded-full" {}
+                        div class="flex flex-col gap-1 w-full" {
+                            h2 class="text-2xl font-bold text-bright-color" {
+                                "Top Songs"
+                            }
+                            h3 class="text-lg font-bold text-bright-color" {
+                                "One year"
+                            }
+                        }
+                    }
+                    div id="top-tracks"
                     hx-get="/music/user-top/tracks/long_term"
                     hx-target="this"
                     hx-trigger="load"
                     hx-swap="innerHTML" {
-
+                        "Loading..."
+                    }
                 }
             }
         }
@@ -140,76 +166,59 @@ pub async fn get_user_top_item(
     match top_items {
         Ok(TopItems::Artists(top_artists)) => {
             html! {
-                div class="flex flex-col gap-4" {
-                    div class="flex items-center gap-3 mb-2" {
-                        div class="w-1 h-8 bg-primary-color rounded-full" {}
-                        h2 class="text-2xl font-bold text-white" {
-                            "Top " (top_artists.items.len()) " Artists"
-                        }
-                    }
-                    div class="flex flex-col gap-3" {
-                        @for (i, artist) in top_artists.items.iter().enumerate() {
-                            a href=(artist.external_urls.spotify) target="_blank" rel="noopener noreferrer"
-                                class="group bg-bright-color/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-bright-color/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-primary-color/10 border border-shade-color hover:border-primary-color" {
-                                div class="text-xl font-bold group-hover:text-primary-color w-8 text-center" {
-                                    (i + 1)
+                div class="flex flex-col gap-3" {
+                    @for (i, artist) in top_artists.items.iter().enumerate() {
+                        a href=(artist.external_urls.spotify) target="_blank" rel="noopener noreferrer"
+                            class="group bg-bright-color/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-bright-color/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-primary-color/10 border border-shade-color hover:border-primary-color" {
+                            div class="text-xl font-bold group-hover:text-primary-color w-8 text-center" {
+                                (i + 1)
+                            }
+                            img src=(artist.images.first().unwrap().url)
+                                class="w-14 h-14 rounded-full shadow-md group-hover:shadow-xl transition-shadow duration-300 group-hover:ring-primary-color" {}
+                            div class="flex-1 min-w-0" {
+                                h3 class="font-semibold text-base text-bright-color truncate group-hover:text-primary-color transition-colors" {
+                                    (artist.name)
                                 }
-                                img src=(artist.images.first().unwrap().url)
-                                    class="w-14 h-14 rounded-full shadow-md group-hover:shadow-xl transition-shadow duration-300 group-hover:ring-primary-color" {}
-                                div class="flex-1 min-w-0" {
-                                    h3 class="font-semibold text-base text-white truncate group-hover:text-primary-color transition-colors" {
-                                        (artist.name)
-                                    }
-                                    p class="text-gray-400 text-sm truncate" {
-                                        @if let Some(genre) = artist.genres.first() {
-                                            (genre)
-                                        } @else {
-                                            "Artist"
-                                        }
+                                p class="text-gray-400 text-sm truncate" {
+                                    @if let Some(genre) = artist.genres.first() {
+                                        (genre)
+                                    } @else {
+                                        "Artist"
                                     }
                                 }
-                                div class="text-right" {
-                                    p class="font-medium text-sm text-gray-300" {
-                                        (artist.popularity) "%"
-                                    }
+                            }
+                            div class="text-right" {
+                                p class="font-medium text-sm text-gray-300" {
+                                    (artist.popularity) "%"
                                 }
                             }
                         }
                     }
                 }
-
             }
         }
         Ok(TopItems::Tracks(top_tracks)) => {
             html! {
-                div class="flex flex-col gap-4" {
-                    div class="flex items-center gap-3 mb-2" {
-                        div class="w-1 h-8 bg-primary-color rounded-full" {}
-                        h2 class="text-2xl font-bold text-white" {
-                            "Top " (top_tracks.items.len()) " Songs"
-                        }
-                    }
-                    div class="flex flex-col gap-3" {
-                        @for (i, song) in top_tracks.items.iter().enumerate() {
-                            a href=(song.external_urls.spotify) target="_blank" rel="noopener noreferrer"
-                                class="group bg-bright-color/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-bright-color/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-primary-color/10 border border-shade-color hover:border-primary-color" {
-                                div class="text-xl font-bold group-hover:text-primary-color w-8 text-center" {
-                                    (i + 1)
+                div class="flex flex-col gap-3" {
+                    @for (i, song) in top_tracks.items.iter().enumerate() {
+                        a href=(song.external_urls.spotify) target="_blank" rel="noopener noreferrer"
+                            class="group bg-bright-color/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-bright-color/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-primary-color/10 border border-shade-color hover:border-primary-color" {
+                            div class="text-xl font-bold group-hover:text-primary-color w-8 text-center" {
+                                (i + 1)
+                            }
+                            img src=(song.album.images.first().unwrap().url)
+                                class="w-14 h-14 rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300" {}
+                            div class="flex-1 min-w-0" {
+                                h3 class="font-semibold text-base text-bright-color truncate group-hover:text-primary-color transition-colors" {
+                                    (song.name)
                                 }
-                                img src=(song.album.images.first().unwrap().url)
-                                    class="w-14 h-14 rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300" {}
-                                div class="flex-1 min-w-0" {
-                                    h3 class="font-semibold text-base text-white truncate group-hover:text-primary-color transition-colors" {
-                                        (song.name)
-                                    }
-                                    p class="text-gray-400 text-sm truncate" {
-                                        (song.artists.first().unwrap().name)
-                                    }
+                                p class="text-gray-400 text-sm truncate" {
+                                    (song.artists.first().unwrap().name)
                                 }
-                                div class="text-right" {
-                                    p class="font-medium text-sm text-gray-300" {
-                                        (ms_to_min(&song.duration_ms))
-                                    }
+                            }
+                            div class="text-right" {
+                                p class="font-medium text-sm text-gray-300" {
+                                    (ms_to_min(&song.duration_ms))
                                 }
                             }
                         }
