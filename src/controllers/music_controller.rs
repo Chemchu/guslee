@@ -75,10 +75,12 @@ pub fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                             h3 id="artists-time-range"
                                 class="text-lg font-bold text-bright-color cursor-pointer hover:text-primary-color transition-colors select-none" {
                                 span
+                                    class="flex items-center gap-2"
                                     hx-get="/music/time-range/artists/long_term/next"
                                     hx-target="this"
                                     hx-swap="outerHTML" {
-                                        "Last year"
+                                       "Last year"
+                                        span class="text-sm opacity-60 hover:opacity-100 hover:rotate-180 transition-all duration-300 inline-block" { "⟳" }
                                 }
                             }
                         }
@@ -101,10 +103,13 @@ pub fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                             h3 id="tracks-time-range"
                                 class="text-lg font-bold text-bright-color cursor-pointer hover:text-primary-color transition-colors select-none" {
                                 span
+                                    class="flex items-center gap-2"
                                     hx-get="/music/time-range/tracks/long_term/next"
                                     hx-target="this"
                                     hx-swap="outerHTML" {
                                         "Last year"
+                                        span class="text-sm opacity-60 hover:opacity-100 hover:rotate-180 transition-all duration-300 inline-block" { "⟳" }
+
                                 }
                             }
                         }
@@ -232,10 +237,12 @@ pub async fn cycle_time_range(
 
     html! {
         span
+            class="flex items-center gap-2"
             hx-get={"/music/time-range/"(content_type)"/"(next_term)"/next"}
             hx-target="this"
             hx-swap="outerHTML" {
                 (label)
+                span class="text-sm opacity-60 hover:opacity-100 hover:rotate-180 transition-all duration-300 inline-block" { "⟳" }
         }
         div id={"top-"(content_type)} hx-swap-oob="innerHTML" {
             (top_items_html)
