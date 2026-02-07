@@ -187,20 +187,20 @@ pub async fn chess_graph(app_state: web::Data<AppState>, path: web::Path<String>
                         }
                         div {
                             p class="text-gray-400 text-sm" { "Win Rate" }
-                            p class="text-2xl font-bold text-green-500" {
-                                (format!("{:.1}%", win_rate))
+                            p class="text-2xl font-bold" {
+                                (format!("{:.2}%", win_rate))
                             }
                         }
                         div {
                             p class="text-gray-400 text-sm" { "Draw Rate" }
-                            p class="text-2xl font-bold text-yellow-500" {
-                                (format!("{:.1}%", draw_rate))
+                            p class="text-2xl font-bold" {
+                                (format!("{:.2}%", draw_rate))
                             }
                         }
                         div {
                             p class="text-gray-400 text-sm" { "Loss Rate" }
-                            p class="text-2xl font-bold text-red-500" {
-                                (format!("{:.1}%", loss_rate))
+                            p class="text-2xl font-bold" {
+                                (format!("{:.2}%", loss_rate))
                             }
                         }
                     }
