@@ -100,6 +100,7 @@ async fn main() -> std::io::Result<()> {
             .service(controllers::graph_controller::garden_view)
             .service(controllers::graph_controller::garden_view_dispatcher)
             .service(controllers::music_controller::get_user_profile)
+            .service(controllers::music_controller::get_user_top_item)
             .service(controllers::routines_controller::get_current_schedule_activity)
             .service(controllers::posts_controller::get_post_page)
             .service(controllers::posts_controller::fallback_route) // This service should be last one in the list because it matches any string

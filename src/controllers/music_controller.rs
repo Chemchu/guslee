@@ -23,10 +23,8 @@ use crate::controllers::{AppState, wrap_content_into_full_page};
 pub async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     let mut spotify_state = app_state.spotify_state.lock().await;
     let user_profile = spotify_state.fetch_user_profile().await;
-    let top_tracks = spotify_state.fetch_top_tracks(5).await;
-    let top_artists = spotify_state.fetch_top_artists(5).await;
 
-    let html_to_render = match user_profile.is_err() || top_tracks.is_err() {
+    let html_to_render = match user_profile.is_err() {
         true => {
             html! {
                 div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
@@ -34,11 +32,7 @@ pub async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) 
                 }
             }
         }
-        false => render_mock_spotify_profile(
-            user_profile.unwrap(),
-            top_tracks.unwrap(),
-            top_artists.unwrap(),
-        ),
+        false => render_spotify_profile(user_profile.unwrap()),
     };
 
     let is_htmx_req = req.headers().get("HX-Request").is_some();
@@ -52,20 +46,7 @@ pub async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) 
     }
 }
 
-#[get("/music/top-artists/{time_limit:.*}")]
-pub async fn get_user_top_artists(
-    app_state: web::Data<AppState>,
-    req: HttpRequest,
-    route: web::Path<String>,
-) -> Html {
-    todo!()
-}
-
-pub fn render_mock_spotify_profile(
-    user: SpotifyUser,
-    top_tracks: TopTracksResponse,
-    top_artists: TopArtistsResponse,
-) -> PreEscaped<String> {
+pub fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
     html! {
         div class="flex flex-col w-full gap-8 p-6 lg:p-8 overflow-auto" {
             div {
@@ -94,40 +75,71 @@ pub fn render_mock_spotify_profile(
             }
 
             div class="grid grid-cols-1 lg:grid-cols-2 gap-8" {
-                div class="flex flex-col gap-4" {
-                    div class="flex items-center gap-3 mb-2" {
-                        div class="w-1 h-8 bg-primary-color rounded-full" {}
-                        h2 class="text-2xl font-bold text-white" {
-                            "Top " (top_tracks.items.len()) " Songs"
-                        }
-                    }
-                    div class="flex flex-col gap-3" {
-                        @for (i, song) in top_tracks.items.iter().enumerate() {
-                            a href=(song.external_urls.spotify) target="_blank" rel="noopener noreferrer"
-                                class="group bg-bright-color/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-bright-color/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-primary-color/10 border border-shade-color hover:border-primary-color" {
-                                div class="text-xl font-bold group-hover:text-primary-color w-8 text-center" {
-                                    (i + 1)
-                                }
-                                img src=(song.album.images.first().unwrap().url)
-                                    class="w-14 h-14 rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300" {}
-                                div class="flex-1 min-w-0" {
-                                    h3 class="font-semibold text-base text-white truncate group-hover:text-primary-color transition-colors" {
-                                        (song.name)
-                                    }
-                                    p class="text-gray-400 text-sm truncate" {
-                                        (song.artists.first().unwrap().name)
-                                    }
-                                }
-                                div class="text-right" {
-                                    p class="font-medium text-sm text-gray-300" {
-                                        (ms_to_min(&song.duration_ms))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                div id="top-artists"
+                    hx-get="/music/user-top/artists/long_term"
+                    hx-target="this"
+                    hx-trigger="load"
+                    hx-swap="innerHTML" {
 
+                }
+                div id="top-tracks"
+                    hx-get="/music/user-top/tracks/long_term"
+                    hx-target="this"
+                    hx-trigger="load"
+                    hx-swap="innerHTML" {
+
+                }
+            }
+        }
+    }
+}
+
+pub enum TopItems {
+    Artists(TopArtistsResponse),
+    Tracks(TopTracksResponse),
+}
+
+#[cached(
+    time = 3600,
+    key = "String",
+    convert = r##"{ 
+        format!(
+            "top_item-{}-time_range-{}",
+            &args.0,
+            &args.1
+        )
+    }"##
+)]
+#[get("/music/user-top/{item:.*}/{time_range:.*}")]
+pub async fn get_user_top_item(
+    app_state: web::Data<AppState>,
+    args: web::Path<(String, String)>,
+) -> PreEscaped<String> {
+    let item = &args.0;
+    let time_range = &args.1;
+    let mut spotify_state = app_state.spotify_state.lock().await;
+
+    let top_items: Result<TopItems, _> = match item.as_str() {
+        "artists" => spotify_state
+            .fetch_top_items::<TopArtistsResponse>(item, time_range)
+            .await
+            .map(TopItems::Artists),
+        "tracks" => spotify_state
+            .fetch_top_items::<TopTracksResponse>(item, time_range)
+            .await
+            .map(TopItems::Tracks),
+        _ => {
+            return html! {
+                div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
+                    "Error loading Spotify item"
+                }
+            };
+        }
+    };
+
+    match top_items {
+        Ok(TopItems::Artists(top_artists)) => {
+            html! {
                 div class="flex flex-col gap-4" {
                     div class="flex items-center gap-3 mb-2" {
                         div class="w-1 h-8 bg-primary-color rounded-full" {}
@@ -165,8 +177,51 @@ pub fn render_mock_spotify_profile(
                         }
                     }
                 }
+
             }
         }
+        Ok(TopItems::Tracks(top_tracks)) => {
+            html! {
+                div class="flex flex-col gap-4" {
+                    div class="flex items-center gap-3 mb-2" {
+                        div class="w-1 h-8 bg-primary-color rounded-full" {}
+                        h2 class="text-2xl font-bold text-white" {
+                            "Top " (top_tracks.items.len()) " Songs"
+                        }
+                    }
+                    div class="flex flex-col gap-3" {
+                        @for (i, song) in top_tracks.items.iter().enumerate() {
+                            a href=(song.external_urls.spotify) target="_blank" rel="noopener noreferrer"
+                                class="group bg-bright-color/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-bright-color/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-primary-color/10 border border-shade-color hover:border-primary-color" {
+                                div class="text-xl font-bold group-hover:text-primary-color w-8 text-center" {
+                                    (i + 1)
+                                }
+                                img src=(song.album.images.first().unwrap().url)
+                                    class="w-14 h-14 rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300" {}
+                                div class="flex-1 min-w-0" {
+                                    h3 class="font-semibold text-base text-white truncate group-hover:text-primary-color transition-colors" {
+                                        (song.name)
+                                    }
+                                    p class="text-gray-400 text-sm truncate" {
+                                        (song.artists.first().unwrap().name)
+                                    }
+                                }
+                                div class="text-right" {
+                                    p class="font-medium text-sm text-gray-300" {
+                                        (ms_to_min(&song.duration_ms))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => html! {
+            div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
+                "Error loading Spotify item: " (e)
+            }
+        },
     }
 }
 

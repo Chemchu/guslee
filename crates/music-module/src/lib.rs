@@ -240,28 +240,28 @@ impl SpotifyState {
         Ok(content)
     }
 
-    pub async fn fetch_top_tracks(
+    /* pub async fn fetch_top_tracks(
         &mut self,
-        limit: usize,
+        time_range: &str,
     ) -> Result<TopTracksResponse, Box<dyn std::error::Error>> {
-        self.fetch_top_items("tracks", limit).await
+        self.fetch_top_items("tracks", time_range).await
     }
 
     pub async fn fetch_top_artists(
         &mut self,
-        limit: usize,
+        time_range: &str,
     ) -> Result<TopArtistsResponse, Box<dyn std::error::Error>> {
-        self.fetch_top_items("artists", limit).await
-    }
+        self.fetch_top_items("artists", time_range).await
+    } */
 
-    async fn fetch_top_items<T: serde::de::DeserializeOwned>(
+    pub async fn fetch_top_items<T: serde::de::DeserializeOwned>(
         &mut self,
         item_type: &str,
-        limit: usize,
+        time_range: &str,
     ) -> Result<T, Box<dyn std::error::Error>> {
         let url = format!(
-            "https://api.spotify.com/v1/me/top/{}?limit={}&time_range=long_term",
-            item_type, limit
+            "https://api.spotify.com/v1/me/top/{}?limit=5&time_range={}",
+            item_type, time_range
         );
         let session = self.get_spotify_session().await?;
         let client = reqwest::Client::new();
