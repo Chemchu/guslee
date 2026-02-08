@@ -63,7 +63,6 @@ pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Htm
     }
 }
 
-// Mock Steam profile data
 fn render_mock_steam_profile() -> PreEscaped<String> {
     let profile = SteamProfile {
         personaname: "ExampleGamer",
@@ -105,8 +104,6 @@ fn render_mock_steam_profile() -> PreEscaped<String> {
     html! {
         div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
             div class="flex flex-col gap-6" {
-                h1 class="text-4xl font-bold text-white" { "Steam Profile" }
-
                 div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg shadow-2xl p-6 border border-purple-700" {
                     div class="flex flex-col md:flex-row gap-6 items-start" {
                         div class="flex-shrink-0" {
