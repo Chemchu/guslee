@@ -64,6 +64,8 @@ jobs:
             -e SPOTIFY_CLIENT_ID="test_client_id" \
             -e SPOTIFY_CLIENT_SECRET="test_client_secret" \
             -e SPOTIFY_REFRESH_TOKEN="test_refresh_token" \
+            -e STEAM_API_KEY="test_steam_api_key" \
+            -e STEAM_ID="test_steam_id" \
             --name guslee-test guslee:test
       
       - name: Check container is running
