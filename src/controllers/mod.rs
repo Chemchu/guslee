@@ -1,4 +1,5 @@
 use chess_module::LichessState;
+use games_module::SteamState;
 use music_module::SpotifyState;
 use search_engine::PostsSearchEngine;
 use std::sync::{Arc, OnceLock};
@@ -18,7 +19,7 @@ pub struct AppState {
     pub app_name: String,
     pub lichess_state: LichessState,
     pub spotify_state: Arc<tokio::sync::Mutex<SpotifyState>>,
-    pub steam_state: String,
+    pub steam_state: SteamState,
     pub post_search_engine: Arc<PostsSearchEngine>,
 }
 

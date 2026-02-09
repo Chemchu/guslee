@@ -3,6 +3,7 @@ members = [
     "crates/search-engine",
     "crates/chess-module",
     "crates/music-module",
+    "crates/games-module",
 ]
 
 [package]
@@ -14,6 +15,7 @@ edition = "2024"
 search-engine = {path = "crates/search-engine"}
 chess-module = {path = "crates/chess-module"}
 music-module = {path = "crates/music-module"}
+games-module = {path = "crates/games-module"}
 actix-files = "0.6.7"
 actix-web = "4.11.0"
 markdown = "1.0.0"

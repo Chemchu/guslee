@@ -53,13 +53,16 @@ async fn main() -> std::io::Result<()> {
         .expect("SPOTIFY_REFRESH_TOKEN not defined")
         .to_string();
 
+    info!("Initializing Steam state...");
     let steam_token = env_vars
         .get("STEAM_API_KEY")
         .expect("STEAM_API_KEY not defined")
         .to_string();
 
-    info!("Creating in-memory full-text search engine...");
-    let search_engine = Arc::new(PostsSearchEngine::new("./garden").await);
+    let steam_id = env_vars
+        .get("STEAM_ID")
+        .expect("STEAM_ID not defined")
+        .to_string();
 
     info!("Initializing Spotify state...");
     let spotify_state = Arc::new(tokio::sync::Mutex::new(
@@ -70,9 +73,11 @@ async fn main() -> std::io::Result<()> {
             spotify_refresh_token,
         ),
     ));
-    info!("Spotify state initialized");
 
+    info!("Creating in-memory full-text search engine...");
+    let search_engine = Arc::new(PostsSearchEngine::new("./garden").await);
     info!("Search engine created correctly");
+
     info!("Server starting on port 3000");
 
     HttpServer::new(move || {
@@ -86,7 +91,7 @@ async fn main() -> std::io::Result<()> {
                     lichess_username: lichess_username.clone(),
                 },
                 spotify_state: Arc::clone(&spotify_state),
-                steam_state: steam_token.clone(),
+                steam_state: games_module::SteamState::new(steam_token.clone(), steam_id.clone()),
                 post_search_engine: Arc::clone(&search_engine),
             }))
             .service(controllers::posts_controller::landing)

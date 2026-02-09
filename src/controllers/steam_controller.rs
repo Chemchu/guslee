@@ -3,31 +3,11 @@ use actix_web::{
     web::{self, Html},
 };
 use cached::proc_macro::cached;
+use games_module::{RecentGame, SteamProfile};
 use maud::{PreEscaped, html};
 use std::time::Duration;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
-
-struct SteamProfile {
-    personaname: &'static str,
-    realname: Option<&'static str>,
-    avatar_full: &'static str,
-    profileurl: &'static str,
-    steamid: &'static str,
-    personastate: u32,
-    timecreated: Option<u64>,
-    loccountrycode: Option<&'static str>,
-    level: u32,
-    game_count: u32,
-}
-
-struct RecentGame {
-    name: &'static str,
-    appid: &'static str,
-    playtime_2weeks: u32,  // in minutes
-    playtime_forever: u32, // in minutes
-    img_icon_url: &'static str,
-}
 
 #[cached(
     time = 3600,
@@ -41,7 +21,9 @@ struct RecentGame {
 )]
 #[get("/steam")]
 pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
-    let html_to_render = match false {
+    let profile = app_state.steam_state.get_profile().await;
+    let recent_games = app_state.steam_state.get_recent_games(5).await;
+    let html_to_render = match profile.is_err() || recent_games.is_err() {
         true => {
             html! {
                 div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
@@ -49,7 +31,7 @@ pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Htm
                 }
             }
         }
-        false => render_mock_steam_profile(),
+        false => render_steam_page(profile.unwrap(), recent_games.unwrap()),
     };
 
     let is_htmx_req = req.headers().get("HX-Request").is_some();
@@ -63,44 +45,7 @@ pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Htm
     }
 }
 
-fn render_mock_steam_profile() -> PreEscaped<String> {
-    let profile = SteamProfile {
-        personaname: "ExampleGamer",
-        realname: Some("John Doe"),
-        avatar_full: "https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg",
-        profileurl: "https://steamcommunity.com/id/examplegamer/",
-        steamid: "76561198000000000",
-        personastate: 1, // Online
-        timecreated: Some(1234567890),
-        loccountrycode: Some("US"),
-        level: 42,
-        game_count: 156,
-    };
-
-    let recent_games = vec![
-        RecentGame {
-            name: "Counter-Strike 2",
-            appid: "730",
-            playtime_2weeks: 1240,
-            playtime_forever: 25680,
-            img_icon_url: "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/730/69f7ebe2735c366c65c0b33dae00e12dc40edbe4.jpg",
-        },
-        RecentGame {
-            name: "Baldur's Gate 3",
-            appid: "1086940",
-            playtime_2weeks: 480,
-            playtime_forever: 8920,
-            img_icon_url: "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/1086940/94c1280d9e28ab2950a3674c6cd9597e03d3e78f.jpg",
-        },
-        RecentGame {
-            name: "Cyberpunk 2077",
-            appid: "1091500",
-            playtime_2weeks: 320,
-            playtime_forever: 4560,
-            img_icon_url: "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/1091500/4d5b3a950f2b92d88be84f29c2e0c82f7f74c73e.jpg",
-        },
-    ];
-
+fn render_steam_page(profile: SteamProfile, recent_games: Vec<RecentGame>) -> PreEscaped<String> {
     html! {
         div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
             div class="flex flex-col gap-6" {
@@ -173,7 +118,7 @@ fn render_mock_steam_profile() -> PreEscaped<String> {
                     }
                 }
 
-                @if let Some(created) = profile.timecreated {
+                @if let Some(_created) = profile.timecreated {
                     div class="bg-gradient-to-br from-emerald-900/50 to-emerald-800/50 rounded-lg p-6 border border-emerald-700/50 shadow-lg" {
                         div class="flex items-center gap-3" {
                             div class="p-3 bg-emerald-500/20 rounded-lg" {

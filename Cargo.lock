@@ -921,7 +921,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "surrealdb",
  "tokio",
 ]
 
@@ -1632,6 +1631,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "games-module"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1727,6 +1737,7 @@ dependencies = [
  "cached",
  "chess-module",
  "chrono",
+ "games-module",
  "log",
  "markdown",
  "maud",
