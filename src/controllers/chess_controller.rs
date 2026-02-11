@@ -3,41 +3,33 @@ use actix_web::{
     web::{self, Html},
 };
 use cached::proc_macro::cached;
-use chess_module::ChessModule;
-use maud::html;
+use chess_module::{
+    ChessModule,
+    types::{GameRatingHistory, LichessUser},
+};
+use maud::{PreEscaped, html};
 use serde_json::json;
 use std::time::Duration;
 
-use crate::controllers::{AppState, load_html_page, wrap_content_into_full_page};
+use crate::controllers::{AppState, wrap_content_into_full_page};
 
 #[cached(
     time = 3600,
     key = "String",
-    convert = r##"{ 
+    convert = r##"{
         format!(
-            "chess-is_htmx_req-{}",
+            "chess-{}-is_htmx_req-{}",
+            path.clone(),
             req.headers().get("HX-Request").is_some()
         )
     }"##
 )]
-#[get("/chess")]
-pub async fn chess_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
-    let chess_html = load_html_page("chess_page");
-
-    let is_htmx_req = req.headers().get("HX-Request").is_some();
-    if is_htmx_req {
-        Html::new(chess_html)
-    } else {
-        Html::new(wrap_content_into_full_page(
-            &app_state.app_name,
-            &chess_html,
-        ))
-    }
-}
-
-#[cached(time = 3600, key = "String", convert = r#"{ path.clone() }"#)]
 #[get("/chess/stats/{game_mode}")]
-pub async fn chess_graph(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
+pub async fn chess_stats_by_game(
+    app_state: web::Data<AppState>,
+    path: web::Path<String>,
+    req: HttpRequest,
+) -> Html {
     let game_mode = path.into_inner();
     let data = ChessModule::get_player_data(
         &app_state.lichess_state.lichess_token,
@@ -58,6 +50,24 @@ pub async fn chess_graph(app_state: web::Data<AppState>, path: web::Path<String>
         }
     };
 
+    let is_htmx_req = req.headers().get("HX-Request").is_some();
+    if is_htmx_req {
+        Html::new(render_chess_page(game_mode, rating_history, player_stats))
+    } else {
+        Html::new(wrap_content_into_full_page(
+            &app_state.app_name,
+            render_chess_page(game_mode, rating_history, player_stats)
+                .0
+                .as_str(),
+        ))
+    }
+}
+
+fn render_chess_page(
+    game_mode: String,
+    rating_history: Vec<GameRatingHistory>,
+    player_stats: LichessUser,
+) -> PreEscaped<String> {
     let game_mode_normalized = match game_mode.as_str() {
         "kingOfTheHill" => "King of the Hill",
         "racingKings" => "Racing Kings",
@@ -94,7 +104,7 @@ pub async fn chess_graph(app_state: web::Data<AppState>, path: web::Path<String>
 
     let data_json = serde_json::to_string(&chart_data).unwrap_or_default();
 
-    let perf_stat = match game_mode.as_str() {
+    let perf_stat = match game_mode_normalized {
         "Blitz" => player_stats.perfs.as_ref().and_then(|p| p.blitz.as_ref()),
         "Bullet" => player_stats.perfs.as_ref().and_then(|p| p.bullet.as_ref()),
         "Rapid" => player_stats.perfs.as_ref().and_then(|p| p.rapid.as_ref()),
@@ -164,54 +174,62 @@ pub async fn chess_graph(app_state: web::Data<AppState>, path: web::Path<String>
         0.0
     };
 
-    let rating_html = html! {
-        div class="text-bright-color w-full" {
-            div class="container mx-auto max-w-6xl" {
-                div {
-                    div class="grid grid-cols-2 md:grid-cols-4 gap-4" {
+    html! {
+        div class="flex flex-col w-full h-full gap-6 md:p-6 lg:p-8"
+        {
+            h1 class="text-3xl font-bold"
+            {
+                "CHESS SUMMARY"
+            }
+            div id="chess-stats"
+            {
+                div class="text-bright-color w-full" {
+                    div class="container mx-auto max-w-6xl" {
                         div {
-                            p class="text-gray-400 text-sm" { "Current Rating" }
-                            p class="text-2xl font-bold" { (current_rating) }
-                        }
-                        div {
-                            p class="text-gray-400 text-sm" { "Peak Rating" }
-                            p class="text-2xl font-bold" { (peak_rating) }
-                        }
-                        div {
-                            p class="text-gray-400 text-sm" { "Games (" (game_mode) ")" }
-                            p class="text-2xl font-bold" { (total_games) }
-                        }
-                        div {
-                            p class="text-gray-400 text-sm" { "Total Games" }
-                            p class="text-2xl font-bold" { (total_all_games) }
-                        }
-                        div {
-                            p class="text-gray-400 text-sm" { "Win Rate" }
-                            p class="text-2xl font-bold" {
-                                (format!("{:.2}%", win_rate))
+                            div class="grid grid-cols-2 md:grid-cols-4 gap-4" {
+                                div {
+                                    p class="text-gray-400 text-sm" { "Current Rating" }
+                                    p class="text-2xl font-bold" { (current_rating) }
+                                }
+                                div {
+                                    p class="text-gray-400 text-sm" { "Peak Rating" }
+                                    p class="text-2xl font-bold" { (peak_rating) }
+                                }
+                                div {
+                                    p class="text-gray-400 text-sm" { "Games (" (game_mode) ")" }
+                                    p class="text-2xl font-bold" { (total_games) }
+                                }
+                                div {
+                                    p class="text-gray-400 text-sm" { "Total Games" }
+                                    p class="text-2xl font-bold" { (total_all_games) }
+                                }
+                                div {
+                                    p class="text-gray-400 text-sm" { "Win Rate" }
+                                    p class="text-2xl font-bold" {
+                                        (format!("{:.2}%", win_rate))
+                                    }
+                                }
+                                div {
+                                    p class="text-gray-400 text-sm" { "Draw Rate" }
+                                    p class="text-2xl font-bold" {
+                                        (format!("{:.2}%", draw_rate))
+                                    }
+                                }
+                                div {
+                                    p class="text-gray-400 text-sm" { "Loss Rate" }
+                                    p class="text-2xl font-bold" {
+                                        (format!("{:.2}%", loss_rate))
+                                    }
+                                }
                             }
                         }
+
                         div {
-                            p class="text-gray-400 text-sm" { "Draw Rate" }
-                            p class="text-2xl font-bold" {
-                                (format!("{:.2}%", draw_rate))
-                            }
-                        }
-                        div {
-                            p class="text-gray-400 text-sm" { "Loss Rate" }
-                            p class="text-2xl font-bold" {
-                                (format!("{:.2}%", loss_rate))
-                            }
+                            div id="elo-chart" dataset=(data_json) {}
                         }
                     }
                 }
-
-                div {
-                    div id="elo-chart" dataset=(data_json) {}
-                }
             }
         }
-    };
-
-    Html::new(rating_html)
+    }
 }

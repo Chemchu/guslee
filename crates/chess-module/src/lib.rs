@@ -1,7 +1,7 @@
 use tokio::try_join;
 
 use crate::types::{AllGamesRatingHistory, LichessUser};
-mod types;
+pub mod types;
 
 pub struct LichessState {
     pub lichess_token: String,
