@@ -1635,6 +1635,7 @@ name = "games-module"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "futures",
  "reqwest",
  "serde",
  "serde_json",
