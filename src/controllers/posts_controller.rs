@@ -268,7 +268,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
 
     html! {
         div
-        id="content-section"
+        id="main-section"
         class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
             {
                (PreEscaped(markdown::to_html_with_options(&md, &frontmatter).unwrap()))

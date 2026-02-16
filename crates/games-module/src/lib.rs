@@ -73,10 +73,6 @@ struct PlayerAchievementsResponse {
 
 #[derive(Deserialize)]
 struct PlayerAchievementsData {
-    #[serde(rename = "steamID")]
-    steam_id: String,
-    #[serde(rename = "gameName")]
-    game_name: String,
     achievements: Option<Vec<AchievementData>>,
 }
 
