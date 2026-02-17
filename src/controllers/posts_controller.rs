@@ -268,7 +268,6 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
 
     html! {
         div
-        id="main-section"
         class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
             {
                (PreEscaped(markdown::to_html_with_options(&md, &frontmatter).unwrap()))
@@ -283,7 +282,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
                 div
                 id="upper-right-section"
                 hx-get=(format!("/graph/{}", post_path))
-                hx-trigger="load, contentUpdated from:document"
+                hx-trigger="load"
                 hx-target="#upper-right-section"
                 hx-swap="innerHTML"
                 class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
@@ -297,7 +296,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
                 div
                 id="bottom-right-section"
                 hx-get=(format!("/metadata/{}", post_path))
-                hx-trigger="load, contentUpdated from:document"
+                hx-trigger="load"
                 hx-target="#bottom-right-section"
                 hx-swap="innerHTML"
                 class="flex w-full flex-grow p-2"
