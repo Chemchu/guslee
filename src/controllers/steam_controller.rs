@@ -22,7 +22,6 @@ use crate::controllers::{AppState, wrap_content_into_full_page};
 #[get("/steam")]
 pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     let profile = app_state.steam_state.get_profile().await;
-    println!("{:?}", profile.as_ref().unwrap());
     let recent_games = app_state.steam_state.get_recent_games(5).await;
     let html_to_render = match profile.is_err() || recent_games.is_err() {
         true => {
@@ -48,6 +47,39 @@ pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Htm
 
 fn render_steam_page(profile: SteamProfile, recent_games: Vec<RecentGame>) -> PreEscaped<String> {
     html! {
+        @let status_text = match profile.personastate {
+            0 => "Offline",
+            1 => "Online",
+            2 => "Busy",
+            3 => "Away",
+            4 => "Snooze",
+            5 => "Looking to Trade",
+            6 => "Looking to Play",
+            _ => "Unknown",
+        };
+
+        @let status_classes = match profile.personastate {
+            0 => "px-3 py-1 bg-slate-500/20 text-slate-400 rounded-full text-sm font-semibold border border-slate-500/30",
+            1 => "px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-semibold border border-blue-500/30",
+            2 => "px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-sm font-semibold border border-red-500/30",
+            3 => "px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-semibold border border-yellow-500/30",
+            4 => "px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm font-semibold border border-purple-500/30",
+            5 => "px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-semibold border border-green-500/30",
+            6 => "px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-semibold border border-emerald-500/30",
+            _ => "px-3 py-1 bg-slate-500/20 text-slate-400 rounded-full text-sm font-semibold border border-slate-500/30",
+        };
+
+        @let pfp_indicator_color = match profile.personastate {
+            0 => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-slate-500",
+            1 => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-blue-400",
+            2 => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-red-500",
+            3 => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-yellow-500",
+            4 => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-purple-500",
+            5 => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-green-500",
+            6 => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-emerald-500",
+            _ => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-slate-500",
+        };
+
         div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
             div class="flex flex-col gap-6" {
                 div class="bg-gradient-to-br from-slate-800 to-slate-900 shadow-2xl p-6 border border-shade-color" {
@@ -61,8 +93,9 @@ fn render_steam_page(profile: SteamProfile, recent_games: Vec<RecentGame>) -> Pr
                                         alt="Steam Avatar"
                                         class="transition-all duration-200 w-32 h-32 border-4 border-slate-700 shadow-xl hover:border-primary-color";
                                 }
-                                div class="absolute bottom-2 right-2 w-6 h-6 bg-blue-400 rounded-full border-4 border-slate-900 shadow-lg"
-                                    title="Online" {}
+                                div
+                                class=(pfp_indicator_color)
+                                title=(status_text) {}
                             }
                         }
 
@@ -77,10 +110,12 @@ fn render_steam_page(profile: SteamProfile, recent_games: Vec<RecentGame>) -> Pr
                                 }
 
                                 div class="flex flex-wrap gap-2 items-center" {
-                                    span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-semibold border border-blue-500/30" {
-                                        "● Online"
+                                    span class=(status_classes) {
+                                        "● " (status_text)
                                     }
-                                    span class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm font-semibold border border-purple-500/30" {
+
+                                    span class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm font-semibold border border-purple-500/30"
+                                    {
                                         "Level " (profile.level)
                                     }
                                 }
