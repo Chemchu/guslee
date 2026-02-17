@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Html},
 };
 use cached::proc_macro::cached;
-use games_module::{RecentGame, SteamProfile};
+use games_module::{RecentGame, SteamProfile, TopGame};
 use maud::{PreEscaped, html};
 use std::time::Duration;
 
@@ -23,7 +23,8 @@ use crate::controllers::{AppState, wrap_content_into_full_page};
 pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     let profile = app_state.steam_state.get_profile().await;
     let recent_games = app_state.steam_state.get_recent_games(5).await;
-    let html_to_render = match profile.is_err() || recent_games.is_err() {
+    let top_games = app_state.steam_state.get_top_played_games(5).await;
+    let html_to_render = match profile.is_err() || recent_games.is_err() || top_games.is_err() {
         true => {
             html! {
                 div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
@@ -31,7 +32,7 @@ pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Htm
                 }
             }
         }
-        false => render_steam_page(profile.unwrap(), recent_games.unwrap()),
+        false => render_steam_page(profile.unwrap(), recent_games.unwrap(), top_games.unwrap()),
     };
 
     let is_htmx_req = req.headers().get("HX-Request").is_some();
@@ -45,7 +46,11 @@ pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Htm
     }
 }
 
-fn render_steam_page(profile: SteamProfile, recent_games: Vec<RecentGame>) -> PreEscaped<String> {
+fn render_steam_page(
+    profile: SteamProfile,
+    recent_games: Vec<RecentGame>,
+    top_games: Vec<TopGame>,
+) -> PreEscaped<String> {
     html! {
         @let status_text = match profile.personastate {
             0 => "Offline",
@@ -227,6 +232,60 @@ fn render_steam_page(profile: SteamProfile, recent_games: Vec<RecentGame>) -> Pr
                                                 path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" {}
                                             }
                                             span { (format_playtime(game.playtime_2weeks)) " (2 weeks)" }
+                                        }
+                                        div class="flex items-center gap-1 text-slate-500" {
+                                            svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
+                                                path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" {}
+                                            }
+                                            span { (format_playtime(game.playtime_forever)) " total" }
+                                        }
+                                    }
+                                }
+
+                                div class="hidden md:flex md:flex-col" {
+                                    div class="w-24 h-2 bg-slate-700 overflow-hidden" {
+                                        div
+                                            class="h-full bg-primary-color"
+                                            style=(format!("width: {}%", game.achievement_progress_percentage)) {}
+                                    }
+                                    span class="w-full text-slate-500 text-right" {
+                                        (game.unlocked_achievements) "/" (game.total_achievements)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            div class="flex flex-col gap-4" {
+                h2 class="text-2xl font-bold text-white flex items-center gap-2" {
+                    svg class="w-7 h-7 text-primary-color" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
+                        path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" {}
+                        path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" {}
+                    }
+                    "Top Played Games"
+                }
+                div class="grid grid-cols-1 gap-4" {
+                    @for game in &top_games {
+                        div class="bg-gradient-to-r from-slate-800 to-slate-900 p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
+                            div class="flex gap-4 items-center" {
+                                img
+                                    src=(game.img_logo_url)
+                                    onerror={"this.onerror=null; this.src='http://media.steampowered.com/steamcommunity/public/images/apps/"(game.appid)"/"(game.img_icon_url)".jpg';"}
+                                    alt=(game.name)
+                                    class="w-16 h-16 border-2 border-slate-600 shadow-md flex-shrink-0 object-cover";
+
+                                div class="flex-1 min-w-0" {
+                                    h3 class="text-xl font-bold text-white truncate mb-2" {
+                                        (game.name)
+                                    }
+                                    div class="flex flex-wrap gap-4 text-sm" {
+                                        div class="flex items-center gap-1 text-slate-400" {
+                                            svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
+                                                path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" {}
+                                            }
+                                            span { (format_playtime(game.playtime_2weeks.unwrap_or(0))) " (2 weeks)" }
                                         }
                                         div class="flex items-center gap-1 text-slate-500" {
                                             svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
