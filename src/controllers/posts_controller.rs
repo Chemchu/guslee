@@ -14,8 +14,14 @@ use std::{fs, io};
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
+pub fn configure_services(cfg: &mut web::ServiceConfig) {
+    cfg.service(landing)
+        .service(search_post)
+        .service(get_post_page);
+}
+
 #[get("/")]
-pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
+async fn landing(app_state: web::Data<AppState>) -> impl Responder {
     let content = match std::fs::read_to_string("./garden/welcome.md") {
         Ok(content) => content,
         Err(e) => {
@@ -36,7 +42,7 @@ pub async fn landing(app_state: web::Data<AppState>) -> impl Responder {
 }
 
 #[get("/posts/{post:.*}")]
-pub async fn get_post_page(
+async fn get_post_page(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     route: web::Path<String>,
@@ -82,7 +88,7 @@ pub async fn get_post_page(
     }"##
 )]
 #[get("/search")]
-pub async fn search_post(
+async fn search_post(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     params: web::Query<Params>,
@@ -247,11 +253,6 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
         }
     };
     Html::new(html)
-}
-
-#[get("/{url:.*}")]
-pub async fn fallback_route() -> impl Responder {
-    String::from("Fallback page")
 }
 
 fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {

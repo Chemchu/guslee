@@ -6,8 +6,14 @@ use maud::html;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
+pub fn configure_services(cfg: &mut web::ServiceConfig) {
+    cfg.service(graph_network)
+        .service(garden_view_dispatcher)
+        .service(garden_view);
+}
+
 #[get("/graph/{current_url_pathname:.*}")]
-pub async fn graph_network(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
+async fn graph_network(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
     let graph_data = {
         let file_path = format!("{}.md", path.as_str());
         app_state
@@ -30,7 +36,7 @@ pub async fn graph_network(app_state: web::Data<AppState>, path: web::Path<Strin
 }
 
 #[get("/garden-view-dispatcher")]
-pub async fn garden_view_dispatcher(
+async fn garden_view_dispatcher(
     app_state: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl actix_web::Responder {
@@ -55,7 +61,7 @@ pub async fn garden_view_dispatcher(
 }
 
 #[get("/garden-view")]
-pub async fn garden_view(app_state: web::Data<AppState>) -> Html {
+async fn garden_view(app_state: web::Data<AppState>) -> Html {
     let graph_data = app_state.post_search_engine.get_overall_graph_data().await;
     let nodes_json = serde_json::to_string(&graph_data.nodes).unwrap();
     let edges_json = serde_json::to_string(&graph_data.edges).unwrap();

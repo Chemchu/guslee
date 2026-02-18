@@ -1,11 +1,18 @@
 use std::collections::HashMap;
 
-use actix_web::{get, web::Html};
+use actix_web::{
+    get,
+    web::{self, Html},
+};
 use chrono::{Timelike, Utc};
 use maud::html;
 
+pub fn configure_services(cfg: &mut web::ServiceConfig) {
+    cfg.service(get_current_schedule_activity);
+}
+
 #[get("/schedule")]
-pub async fn get_current_schedule_activity() -> Html {
+async fn get_current_schedule_activity() -> Html {
     let current_hour = Utc::now().hour();
     let schedule: HashMap<u32, &str> = HashMap::from([
         (0, "Coding, probably"),

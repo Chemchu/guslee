@@ -94,21 +94,15 @@ async fn main() -> std::io::Result<()> {
                 steam_state: games_module::SteamState::new(steam_token.clone(), steam_id.clone()),
                 post_search_engine: Arc::clone(&search_engine),
             }))
-            .service(controllers::posts_controller::landing)
-            .service(controllers::news_controller::news_page)
-            .service(controllers::metadata_controller::render_metadata)
-            .service(controllers::steam_controller::steam_page)
-            .service(controllers::chess_controller::chess_stats_by_game)
-            .service(controllers::posts_controller::search_post)
-            .service(controllers::graph_controller::graph_network)
-            .service(controllers::graph_controller::garden_view)
-            .service(controllers::graph_controller::garden_view_dispatcher)
-            .service(controllers::music_controller::get_user_profile)
-            .service(controllers::music_controller::get_user_top_item)
-            .service(controllers::music_controller::cycle_time_range)
-            .service(controllers::routines_controller::get_current_schedule_activity)
-            .service(controllers::posts_controller::get_post_page)
-            .service(controllers::posts_controller::fallback_route) // This service should be last one in the list because it matches any string
+            .configure(controllers::posts_controller::configure_services)
+            .configure(controllers::news_controller::configure_services)
+            .configure(controllers::metadata_controller::configure_services)
+            .configure(controllers::steam_controller::configure_services)
+            .configure(controllers::chess_controller::configure_services)
+            .configure(controllers::graph_controller::configure_services)
+            .configure(controllers::music_controller::configure_services)
+            .configure(controllers::routines_controller::configure_services)
+            .service(controllers::fallback_controller::fallback_route) // This service should be last one in the list because it matches any string
     })
     .bind(("0.0.0.0", 3000))?
     .run()

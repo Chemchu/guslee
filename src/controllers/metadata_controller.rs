@@ -6,8 +6,12 @@ use maud::html;
 
 use crate::controllers::AppState;
 
+pub fn configure_services(cfg: &mut web::ServiceConfig) {
+    cfg.service(render_metadata);
+}
+
 #[get("/metadata/{post:.*}")]
-pub async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
+async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
     let file_path = format!("{}.md", path.as_str());
     let post = app_state.post_search_engine.get_post(&file_path).await;
 

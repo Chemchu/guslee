@@ -5,6 +5,7 @@ use search_engine::PostsSearchEngine;
 use std::sync::{Arc, OnceLock};
 
 pub mod chess_controller;
+pub mod fallback_controller;
 pub mod graph_controller;
 pub mod metadata_controller;
 pub mod music_controller;

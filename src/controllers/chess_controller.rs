@@ -13,6 +13,10 @@ use std::time::Duration;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
+pub fn configure_services(cfg: &mut web::ServiceConfig) {
+    cfg.service(chess_stats_by_game);
+}
+
 #[cached(
     time = 3600,
     key = "String",
@@ -25,7 +29,7 @@ use crate::controllers::{AppState, wrap_content_into_full_page};
     }"##
 )]
 #[get("/chess/stats/{game_mode}")]
-pub async fn chess_stats_by_game(
+async fn chess_stats_by_game(
     app_state: web::Data<AppState>,
     path: web::Path<String>,
     req: HttpRequest,

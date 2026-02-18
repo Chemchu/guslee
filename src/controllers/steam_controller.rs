@@ -9,6 +9,10 @@ use std::time::Duration;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
+pub fn configure_services(cfg: &mut web::ServiceConfig) {
+    cfg.service(steam_page);
+}
+
 #[cached(
     time = 3600,
     key = "String",
@@ -20,7 +24,7 @@ use crate::controllers::{AppState, wrap_content_into_full_page};
     }"##
 )]
 #[get("/steam")]
-pub async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
+async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     let profile = app_state.steam_state.get_profile().await;
     let recent_games = app_state.steam_state.get_recent_games(5).await;
     let top_games = app_state.steam_state.get_top_played_games(5).await;

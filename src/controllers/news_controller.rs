@@ -15,8 +15,12 @@ struct News {
     tags: Vec<String>,
 }
 
+pub fn configure_services(cfg: &mut web::ServiceConfig) {
+    cfg.service(news_page);
+}
+
 #[get("/news")]
-pub async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
+async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
     let query = "SELECT 
         file_path,
         metadata.date AS date,

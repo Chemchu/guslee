@@ -9,8 +9,14 @@ use std::time::Duration;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
+pub fn configure_services(cfg: &mut web::ServiceConfig) {
+    cfg.service(get_user_profile)
+        .service(get_user_top_item)
+        .service(cycle_time_range);
+}
+
 #[get("/music/profile")]
-pub async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
+async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     let mut spotify_state = app_state.spotify_state.lock().await;
     let user_profile = spotify_state.fetch_user_profile().await;
 
@@ -36,7 +42,7 @@ pub async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) 
     }
 }
 
-pub fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
+fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
     html! {
         div class="flex flex-col w-full gap-8 p-6 lg:p-8 overflow-auto" {
             div {
@@ -144,7 +150,7 @@ pub enum TopItems {
     }"##
 )]
 #[get("/music/user-top/{item:.*}/{time_range:.*}")]
-pub async fn get_user_top_item(
+async fn get_user_top_item(
     app_state: web::Data<AppState>,
     args: web::Path<(String, String)>,
 ) -> PreEscaped<String> {
@@ -193,7 +199,7 @@ pub async fn get_user_top_item(
     }"##
 )]
 #[get("/music/time-range/{type}/{term}/next")]
-pub async fn cycle_time_range(
+async fn cycle_time_range(
     app_state: web::Data<AppState>,
     args: web::Path<(String, String)>,
 ) -> PreEscaped<String> {
