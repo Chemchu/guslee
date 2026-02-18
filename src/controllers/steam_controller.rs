@@ -245,15 +245,16 @@ fn render_steam_page(
                                         }
                                     }
                                 }
-
-                                div class="hidden md:flex md:flex-col" {
-                                    div class="w-24 h-2 bg-slate-700 overflow-hidden" {
-                                        div
-                                            class="h-full bg-primary-color"
-                                            style=(format!("width: {}%", game.achievement_progress_percentage)) {}
-                                    }
-                                    span class="w-full text-slate-500 text-right" {
-                                        (game.unlocked_achievements) "/" (game.total_achievements)
+                                @if game.total_achievements > 0 {
+                                    div class="hidden md:flex md:flex-col" {
+                                        div class="w-24 h-2 bg-slate-700 overflow-hidden" {
+                                            div
+                                                class="h-full bg-primary-color"
+                                                style=(format!("width: {}%", game.achievement_progress_percentage)) {}
+                                        }
+                                        span class="w-full text-slate-500 text-right" {
+                                            (game.unlocked_achievements) "/" (game.total_achievements)
+                                        }
                                     }
                                 }
                             }
@@ -300,14 +301,16 @@ fn render_steam_page(
                                     }
                                 }
 
-                                div class="hidden md:flex md:flex-col" {
-                                    div class="w-24 h-2 bg-slate-700 overflow-hidden" {
-                                        div
-                                            class="h-full bg-primary-color"
-                                            style=(format!("width: {}%", game.achievement_progress_percentage)) {}
-                                    }
-                                    span class="w-full text-slate-500 text-right" {
-                                        (game.unlocked_achievements) "/" (game.total_achievements)
+                                @if game.total_achievements > 0 {
+                                    div class="hidden md:flex md:flex-col" {
+                                        div class="w-24 h-2 bg-slate-700 overflow-hidden" {
+                                            div
+                                                class="h-full bg-primary-color"
+                                                style=(format!("width: {}%", game.achievement_progress_percentage)) {}
+                                        }
+                                        span class="w-full text-slate-500 text-right" {
+                                            (game.unlocked_achievements) "/" (game.total_achievements)
+                                        }
                                     }
                                 }
                             }
