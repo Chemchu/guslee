@@ -72,10 +72,22 @@
 }
 
 .htmx-indicator {
-  display: none !important;
-}
-.htmx-request.htmx-indicator {
   display: flex !important;
+  opacity: 0;
+  transition: opacity 0s; /* instant hide */
+  pointer-events: none;
+}
+
+.htmx-request.htmx-indicator {
+  opacity: 0;
+  animation: skeleton-appear 0.1s ease-out 0.15s forwards;
+  /* 0.15s delay — if request finishes before that, it never becomes visible */
+}
+
+@keyframes skeleton-appear {
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes shimmer {
