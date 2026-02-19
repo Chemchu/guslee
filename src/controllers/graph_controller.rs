@@ -43,7 +43,7 @@ async fn garden_view_dispatcher(
     let h = html! {
         div
         #garden-view-section
-        style="width: 100%; min-height: 90vh;"
+        style="width: 100%; height: 100%;"
         hx-get="/garden-view"
         hx-target="#garden-view-section"
         hx-trigger="load"
@@ -68,7 +68,7 @@ async fn garden_view(app_state: web::Data<AppState>) -> Html {
 
     let graph = html! {
         div #garden-view-content
-        style="width: 100%; min-height: 80vh;"
+        style="width: 100%; height: 100%;"
         data-nodes=(nodes_json)
         data-edges=(edges_json) {}
     };
