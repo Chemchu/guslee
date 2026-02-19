@@ -70,3 +70,31 @@
     transform: scale(1);
   }
 }
+
+.htmx-indicator {
+  display: none !important;
+}
+.htmx-request.htmx-indicator {
+  display: flex !important;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-block {
+  background: linear-gradient(
+    90deg,
+    var(--color-shade-color) 25%,
+    color-mix(in srgb, var(--color-shade-color) 60%, var(--color-bright-color))
+      50%,
+    var(--color-shade-color) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}

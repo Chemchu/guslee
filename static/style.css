@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @plugin '@tailwindcss/typography';
 
+@source "src/**/*.rs";
+@source "templates/**/*.{html,js}";
+@source "static/**/*.{html,js}";
+
 @theme {
   --color-bright-color: #dbdfe5;
   --color-background-color: #1e242c;
@@ -28,10 +32,6 @@
   --tw-prose-th-borders: #cad2c5;
   --tw-prose-td-borders: #cad2c5;
 }
-
-@source "src/**/*.rs";
-@source "templates/**/*.{html,js}";
-@source "static/**/*.{html,js}";
 
 .fade {
   transition: opacity 0.5s ease-in-out;

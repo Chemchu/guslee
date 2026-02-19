@@ -127,6 +127,7 @@
           hx-trigger="click"
           hx-target="#main-section"
           hx-swap="innerHTML transition:true"
+          hx-indicator="#global-skeleton"
         >
           CHESS
         </a>
@@ -138,6 +139,7 @@
           hx-trigger="click"
           hx-target="#main-section"
           hx-swap="innerHTML transition:true"
+          hx-indicator="#global-skeleton"
         >
           MUSIC
         </a>
@@ -149,6 +151,7 @@
           hx-trigger="click"
           hx-target="#main-section"
           hx-swap="innerHTML transition:true"
+          hx-indicator="#global-skeleton"
         >
           GAMES
         </a>
@@ -284,11 +287,57 @@
         </div>
       </div>
 
-      <div
-        id="main-section"
-        class="flex flex-col lg:flex-row justify-between flex-grow min-h-0"
-      >
-        {{CONTENT}}
+      <div class="relative flex-grow min-h-0">
+        <div
+          id="main-section"
+          class="flex flex-col lg:flex-row justify-between h-full min-h-0"
+        >
+          {{CONTENT}}
+        </div>
+
+        <div
+          id="global-skeleton"
+          class="htmx-indicator absolute inset-0 z-10 flex flex-col gap-6 p-6 md:p-8 bg-background-color overflow-hidden"
+        >
+          <div class="skeleton-block h-8 w-64"></div>
+          <div class="flex flex-col gap-2">
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-5/6"></div>
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-3/4"></div>
+          </div>
+          <div class="skeleton-block h-6 w-48"></div>
+          <div class="flex flex-col gap-2">
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-4/5"></div>
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-2/3"></div>
+          </div>
+          <div class="border-l-2 border-shade-color pl-4 flex flex-col gap-2">
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-5/6"></div>
+            <div class="skeleton-block h-3 w-4/5"></div>
+          </div>
+          <div class="skeleton-block h-6 w-36"></div>
+          <div class="flex flex-col gap-2">
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-3/4"></div>
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-5/6"></div>
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-1/2"></div>
+          </div>
+          <div class="skeleton-block h-6 w-52"></div>
+          <div class="flex flex-col gap-2">
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-4/5"></div>
+            <div class="skeleton-block h-3 w-full"></div>
+            <div class="skeleton-block h-3 w-2/3"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div
