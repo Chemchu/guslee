@@ -209,54 +209,63 @@ fn render_chess_page(
     };
 
     html! {
-        div class="flex flex-col w-full gap-6 md:p-6 lg:p-8 overflow-y-auto h-full"
-        {
-            h1 class="text-4xl font-bold"
-            {
-                "Chess Journey"
-            }
-            div id="chess-stats"
-            {
+        div class="flex flex-col w-full gap-6 md:p-6 lg:p-8 overflow-y-auto h-full" {
+            h1 class="text-4xl font-bold" { "Chess Journey" }
+            div id="chess-stats" {
                 div class="text-bright-color w-full" {
                     div class="container mx-auto max-w-6xl h-full" {
-                        div {
-                            div class="grid grid-cols-2 md:grid-cols-4 gap-4" {
-                                div {
-                                    p class="text-gray-400 text-sm" { "Current Rating" }
-                                    p class="text-2xl font-bold" { (current_rating) }
-                                }
-                                div {
-                                    p class="text-gray-400 text-sm" { "Peak Rating" }
-                                    p class="text-2xl font-bold" { (peak_rating) }
-                                }
-                                div {
-                                    p class="text-gray-400 text-sm" { "Games (" (game_mode) ")" }
-                                    p class="text-2xl font-bold" { (total_games) }
-                                }
-                                div {
-                                    p class="text-gray-400 text-sm" { "Total Games" }
-                                    p class="text-2xl font-bold" { (total_all_games) }
-                                }
-                                div {
-                                    p class="text-gray-400 text-sm" { "Win Rate" }
-                                    p class="text-2xl font-bold" {
-                                        (format!("{:.2}%", win_rate))
-                                    }
-                                }
-                                div {
-                                    p class="text-gray-400 text-sm" { "Draw Rate" }
-                                    p class="text-2xl font-bold" {
-                                        (format!("{:.2}%", draw_rate))
-                                    }
-                                }
-                                div {
-                                    p class="text-gray-400 text-sm" { "Loss Rate" }
-                                    p class="text-2xl font-bold" {
-                                        (format!("{:.2}%", loss_rate))
-                                    }
-                                }
+
+                        // Stats grid
+                        div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-zinc-800 mb-6" {
+                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Current Rating" }
+                                p class="text-3xl font-bold" { (current_rating) }
+                            }
+                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Peak Rating" }
+                                p class="text-3xl font-bold text-primary-color" { (peak_rating) }
+                            }
+                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Games (" (game_mode) ")" }
+                                p class="text-3xl font-bold" { (total_games) }
+                            }
+                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Total Games" }
+                                p class="text-3xl font-bold" { (total_all_games) }
                             }
                         }
+
+                        // Win/draw/loss rates
+                        div class="grid grid-cols-3 gap-px bg-zinc-800 mb-6" {
+                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Win Rate" }
+                                div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden mb-2" {
+                                    div class="h-full bg-emerald-500 rounded-full"
+                                        style=(format!("width:{}%", win_rate)) {}
+                                }
+                                p class="text-2xl font-bold text-emerald-400" { (format!("{:.2}%", win_rate)) }
+                                p class="text-zinc-600 text-xs mt-1" { (win_count) " games" }
+                            }
+                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Draw Rate" }
+                                div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden mb-2" {
+                                    div class="h-full bg-primary-color rounded-full"
+                                        style=(format!("width:{}%", draw_rate)) {}
+                                }
+                                p class="text-2xl font-bold text-primary-color" { (format!("{:.2}%", draw_rate)) }
+                                p class="text-zinc-600 text-xs mt-1" { (draw_count) " games" }
+                            }
+                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Loss Rate" }
+                                div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden mb-2" {
+                                    div class="h-full bg-rose-500 rounded-full"
+                                        style=(format!("width:{}%", loss_rate)) {}
+                                }
+                                p class="text-2xl font-bold text-rose-400" { (format!("{:.2}%", loss_rate)) }
+                                p class="text-zinc-600 text-xs mt-1" { (loss_count) " games" }
+                            }
+                        }
+
                         div {
                             div id="elo-chart" dataset=(data_json) {}
                         }
@@ -267,9 +276,7 @@ fn render_chess_page(
                         hx-target="this"
                         hx-swap="innerHTML"
                         class="w-full min-w-0 overflow-y-auto"
-                        {
-                            "Loading..."
-                        }
+                        { "Loading..." }
                     }
                 }
             }
