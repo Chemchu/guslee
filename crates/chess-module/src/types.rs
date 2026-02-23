@@ -306,3 +306,164 @@ pub struct Streamer {
 pub struct StreamChannel {
     pub channel: String,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Game {
+    pub id: String,
+    pub rated: bool,
+    pub variant: Variant,
+    pub speed: Speed,
+    pub perf: String,
+    pub created_at: i64,
+    pub last_move_at: i64,
+    pub status: Status,
+    pub players: Players,
+    pub source: Option<String>,
+    pub initial_fen: Option<String>,
+    pub winner: Option<Winner>,
+    pub opening: Option<Opening>,
+    pub moves: Option<String>,
+    pub pgn: Option<String>,
+    pub days_per_turn: Option<i32>,
+    pub analysis: Option<Vec<MoveAnalysis>>,
+    pub tournament: Option<String>,
+    pub swiss: Option<String>,
+    pub clock: Option<Clock>,
+    pub clocks: Option<Vec<i64>>,
+    pub division: Option<Division>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Players {
+    pub white: Player,
+    pub black: Player,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Player {
+    pub user: Option<UserInfo>,
+    pub rating: Option<i32>,
+    pub rating_diff: Option<i32>,
+    pub name: Option<String>,
+    pub provisional: Option<bool>,
+    pub ai_level: Option<i32>,
+    pub analysis: Option<PlayerAnalysis>,
+    pub team: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserInfo {
+    pub id: String,
+    pub name: String,
+    pub flair: Option<String>,
+    pub title: Option<Title>,
+    pub patron_color: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PlayerAnalysis {
+    pub inaccuracy: i32,
+    pub mistake: i32,
+    pub blunder: i32,
+    pub acpl: i32,
+    pub accuracy: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Opening {
+    pub eco: String,
+    pub name: String,
+    pub ply: i32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MoveAnalysis {
+    pub eval: Option<i32>,
+    pub mate: Option<i32>,
+    pub best: Option<String>,
+    pub variation: Option<String>,
+    pub judgment: Option<Judgment>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Judgment {
+    pub name: JudgmentName,
+    pub comment: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Clock {
+    pub initial: i32,
+    pub increment: i32,
+    #[serde(rename = "totalTime")]
+    pub total_time: i32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Division {
+    pub middle: Option<i32>,
+    pub end: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Variant {
+    Standard,
+    Chess960,
+    Crazyhouse,
+    Antichess,
+    Atomic,
+    Horde,
+    KingOfTheHill,
+    RacingKings,
+    ThreeCheck,
+    FromPosition,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Speed {
+    UltraBullet,
+    Bullet,
+    Blitz,
+    Rapid,
+    Classical,
+    Correspondence,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Status {
+    Created,
+    Started,
+    Aborted,
+    Mate,
+    Resign,
+    Stalemate,
+    Timeout,
+    Draw,
+    Outoftime,
+    Cheat,
+    NoStart,
+    UnknownFinish,
+    InsufficientMaterialClaim,
+    VariantEnd,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Winner {
+    White,
+    Black,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum JudgmentName {
+    Inaccuracy,
+    Mistake,
+    Blunder,
+}

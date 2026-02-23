@@ -1,6 +1,7 @@
+use serde_json::Deserializer;
 use tokio::try_join;
 
-use crate::types::{AllGamesRatingHistory, LichessUser};
+use crate::types::{AllGamesRatingHistory, Game, LichessUser};
 pub mod types;
 
 pub struct LichessState {
@@ -46,6 +47,27 @@ impl ChessModule {
             .await?;
 
         response.json::<LichessUser>().await
+    }
+
+    pub async fn get_last_games_analysis(
+        token: &str,
+        username: &str,
+    ) -> Result<Vec<Game>, reqwest::Error> {
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!(
+                "https://lichess.org/api/games/user/{}?opening=true&perfType=rapid",
+                username
+            ))
+            .header("Accept", "application/x-ndjson")
+            .header("Authorization", format!("Bearer {}", token))
+            .send()
+            .await;
+
+        let r = response.unwrap().text().await.unwrap();
+        let result_stream = Deserializer::from_str(r.as_str()).into_iter::<Game>();
+
+        Ok(result_stream.flatten().collect())
     }
 
     pub async fn get_player_data(
