@@ -215,49 +215,47 @@ fn render_chess_page(
                 div class="text-bright-color w-full" {
                     div class="container mx-auto max-w-6xl h-full" {
 
-                        // Stats grid
-                        div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-zinc-800 mb-6" {
-                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                        div class="grid grid-cols-2 md:grid-cols-4 mb-6" {
+                            div class="p-5 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Current Rating" }
                                 p class="text-3xl font-bold" { (current_rating) }
                             }
-                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                            div class="p-5 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Peak Rating" }
                                 p class="text-3xl font-bold text-primary-color" { (peak_rating) }
                             }
-                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                            div class="p-5 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Games (" (game_mode) ")" }
                                 p class="text-3xl font-bold" { (total_games) }
                             }
-                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                            div class="p-5 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Total Games" }
                                 p class="text-3xl font-bold" { (total_all_games) }
                             }
                         }
 
-                        // Win/draw/loss rates
-                        div class="grid grid-cols-3 gap-px bg-zinc-800 mb-6" {
-                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                        div class="grid grid-cols-3 mb-6" {
+                            div class="p-5 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Win Rate" }
-                                div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden mb-2" {
+                                div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-emerald-500 rounded-full"
                                         style=(format!("width:{}%", win_rate)) {}
                                 }
                                 p class="text-2xl font-bold text-emerald-400" { (format!("{:.2}%", win_rate)) }
                                 p class="text-zinc-600 text-xs mt-1" { (win_count) " games" }
                             }
-                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                            div class="p-5 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Draw Rate" }
-                                div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden mb-2" {
+                                div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-primary-color rounded-full"
                                         style=(format!("width:{}%", draw_rate)) {}
                                 }
                                 p class="text-2xl font-bold text-primary-color" { (format!("{:.2}%", draw_rate)) }
                                 p class="text-zinc-600 text-xs mt-1" { (draw_count) " games" }
                             }
-                            div class="bg-zinc-900 p-5 hover:bg-zinc-800 transition-colors" {
+                            div class="p-5 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Loss Rate" }
-                                div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden mb-2" {
+                                div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-rose-500 rounded-full"
                                         style=(format!("width:{}%", loss_rate)) {}
                                 }
@@ -290,29 +288,13 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
     let mut white_openings: HashMap<String, usize> = HashMap::new();
     let mut black_openings: HashMap<String, usize> = HashMap::new();
 
-    let mut total_accuracy_white = 0i32;
-    let mut accuracy_white_count = 0i32;
-    let mut total_accuracy_black = 0i32;
-    let mut accuracy_black_count = 0i32;
-
     for game in &games {
         if let Some(opening) = &game.opening {
-            *white_openings.entry(opening.name.clone()).or_insert(0) += 1;
-            *black_openings.entry(opening.name.clone()).or_insert(0) += 1;
-        }
-
-        if let Some(analysis) = &game.players.white.analysis
-            && let Some(acc) = analysis.accuracy
-        {
-            total_accuracy_white += acc;
-            accuracy_white_count += 1;
-        }
-
-        if let Some(analysis) = &game.players.black.analysis
-            && let Some(acc) = analysis.accuracy
-        {
-            total_accuracy_black += acc;
-            accuracy_black_count += 1;
+            if game.players.white.user.as_ref().map(|u| u.name.as_str()) == Some("chemchu") {
+                *white_openings.entry(opening.name.clone()).or_insert(0) += 1;
+            } else {
+                *black_openings.entry(opening.name.clone()).or_insert(0) += 1;
+            }
         }
     }
 
@@ -326,17 +308,6 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
         .max_by_key(|(_, v)| *v)
         .map(|(k, v)| (k.clone(), *v));
 
-    let avg_acc_white = if accuracy_white_count > 0 {
-        total_accuracy_white / accuracy_white_count
-    } else {
-        0
-    };
-    let avg_acc_black = if accuracy_black_count > 0 {
-        total_accuracy_black / accuracy_black_count
-    } else {
-        0
-    };
-
     html! {
         div class="max-w-4xl mx-auto" {
 
@@ -349,8 +320,8 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
             div class="flex items-center gap-3 mb-4 pt-10" {
                 p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Favourite Openings" }
             }
-            div class="grid grid-cols-1 sm:grid-cols-2 gap-px" {
-                div class="bg-zinc-900 p-7 border-l-2 border-zinc-400 hover:bg-zinc-800 transition-colors" {
+            div class="grid grid-cols-1 sm:grid-cols-2" {
+                div class="p-7 border border-shade-color border-l-2 border-l-zinc-400" {
                     p class="text-gray-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2" {
                         span class="inline-block w-2 h-2 rounded-full bg-zinc-300" {}
                         "As White"
@@ -364,7 +335,7 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
                         p class="text-zinc-600 text-base" { "No data" }
                     }
                 }
-                div class="bg-zinc-900 p-7 border-l-2 border-primary-color hover:bg-zinc-800 transition-colors" {
+                div class="p-7 border border-shade-color border-l-2 border-l-primary-color" {
                     p class="text-gray-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2" {
                         span class="inline-block w-2 h-2 rounded-full bg-primary-color" {}
                         "As Black"
@@ -380,60 +351,31 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
                 }
             }
 
-            @if accuracy_white_count > 0 || accuracy_black_count > 0 {
-                div class="flex items-center gap-3 mb-4 mt-10" {
-                    p class="text-amber-400 text-sm font-semibold uppercase tracking-wider" { "Average Accuracy" }
-                    div class="flex-1 h-px bg-zinc-800" {}
-                }
-                div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-zinc-800 mb-10" {
-                    div class="bg-zinc-900 p-6 flex items-center justify-between hover:bg-zinc-800 transition-colors" {
-                        div {
-                            p class="text-zinc-500 text-xs uppercase tracking-wider mb-3" { "♙ White" }
-                            div class="w-32 h-1 bg-zinc-800 rounded-full overflow-hidden" {
-                                div class="h-full bg-amber-400 rounded-full"
-                                    style=(format!("width:{}%", avg_acc_white)) {}
-                            }
-                        }
-                        p class="text-4xl font-bold text-amber-400" { (avg_acc_white) "%" }
-                    }
-                    div class="bg-zinc-900 p-6 flex items-center justify-between hover:bg-zinc-800 transition-colors" {
-                        div {
-                            p class="text-zinc-500 text-xs uppercase tracking-wider mb-3" { "♟ Black" }
-                            div class="w-32 h-1 bg-zinc-800 rounded-full overflow-hidden" {
-                                div class="h-full bg-amber-400 rounded-full"
-                                    style=(format!("width:{}%", avg_acc_black)) {}
-                            }
-                        }
-                        p class="text-4xl font-bold text-amber-400" { (avg_acc_black) "%" }
-                    }
-                }
-            }
-
             div class="flex items-center gap-3 mb-4 pt-4" {
                 p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Recent Games" }
             }
-            div class="flex flex-col gap-px bg-zinc-800" {
+            div class="flex flex-col border-t border-shade-color" {
                 @for game in games.iter().take(15) {
                     @let main_player_color = if game.players.white.user.as_ref().map(|u| u.name.as_str()) == Some("chemchu") { "white" } else { "black" };
                     @let (border, badge_cls, result_label) = match (&game.winner, main_player_color) {
                         (Some(Winner::White), "white") | (Some(Winner::Black), "black") => (
-                            "border-l-2 border-emerald-500",
+                            "border-l-2 border-l-emerald-500",
                             "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
                             "Win"
                         ),
                         (Some(Winner::White), "black") | (Some(Winner::Black), "white") => (
-                            "border-l-2 border-rose-500",
+                            "border-l-2 border-l-rose-500",
                             "bg-rose-500/10 text-rose-400 border border-rose-500/20",
                             "Loss"
                         ),
                         (None, _) => (
-                            "border-l-2 border-primary-color",
+                            "border-l-2 border-l-primary-color",
                             "bg-primary-color/10 text-primary-color border border-primary-color/20",
                             "Draw"
                         ),
                         _ => (
-                            "border-l-2 border-zinc-600",
-                            "bg-zinc-800 text-zinc-400 border border-zinc-600/20",
+                            "border-l-2 border-l-shade-color",
+                            "bg-shade-color text-zinc-400 border border-shade-color",
                             "Unknown"
                         ),
                     };
@@ -441,14 +383,14 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
                         .map(|o| o.name.as_str())
                         .unwrap_or("Unknown Opening");
                     @let speed = format!("{:?}", game.speed);
-                    div class=(format!("bg-zinc-900 {} px-5 py-4 flex items-center justify-between hover:bg-zinc-800 transition-all hover:pl-7 text-sm", border)) {
+                    div class=(format!("{} px-5 py-4 flex items-center justify-between border-b border-r border-shade-color hover:bg-shade-color transition-all hover:pl-7 text-sm", border)) {
                         div {
                             p class="text-zinc-100" { (opening_name) }
                             p class="text-zinc-600 text-xs mt-1" { "#" (game.id) " played as " (main_player_color) }
                         }
                         div class="flex items-center gap-4" {
                             p class="text-zinc-500 text-xs uppercase tracking-wide hidden sm:block" { (speed) }
-                            span class=(format!("text-xs uppercase tracking-wider px-2 py-1 rounded {}", badge_cls)) {
+                            span class=(format!("text-xs uppercase tracking-wider px-2 py-1 {}", badge_cls)) {
                                 (result_label)
                             }
                         }
