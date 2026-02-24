@@ -78,6 +78,7 @@ async fn chess_games_analysis(app_state: web::Data<AppState>) -> Html {
     let data = ChessModule::get_last_games_analysis(
         &app_state.lichess_state.lichess_token,
         &app_state.lichess_state.lichess_username,
+        10,
     )
     .await;
 
@@ -210,7 +211,7 @@ fn render_chess_page(
 
     html! {
         div class="flex flex-col w-full gap-6 md:p-6 lg:p-8 overflow-y-auto h-full" {
-            h1 class="text-4xl font-bold" { "Chess Journey" }
+            h1 class="text-4xl font-bold pb-4" { "Chess Journey" }
             div id="chess-stats" {
                 div class="text-bright-color w-full" {
                     div class="container mx-auto max-w-6xl h-full" {
@@ -273,7 +274,7 @@ fn render_chess_page(
                         hx-trigger="load"
                         hx-target="this"
                         hx-swap="innerHTML"
-                        class="w-full min-w-0 overflow-y-auto"
+                        class="w-full min-w-0 overflow-y-auto pt-10"
                         { "Loading..." }
                     }
                 }
@@ -291,9 +292,29 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
     for game in &games {
         if let Some(opening) = &game.opening {
             if game.players.white.user.as_ref().map(|u| u.name.as_str()) == Some("chemchu") {
-                *white_openings.entry(opening.name.clone()).or_insert(0) += 1;
+                *white_openings
+                    .entry(
+                        opening
+                            .name
+                            .clone()
+                            .split_once(":")
+                            .unwrap_or((opening.name.clone().as_str(), ""))
+                            .0
+                            .to_string(),
+                    )
+                    .or_insert(0) += 1;
             } else {
-                *black_openings.entry(opening.name.clone()).or_insert(0) += 1;
+                *black_openings
+                    .entry(
+                        opening
+                            .name
+                            .clone()
+                            .split_once(":")
+                            .unwrap_or((opening.name.clone().as_str(), ""))
+                            .0
+                            .to_string(),
+                    )
+                    .or_insert(0) += 1;
             }
         }
     }
@@ -309,7 +330,7 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
         .map(|(k, v)| (k.clone(), *v));
 
     html! {
-        div class="max-w-4xl mx-auto" {
+        div class="w-full mx-auto" {
 
             header {
                 h1 class="text-3xl font-bold tracking-tight mb-2" { "Game Analysis" }
@@ -318,7 +339,7 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
             }
 
             div class="flex items-center gap-3 mb-4 pt-10" {
-                p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Favourite Openings" }
+                p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Recently played openings" }
             }
             div class="grid grid-cols-1 sm:grid-cols-2" {
                 div class="p-7 border border-shade-color border-l-2 border-l-zinc-400" {
@@ -329,7 +350,8 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
                     @if let Some((name, count)) = &top_white_opening {
                         p class="text-zinc-100 text-lg font-semibold leading-snug mb-2" { (name) }
                         p class="text-zinc-500 text-xs" {
-                            "Played " span class="text-primary-color" { (count) } " times"
+                            "Played " span class="text-primary-color" { (count) }
+                            (if *count == 1 {" time"} else {" times"}) " recently"
                         }
                     } @else {
                         p class="text-zinc-600 text-base" { "No data" }
@@ -343,7 +365,8 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
                     @if let Some((name, count)) = &top_black_opening {
                         p class="text-zinc-100 text-lg font-semibold leading-snug mb-2" { (name) }
                         p class="text-zinc-500 text-xs" {
-                            "Played " span class="text-primary-color" { (count) } " times"
+                            "Played " span class="text-primary-color" { (count) }
+                            (if *count == 1 {" time"} else {" times"}) " recently"
                         }
                     } @else {
                         p class="text-zinc-600 text-base" { "No data" }
@@ -355,7 +378,7 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
                 p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Recent Games" }
             }
             div class="flex flex-col border-t border-shade-color" {
-                @for game in games.iter().take(15) {
+                @for game in games.iter() {
                     @let main_player_color = if game.players.white.user.as_ref().map(|u| u.name.as_str()) == Some("chemchu") { "white" } else { "black" };
                     @let (border, badge_cls, result_label) = match (&game.winner, main_player_color) {
                         (Some(Winner::White), "white") | (Some(Winner::Black), "black") => (

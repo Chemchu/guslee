@@ -52,12 +52,14 @@ impl ChessModule {
     pub async fn get_last_games_analysis(
         token: &str,
         username: &str,
+        number_of_games: usize,
     ) -> Result<Vec<Game>, reqwest::Error> {
         let client = reqwest::Client::new();
         let response = client
             .get(format!(
-                "https://lichess.org/api/games/user/{}?opening=true&perfType=rapid",
-                username
+                "https://lichess.org/api/games/user/{}?opening=true&perfType=rapid&accuracy=true&max={}",
+                username,
+                number_of_games
             ))
             .header("Accept", "application/x-ndjson")
             .header("Authorization", format!("Bearer {}", token))
