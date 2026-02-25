@@ -19,7 +19,7 @@ pub struct PostsSearchEngine {
 }
 
 impl PostsSearchEngine {
-    pub async fn new(documents_path: &str) -> PostsSearchEngine {
+    pub async fn new(repo_path: &str, documents_path: &str) -> PostsSearchEngine {
         let mut posts: Vec<Post> = Vec::new();
         for entry in WalkDir::new(documents_path) {
             let entry = entry.expect("Error while accessing the WalkDir entry");
@@ -40,7 +40,7 @@ impl PostsSearchEngine {
                         let post = Post {
                             file_name,
                             file_path,
-                            metadata: extract_full_metadata(full_path.as_str()).unwrap(),
+                            metadata: extract_full_metadata(repo_path, full_path.as_str()).unwrap(),
                             content,
                         };
                         posts.push(post);
@@ -69,6 +69,8 @@ impl PostsSearchEngine {
             DEFINE FIELD metadata.tags ON posts TYPE array<string>;
             DEFINE FIELD metadata.date ON posts TYPE string;
             DEFINE FIELD metadata.topic ON posts TYPE option<string>;
+            DEFINE FIELD metadata.post_source_url ON posts TYPE string;
+            DEFINE FIELD metadata.is_draft ON posts TYPE bool DEFAULT false;
             DEFINE FIELD content ON posts TYPE string;
             DEFINE INDEX file_path_index ON TABLE posts COLUMNS file_path UNIQUE;
 
@@ -125,6 +127,7 @@ impl PostsSearchEngine {
                 FROM posts 
                 WHERE metadata.title @0@ '{}' 
                    OR content @1@ '{}'
+                   AND metadata.is_draft = false
                 ORDER BY combined_score DESC
                 LIMIT {}",
                 query, query, limit
@@ -137,7 +140,7 @@ impl PostsSearchEngine {
 
     pub async fn get_post(&self, file_path: &str) -> Option<Post> {
         self.db
-            .query("SELECT * FROM posts WHERE file_path = $path")
+            .query("SELECT * FROM posts WHERE file_path = $path AND metadata.is_draft = false")
             .bind(("path", file_path.to_string()))
             .await
             .unwrap()
@@ -194,8 +197,7 @@ impl PostsSearchEngine {
             return GraphData::empty();
         }
 
-        let query =
-            "SELECT ->points_to->posts.* as related_posts FROM posts WHERE file_path = $file_path";
+        let query = "SELECT ->points_to->posts.* as related_posts FROM posts WHERE file_path = $file_path AND metadata.is_draft = false";
 
         let mut result = self
             .db

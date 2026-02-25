@@ -13,6 +13,10 @@ pub struct MdMetadata {
     pub description: String,
     pub tags: Vec<String>,
     pub date: String,
+    #[serde(default)]
+    pub post_source_url: String,
+    #[serde(default)]
+    pub is_draft: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -23,7 +27,7 @@ pub struct Post {
     pub content: String,
 }
 
-pub fn extract_full_metadata(post_path: &str) -> Option<MdMetadata> {
+pub fn extract_full_metadata(repo_source: &str, post_path: &str) -> Option<MdMetadata> {
     use gray_matter::engine::YAML;
     let matter = Matter::<YAML>::new();
     let content = fs::read_to_string(post_path).ok()?;
@@ -36,4 +40,16 @@ pub fn extract_full_metadata(post_path: &str) -> Option<MdMetadata> {
             None
         }
     }
+    .map(|mut md_metadata| {
+        md_metadata.post_source_url = format!(
+            "{}{}",
+            repo_source,
+            post_path
+                .split_once(".")
+                .unwrap_or(("", post_path))
+                .1
+                .to_string()
+        );
+        md_metadata
+    })
 }

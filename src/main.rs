@@ -64,6 +64,11 @@ async fn main() -> std::io::Result<()> {
         .expect("STEAM_ID not defined")
         .to_string();
 
+    let repo_source = env_vars
+        .get("REPO_SOURCE")
+        .expect("REPO_SOURCE not defined")
+        .to_string();
+
     info!("Initializing Spotify state...");
     let spotify_state = Arc::new(tokio::sync::Mutex::new(
         music_module::SpotifyState::from_refresh_token(
@@ -75,7 +80,7 @@ async fn main() -> std::io::Result<()> {
     ));
 
     info!("Creating in-memory full-text search engine...");
-    let search_engine = Arc::new(PostsSearchEngine::new("./garden").await);
+    let search_engine = Arc::new(PostsSearchEngine::new(repo_source.as_str(), "./garden").await);
     info!("Search engine created correctly");
 
     info!("Server starting on port 3000");

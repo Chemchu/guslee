@@ -134,7 +134,7 @@ async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
         .post_search_engine
         .raw_query::<Vec<Post>>(
             format!(
-                "SELECT * FROM posts WHERE file_name IN [{}]",
+                "SELECT * FROM posts WHERE file_name AND metadata.is_draft = false IN [{}]",
                 default_posts_string,
             )
             .as_str(),
@@ -287,9 +287,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
                 hx-target="#upper-right-section"
                 hx-swap="innerHTML"
                 class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
-                {
-                    "Loading..."
-                }
+                {}
             }
             div
             class="flex flex-col flex-grow w-full"
