@@ -71,6 +71,7 @@ impl PostsSearchEngine {
             DEFINE FIELD metadata.topic ON posts TYPE option<string>;
             DEFINE FIELD metadata.post_source_url ON posts TYPE string;
             DEFINE FIELD metadata.is_draft ON posts TYPE bool DEFAULT false;
+            DEFINE FIELD metadata.reading_time ON posts TYPE integer;
             DEFINE FIELD content ON posts TYPE string;
             DEFINE INDEX file_path_index ON TABLE posts COLUMNS file_path UNIQUE;
 
