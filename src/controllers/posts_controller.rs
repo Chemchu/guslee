@@ -286,7 +286,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
                 hx-trigger="load"
                 hx-target="#upper-right-section"
                 hx-swap="innerHTML"
-                class="flex w-full flex-grow cursor-grab active:cursor-grabbing"
+                class="flex w-full flex-grow cursor-grab active:cursor-grabbing h-full"
                 {}
             }
             div

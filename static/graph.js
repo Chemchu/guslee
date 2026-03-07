@@ -121,6 +121,8 @@ function renderGraph(targetContainerId) {
     simulation.alpha(0.3).restart();
   }
 
+  setTimeout(handleResize, 10);
+
   // Debounce resize to avoid excessive recalculations
   let resizeTimer;
   window.addEventListener("resize", () => {
