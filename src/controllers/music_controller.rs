@@ -44,8 +44,8 @@ async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> H
 
 fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
     html! {
-        div class="flex flex-col w-full gap-8 p-6 lg:p-8 overflow-auto" {
-            div {
+        div class="flex flex-col w-full gap-4 p-6 lg:p-8 overflow-auto" {
+            div class="bg-[#1F1F1F] p-6 border border-shade-color" {
                 div class="flex items-center gap-6" {
                     a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" {
                         img src=(user.images.into_iter().next().unwrap().url)
@@ -70,8 +70,8 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                 }
             }
 
-            div class="grid grid-cols-1 lg:grid-cols-2 gap-8" {
-                div class="flex flex-col gap-4" {
+            div class="grid grid-cols-1 lg:grid-cols-2 gap-4" {
+                div class="flex flex-col gap-4 min-w-0 bg-[#1F1F1F] p-6 border border-shade-color" {
                     div class="flex items-center gap-3 mb-2" {
                         div class="w-1 h-16 bg-primary-color rounded-full" {}
                         div class="flex flex-col gap-1 w-full" {
@@ -87,20 +87,19 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                                     hx-swap="outerHTML" {
                                         "Last year"
                                         span class="text-sm opacity-90 transition-all duration-300 inline-block group-hover:opacity-100 group-hover:rotate-180" { "⟳" }
-
                                 }
                             }
                         }
                     }
                     div id="top-tracks"
-                    hx-get="/music/user-top/tracks/long_term"
-                    hx-target="this"
-                    hx-trigger="load"
-                    hx-swap="innerHTML" {
+                        hx-get="/music/user-top/tracks/long_term"
+                        hx-target="this"
+                        hx-trigger="load"
+                        hx-swap="innerHTML" {
                         "Loading..."
                     }
                 }
-                div class="flex flex-col gap-4" {
+                div class="flex flex-col gap-4 min-w-0 bg-[#1F1F1F] p-6 border border-shade-color" {
                     div class="flex items-center gap-3 mb-2" {
                         div class="w-1 h-16 bg-primary-color rounded-full" {}
                         div class="flex flex-col gap-1 w-full" {
@@ -114,7 +113,7 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                                     hx-get="/music/time-range/artists/long_term/next"
                                     hx-target="this"
                                     hx-swap="outerHTML" {
-                                       "Last year"
+                                        "Last year"
                                         span class="text-sm opacity-90 transition-all duration-300 inline-block group-hover:opacity-100 group-hover:rotate-180" { "⟳" }
                                 }
                             }
@@ -297,6 +296,7 @@ fn render_tracks_list(top_tracks: &TopTracksResponse) -> PreEscaped<String> {
                     div class="flex flex-1 min-w-0 overflow-hidden" {
                         iframe
                             src={(song.external_urls.spotify.replace("open.spotify.com/track", "open.spotify.com/embed/track"))"?utm_source=generator&theme=0"}
+                            class="text-primary-color"
                             width="100%"
                             height="80"
                             frameborder="0"
