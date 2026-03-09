@@ -76,34 +76,6 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                         div class="w-1 h-16 bg-primary-color rounded-full" {}
                         div class="flex flex-col gap-1 w-full" {
                             h2 class="text-2xl font-bold text-bright-color" {
-                                "Top Artists"
-                            }
-                            h3 id="artists-time-range"
-                                class="text-lg font-bold text-bright-color cursor-pointer hover:text-primary-color transition-colors select-none" {
-                                span
-                                    class="flex items-center gap-2 group"
-                                    hx-get="/music/time-range/artists/long_term/next"
-                                    hx-target="this"
-                                    hx-swap="outerHTML" {
-                                       "Last year"
-                                        span class="text-sm opacity-90 transition-all duration-300 inline-block group-hover:opacity-100 group-hover:rotate-180" { "⟳" }
-                                }
-                            }
-                        }
-                    }
-                    div id="top-artists"
-                        hx-get="/music/user-top/artists/long_term"
-                        hx-target="this"
-                        hx-trigger="load"
-                        hx-swap="innerHTML" {
-                        "Loading..."
-                    }
-                }
-                div class="flex flex-col gap-4" {
-                    div class="flex items-center gap-3 mb-2" {
-                        div class="w-1 h-16 bg-primary-color rounded-full" {}
-                        div class="flex flex-col gap-1 w-full" {
-                            h2 class="text-2xl font-bold text-bright-color" {
                                 "Top Songs"
                             }
                             h3 id="tracks-time-range"
@@ -125,6 +97,34 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                     hx-target="this"
                     hx-trigger="load"
                     hx-swap="innerHTML" {
+                        "Loading..."
+                    }
+                }
+                div class="flex flex-col gap-4" {
+                    div class="flex items-center gap-3 mb-2" {
+                        div class="w-1 h-16 bg-primary-color rounded-full" {}
+                        div class="flex flex-col gap-1 w-full" {
+                            h2 class="text-2xl font-bold text-bright-color" {
+                                "Top Artists"
+                            }
+                            h3 id="artists-time-range"
+                                class="text-lg font-bold text-bright-color cursor-pointer hover:text-primary-color transition-colors select-none" {
+                                span
+                                    class="flex items-center gap-2 group"
+                                    hx-get="/music/time-range/artists/long_term/next"
+                                    hx-target="this"
+                                    hx-swap="outerHTML" {
+                                       "Last year"
+                                        span class="text-sm opacity-90 transition-all duration-300 inline-block group-hover:opacity-100 group-hover:rotate-180" { "⟳" }
+                                }
+                            }
+                        }
+                    }
+                    div id="top-artists"
+                        hx-get="/music/user-top/artists/long_term"
+                        hx-target="this"
+                        hx-trigger="load"
+                        hx-swap="innerHTML" {
                         "Loading..."
                     }
                 }
@@ -258,20 +258,18 @@ async fn cycle_time_range(
 
 fn render_artists_list(top_artists: &TopArtistsResponse) -> PreEscaped<String> {
     html! {
-        div class="flex flex-col gap-3" {
-            @for (i, artist) in top_artists.items.iter().enumerate() {
+        div class="flex flex-col gap-2" {
+            @for artist in top_artists.items.iter() {
                 a href=(artist.external_urls.spotify) target="_blank" rel="noopener noreferrer"
-                    class="group bg-bright-color/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-bright-color/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-primary-color/10 border border-shade-color hover:border-primary-color" {
-                    div class="text-xl font-bold group-hover:text-primary-color w-8 text-center" {
-                        (i + 1)
-                    }
+                    style="background-color:#1F1F1F;"
+                    class="group h-[90px] p-4 flex items-center gap-4 hover:brightness-125 transition-all duration-300 border border-transparent hover:border-primary-color" {
                     img src=(artist.images.first().unwrap().url)
-                        class="w-14 h-14 rounded-full shadow-md group-hover:shadow-xl transition-shadow duration-300 group-hover:ring-primary-color" {}
+                        class="w-14 h-14 rounded-full shadow-md" {}
                     div class="flex-1 min-w-0" {
-                        h3 class="font-semibold text-base text-bright-color truncate group-hover:text-primary-color transition-colors" {
+                        h3 class="font-semibold text-base text-white truncate" {
                             (artist.name)
                         }
-                        p class="text-gray-400 text-sm truncate" {
+                        p class="text-white/50 text-sm truncate" {
                             @if let Some(genre) = artist.genres.first() {
                                 (genre)
                             } @else {
@@ -280,7 +278,7 @@ fn render_artists_list(top_artists: &TopArtistsResponse) -> PreEscaped<String> {
                         }
                     }
                     div class="text-right" {
-                        p class="font-medium text-sm text-gray-300" {
+                        p class="font-medium text-sm text-white/50" {
                             (artist.popularity) "%"
                         }
                     }
@@ -292,27 +290,19 @@ fn render_artists_list(top_artists: &TopArtistsResponse) -> PreEscaped<String> {
 
 fn render_tracks_list(top_tracks: &TopTracksResponse) -> PreEscaped<String> {
     html! {
-        div class="flex flex-col gap-3" {
-            @for (i, song) in top_tracks.items.iter().enumerate() {
-                a href=(song.external_urls.spotify) target="_blank" rel="noopener noreferrer"
-                    class="group bg-bright-color/5 backdrop-blur-sm p-4 flex items-center gap-4 hover:bg-bright-color/10 transition-all duration-300 hover:translate-x-2 hover:shadow-lg hover:shadow-primary-color/10 border border-shade-color hover:border-primary-color" {
-                    div class="text-xl font-bold group-hover:text-primary-color w-8 text-center" {
-                        (i + 1)
-                    }
-                    img src=(song.album.images.first().unwrap().url)
-                        class="w-14 h-14 rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300" {}
-                    div class="flex-1 min-w-0" {
-                        h3 class="font-semibold text-base text-bright-color truncate group-hover:text-primary-color transition-colors" {
-                            (song.name)
-                        }
-                        p class="text-gray-400 text-sm truncate" {
-                            (song.artists.first().unwrap().name)
-                        }
-                    }
-                    div class="text-right" {
-                        p class="font-medium text-sm text-gray-300" {
-                            (ms_to_min(&song.duration_ms))
-                        }
+        div class="flex flex-col gap-2" {
+            @for song in top_tracks.items.iter() {
+                div style="background-color:#1F1F1F;"
+                    class="group flex items-center justify-center h-[90px] border border-transparent hover:border-primary-color hover:brightness-125 transition-all duration-300" {
+                    div class="flex flex-1 min-w-0 overflow-hidden" {
+                        iframe
+                            src={(song.external_urls.spotify.replace("open.spotify.com/track", "open.spotify.com/embed/track"))"?utm_source=generator&theme=0"}
+                            width="100%"
+                            height="80"
+                            frameborder="0"
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            loading="lazy"
+                            style="border-radius:0px; display:block;" {}
                     }
                 }
             }
@@ -331,12 +321,4 @@ fn title_case(s: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
-}
-
-fn ms_to_min(ms: &u32) -> String {
-    let seg = ms / 1000;
-    let last_seg = seg % 60;
-    let min = seg / 60;
-
-    format!("{}:{}", min, last_seg)
 }
