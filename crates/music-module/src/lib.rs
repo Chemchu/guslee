@@ -240,20 +240,6 @@ impl SpotifyState {
         Ok(content)
     }
 
-    /* pub async fn fetch_top_tracks(
-        &mut self,
-        time_range: &str,
-    ) -> Result<TopTracksResponse, Box<dyn std::error::Error>> {
-        self.fetch_top_items("tracks", time_range).await
-    }
-
-    pub async fn fetch_top_artists(
-        &mut self,
-        time_range: &str,
-    ) -> Result<TopArtistsResponse, Box<dyn std::error::Error>> {
-        self.fetch_top_items("artists", time_range).await
-    } */
-
     pub async fn fetch_top_items<T: serde::de::DeserializeOwned>(
         &mut self,
         item_type: &str,

@@ -45,7 +45,7 @@ async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> H
 fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
     html! {
         div class="flex flex-col w-full gap-4 p-6 lg:p-8 overflow-auto" {
-            div class="bg-[#1F1F1F] p-6 border border-shade-color" {
+            div class="bg-background-color p-6 border border-shade-color border-l-[3px] border-l-primary-color" {
                 div class="flex items-center gap-6" {
                     a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" {
                         img src=(user.images.into_iter().next().unwrap().url)
@@ -71,9 +71,9 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
             }
 
             div class="grid grid-cols-1 lg:grid-cols-2 gap-4" {
-                div class="flex flex-col gap-4 min-w-0 bg-[#1F1F1F] p-6 border border-shade-color" {
+                div class="flex flex-col gap-4 min-w-0 bg-background-color p-6" {
                     div class="flex items-center gap-3 mb-2" {
-                        div class="w-1 h-16 bg-primary-color rounded-full" {}
+                        div class="w-[3px] h-8 bg-primary-color" {}
                         div class="flex flex-col gap-1 w-full" {
                             h2 class="text-2xl font-bold text-bright-color" {
                                 "Top Songs"
@@ -99,9 +99,9 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                         "Loading..."
                     }
                 }
-                div class="flex flex-col gap-4 min-w-0 bg-[#1F1F1F] p-6 border border-shade-color" {
+                div class="flex flex-col gap-4 min-w-0 bg-background-color p-6" {
                     div class="flex items-center gap-3 mb-2" {
-                        div class="w-1 h-16 bg-primary-color rounded-full" {}
+                        div class="w-[3px] h-8 bg-primary-color" {}
                         div class="flex flex-col gap-1 w-full" {
                             h2 class="text-2xl font-bold text-bright-color" {
                                 "Top Artists"
@@ -277,8 +277,12 @@ fn render_artists_list(top_artists: &TopArtistsResponse) -> PreEscaped<String> {
                         }
                     }
                     div class="text-right" {
-                        p class="font-medium text-sm text-white/50" {
+                        p class="font-medium text-sm text-primary-color" {
                             (artist.popularity) "%"
+                        }
+                        div class="w-14 h-[2px] bg-shade-color mt-1" {
+                            div class="h-full bg-primary-color"
+                                style={ "width:" (artist.popularity) "%" } {}
                         }
                     }
                 }
