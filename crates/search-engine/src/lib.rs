@@ -1,9 +1,11 @@
 use regex::Regex;
 use serde::Deserialize;
 use std::fs;
+use surrealdb::Surreal;
 use surrealdb::engine::any::Any;
 use surrealdb::engine::any::connect;
-use surrealdb::{Response, Surreal};
+#[cfg(debug_assertions)]
+use surrealdb::types::SurrealValue;
 use walkdir::WalkDir;
 
 use crate::types::EdgeFilePath;
@@ -118,7 +120,7 @@ impl PostsSearchEngine {
         };
 
         let query = params.query.as_ref().unwrap().to_lowercase();
-        let mut response: Response = self
+        let mut response = self
             .db
             .query(format!(
                 "SELECT *,
@@ -239,9 +241,20 @@ impl PostsSearchEngine {
         GraphData { nodes, edges }
     }
 
-    pub async fn raw_query<T>(&self, query: &str) -> T
+    /* pub async fn raw_query<T>(&self, query: &str) -> T
     where
         T: for<'de> serde::Deserialize<'de> + Default,
+        usize: surrealdb::opt::QueryResult<T>,
+    {
+        match self.db.query(query).await {
+            Ok(mut r) => r.take::<T>(0).unwrap_or_default(),
+            Err(_) => T::default(),
+        }
+    } */
+
+    pub async fn raw_query<T>(&self, query: &str) -> T
+    where
+        T: for<'de> serde::Deserialize<'de> + Default + SurrealValue,
         usize: surrealdb::opt::QueryResult<T>,
     {
         match self.db.query(query).await {
@@ -251,7 +264,7 @@ impl PostsSearchEngine {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(SurrealValue, Deserialize)]
 struct QueryRelatedPostResult {
     related_posts: Vec<Post>,
 }

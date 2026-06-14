@@ -2,7 +2,7 @@ use actix_web::{
     HttpRequest, Responder, get,
     web::{self, Data, Html},
 };
-use cached::proc_macro::cached;
+use cached::cached;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::{PreEscaped, html};
 use search_engine::{

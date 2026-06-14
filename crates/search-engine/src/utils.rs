@@ -2,11 +2,12 @@ use std::fs;
 
 use gray_matter::Matter;
 use serde::{Deserialize, Serialize};
+use surrealdb::types::SurrealValue;
 
 pub struct TitleField;
 pub struct TagsField;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(SurrealValue, Serialize, Deserialize, Debug, Clone)]
 pub struct PostMetadata {
     pub title: String,
     pub topic: Option<String>,
@@ -17,7 +18,7 @@ pub struct PostMetadata {
     pub is_draft: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(SurrealValue, Debug, Serialize, Deserialize, Clone)]
 pub struct Post {
     pub file_name: String,
     pub file_path: String,
@@ -25,7 +26,7 @@ pub struct Post {
     pub content: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(SurrealValue, Serialize, Deserialize, Debug, Clone)]
 pub struct MdMetadata {
     pub title: String,
     pub topic: Option<String>,

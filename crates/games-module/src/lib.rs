@@ -310,7 +310,7 @@ impl SteamState {
             .filter(|game| game.playtime_forever > 0)
             .collect();
 
-        owned_games.sort_by(|a, b| b.playtime_forever.cmp(&a.playtime_forever));
+        owned_games.sort_by_key(|b| std::cmp::Reverse(b.playtime_forever));
         owned_games.truncate(top_games_count as usize);
 
         let achievement_futures: Vec<_> = owned_games

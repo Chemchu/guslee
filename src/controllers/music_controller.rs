@@ -2,10 +2,9 @@ use actix_web::{
     HttpRequest, get,
     web::{self, Html},
 };
-use cached::proc_macro::cached;
+use cached::cached;
 use maud::{PreEscaped, html};
 use music_module::{SpotifyUser, TopArtistsResponse, TopTracksResponse};
-use std::time::Duration;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
@@ -138,7 +137,7 @@ pub enum TopItems {
 }
 
 #[cached(
-    time = 86400,
+    ttl = 86400,
     key = "String",
     convert = r##"{ 
         format!(
@@ -187,7 +186,7 @@ async fn get_user_top_item(
 }
 
 #[cached(
-    time = 86400,
+    ttl = 86400,
     key = "String",
     convert = r##"{ 
         format!(

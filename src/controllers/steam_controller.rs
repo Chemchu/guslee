@@ -2,10 +2,9 @@ use actix_web::{
     HttpRequest, get,
     web::{self, Html},
 };
-use cached::proc_macro::cached;
+use cached::cached;
 use games_module::{RecentGame, SteamProfile, TopGame};
 use maud::{PreEscaped, html};
-use std::time::Duration;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
@@ -14,7 +13,7 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 }
 
 #[cached(
-    time = 3600,
+    ttl = 3600,
     key = "String",
     convert = r##"{ 
         format!(

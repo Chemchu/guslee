@@ -2,14 +2,14 @@ use actix_web::{
     HttpRequest, get,
     web::{self, Html},
 };
-use cached::proc_macro::cached;
+use cached::cached;
 use chess_module::{
     ChessModule,
     types::{Game, GameRatingHistory, LichessUser, Winner},
 };
 use maud::{PreEscaped, html};
 use serde_json::json;
-use std::{collections::HashMap, time::Duration};
+use std::collections::HashMap;
 
 use crate::controllers::{AppState, wrap_content_into_full_page};
 
@@ -19,7 +19,7 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 }
 
 #[cached(
-    time = 3600,
+    ttl = 3600,
     key = "String",
     convert = r##"{
         format!(
@@ -69,7 +69,7 @@ async fn chess_stats_by_game(
 }
 
 #[cached(
-    time = 3600,
+    ttl = 3600,
     key = "String",
     convert = r#"{ "chess-games-analysis".to_string() }"#
 )]

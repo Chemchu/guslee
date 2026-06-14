@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use surrealdb::types::SurrealValue;
 
 #[derive(Deserialize, Clone)]
 #[serde(untagged)]
@@ -52,7 +53,7 @@ pub struct GraphEdge {
     pub target: usize,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(SurrealValue, Deserialize, Debug)]
 pub struct EdgeFilePath {
     pub source: String,
     pub target: String,

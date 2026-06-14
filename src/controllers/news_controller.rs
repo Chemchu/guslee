@@ -5,8 +5,9 @@ use actix_web::{
 };
 use maud::html;
 use serde::{Deserialize, Serialize};
+use surrealdb::types::SurrealValue;
 
-#[derive(Serialize, Deserialize)]
+#[derive(SurrealValue, Serialize, Deserialize)]
 struct News {
     title: String,
     file_path: String,
