@@ -9,6 +9,8 @@ node_modules
 /.direnv/bin
 /.direnv/*
 /.direnv*
+/.devenv
+/.devenv.flake.nix
 tailwindcssss
 
 /target
