@@ -17,6 +17,7 @@ tailwindcssss
 
 /crates/**/target
 
+/result
 # Added by cargo
 #
 # already existing elements were commented out
