@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{APPNAME}}</title>
+    <meta name="htmx-config" content='{"includeIndicatorCSS": false}' />
     <script src="/_static/htmx.min.js"></script>
     <script src="/_static/d3-v7.min.js"></script>
     <script src="/_static/graph.js"></script>
@@ -19,16 +20,15 @@
       name="description"
       content="My personal digital garden, built with Rust + HTMX"
     />
-    <meta name="view-transition" content="same-origin" />
   </head>
   <body
     class="flex flex-col w-full h-dvh max-h-dvh bg-background-color text-bright-color"
-    hx-boost="true"
+    hx-boost:inherited="true"
   >
     <!-- Responsive header with search bar on mobile -->
     <div class="w-full max-h-10 flex justify-between items-center p-2 gap-2">
       <div
-        class="md:hidden flex-grow flex justify-between border border-shade-color focus-within:border-primary-color"
+        class="md:hidden grow flex justify-between border border-shade-color focus-within:border-primary-color"
       >
         <input
           id="mobile-search-input"
@@ -37,7 +37,7 @@
           name="query"
           placeholder="Search posts..."
           hx-get="/search"
-          hx-vals="{'limit': 100}"
+          hx-vals='{"limit": 100}'
           hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
           hx-target="#mobile-search-results"
           hx-swap="innerHTML"
@@ -50,9 +50,9 @@
           viewBox="0 0 24 24"
           stroke-width="1.5"
           stroke="currentColor"
-          class="cursor-pointer w-6 h-6 px-1 opacity-30 hover:opacity-80 flex-shrink-0"
+          class="cursor-pointer w-6 h-6 px-1 opacity-30 hover:opacity-80 shrink-0"
           hx-get="/search"
-          hx-vals="js:{'limit': 100, 'query': document.querySelector('#mobile-search-input').value}"
+          hx-vals="js:{limit: 100, query: document.querySelector('#mobile-search-input').value}"
           hx-trigger="click"
           hx-target="#mobile-search-results"
           hx-swap="innerHTML"
@@ -67,7 +67,7 @@
 
       <button
         id="mobile-menu-btn"
-        class="md:hidden hover:text-primary-color flex-shrink-0 cursor-pointer"
+        class="md:hidden hover:text-primary-color shrink-0 cursor-pointer"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -181,6 +181,15 @@
       class="hidden md:hidden flex-col gap-2 p-4 border-t border-b border-shade-color"
     >
       <a
+        id="home-section-mobile"
+        class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        href="/posts/welcome"
+        hx-trigger="click"
+        hx-target="#main-section"
+        hx-swap="innerHTML transition:true"
+        >HOME</a
+      >
+      <a
         id="news-section-mobile"
         class="cursor-pointer hover:text-primary-color whitespace-nowrap"
         href="/news"
@@ -203,6 +212,8 @@
         href="/chess/stats/rapid"
         hx-trigger="click"
         hx-target="#main-section"
+        hx-swap="innerHTML"
+        hx-indicator="#global-skeleton"
         class="cursor-pointer hover:text-primary-color py-2"
       >
         CHESS
@@ -212,6 +223,8 @@
         href="/music/profile"
         hx-trigger="click"
         hx-target="#main-section"
+        hx-swap="innerHTML"
+        hx-indicator="#global-skeleton"
         class="cursor-pointer hover:text-primary-color py-2"
       >
         MUSIC
@@ -221,6 +234,8 @@
         href="/steam"
         hx-trigger="click"
         hx-target="#main-section"
+        hx-swap="innerHTML"
+        hx-indicator="#global-skeleton"
         class="cursor-pointer hover:text-primary-color py-2"
       >
         GAMES
@@ -228,14 +243,14 @@
     </div>
 
     <div
-      class="flex-grow flex flex-col md:flex-row w-full border-t border-shade-color min-h-0"
+      class="grow flex flex-col md:flex-row w-full border-t border-shade-color min-h-0"
     >
       <div
         id="left-section"
-        class="hidden md:flex flex-col justify-between w-full md:w-72 lg:w-80 border-r border-shade-color pt-2 px-2 min-h-0 flex-shrink-0"
+        class="hidden md:flex flex-col justify-between w-full md:w-72 lg:w-80 border-r border-shade-color pt-2 px-2 min-h-0 shrink-0"
       >
         <div
-          class="flex justify-between border border-shade-color focus:border-primary-color"
+          class="flex justify-between border border-shade-color focus-within:border-primary-color"
         >
           <input
             id="desktop-search-input"
@@ -244,7 +259,7 @@
             name="query"
             placeholder="Search any post..."
             hx-get="/search"
-            hx-vals="{'limit': 100}"
+            hx-vals='{"limit": 100}'
             hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
             hx-target="#list-section"
             hx-swap="innerHTML"
@@ -256,9 +271,9 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="cursor-pointer w-6 h-6 md:w-8 md:h-8 px-1 opacity-30 hover:opacity-80 flex-shrink-0"
+            class="cursor-pointer w-6 h-6 md:w-8 md:h-8 px-1 opacity-30 hover:opacity-80 shrink-0"
             hx-get="/search"
-            hx-vals="js:{'limit': 100, 'query': document.querySelector('#desktop-search-input').value}"
+            hx-vals="js:{limit: 100, query: document.querySelector('#desktop-search-input').value}"
             hx-trigger="click"
             hx-target="#list-section"
             hx-swap="innerHTML"
@@ -273,9 +288,7 @@
 
         <div
           id="list-section"
-          class="flex-grow pt-2 overflow-auto"
-          hx-target="#list-section"
-          hx-swap="innerHTML"
+          class="grow pt-2 overflow-auto"
         >
           <div
             hx-get="/search?query=*&limit=100"
@@ -287,7 +300,7 @@
         </div>
       </div>
 
-      <div class="relative flex-grow min-h-0">
+      <div class="relative grow min-h-0">
         <div
           id="main-section"
           class="flex flex-col lg:flex-row justify-between h-full min-h-0"
@@ -397,11 +410,11 @@
           document.getElementById("mobile-menu").classList.toggle("hidden");
         });
 
-      // Mobile chess link - close menu after content loads
+      // Close the mobile menu once any of its links has loaded
       document
-        .getElementById("chess-link-mobile")
-        .addEventListener("htmx:afterRequest", function () {
-          document.getElementById("mobile-menu").classList.add("hidden");
+        .getElementById("mobile-menu")
+        .addEventListener("htmx:after:request", function () {
+          this.classList.add("hidden");
         });
     </script>
   </body>

@@ -13,8 +13,19 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 
 #[get("/schedule")]
 async fn get_current_schedule_activity() -> Html {
-    let current_hour = Utc::now().hour();
-    let schedule: HashMap<u32, &str> = HashMap::from([
+    let html = html! {
+        span
+        class="italic"
+        {
+            (schedule_activity(Utc::now().hour()))
+        }
+    };
+
+    Html::new(html)
+}
+
+fn schedule_activity(hour: u32) -> &'static str {
+    let schedule: HashMap<u32, &'static str> = HashMap::from([
         (0, "Coding, probably"),
         (1, "Coding, probably"),
         (2, "Sleeping, I hope"),
@@ -41,13 +52,33 @@ async fn get_current_schedule_activity() -> Html {
         (23, "Coding again, probably"),
     ]);
 
-    let html = html! {
-        span
-        class="italic"
-        {
-            (schedule.get(&current_hour).unwrap_or_else(|| &"I should probably see why the hour is not between 0 and 23..."))
-        }
-    };
+    schedule
+        .get(&hour)
+        .copied()
+        .unwrap_or("I should probably see why the hour is not between 0 and 23...")
+}
 
-    Html::new(html)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const FALLBACK: &str = "I should probably see why the hour is not between 0 and 23...";
+
+    #[test]
+    fn every_hour_of_the_day_has_an_activity() {
+        for hour in 0..24 {
+            assert_ne!(schedule_activity(hour), FALLBACK, "hour {hour}");
+        }
+    }
+
+    #[test]
+    fn known_hours_map_to_their_activity() {
+        assert_eq!(schedule_activity(4), "Sleeping");
+        assert_eq!(schedule_activity(12), "Lunch hehe");
+    }
+
+    #[test]
+    fn out_of_range_hours_fall_back() {
+        assert_eq!(schedule_activity(24), FALLBACK);
+    }
 }

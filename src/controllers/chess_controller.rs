@@ -5,97 +5,119 @@ use actix_web::{
 use cached::cached;
 use chess_module::{
     ChessModule,
-    types::{Game, GameRatingHistory, LichessUser, Winner},
+    types::{Game, GameRatingHistory, LichessUser, PerfStat, Perfs, Winner},
 };
 use maud::{PreEscaped, html};
 use serde_json::json;
 use std::collections::HashMap;
 
-use crate::controllers::{AppState, wrap_content_into_full_page};
+use crate::controllers::{AppState, render_page};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(chess_stats_by_game)
         .service(chess_games_analysis);
 }
 
-#[cached(
-    ttl = 3600,
-    key = "String",
-    convert = r##"{
-        format!(
-            "chess-{}-is_htmx_req-{}",
-            path.clone(),
-            req.headers().get("HX-Request").is_some()
-        )
-    }"##
-)]
 #[get("/chess/stats/{game_mode}")]
 async fn chess_stats_by_game(
     app_state: web::Data<AppState>,
     path: web::Path<String>,
     req: HttpRequest,
 ) -> Html {
-    let game_mode = path.into_inner();
-    let data = ChessModule::get_player_data(
-        &app_state.lichess_state.lichess_token,
-        &app_state.lichess_state.lichess_username,
+    let content = chess_stats_content(app_state.clone(), path.into_inner())
+        .await
+        .unwrap_or_else(|fallback| fallback);
+
+    render_page(&app_state, &req, &content)
+}
+
+#[get("/chess/games/analysis")]
+async fn chess_games_analysis(app_state: web::Data<AppState>) -> Html {
+    Html::new(
+        chess_games_analysis_content(app_state)
+            .await
+            .unwrap_or_else(|fallback| fallback),
     )
-    .await;
-
-    let (player_stats, rating_history) = match data {
-        Ok(data) => data,
-        Err(err) => {
-            eprintln!("Error fetching chess data: {}", err);
-            let template_path =
-                std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
-            let fallback_html =
-                std::fs::read_to_string(format!("{}/chess_stats_fallback.md", template_path))
-                    .unwrap_or_else(|_| "Error loading chess stats".to_string());
-            return Html::new(markdown::to_html(&fallback_html));
-        }
-    };
-
-    let is_htmx_req = req.headers().get("HX-Request").is_some();
-    if is_htmx_req {
-        Html::new(render_chess_page(game_mode, rating_history, player_stats))
-    } else {
-        Html::new(wrap_content_into_full_page(
-            &app_state.app_name,
-            render_chess_page(game_mode, rating_history, player_stats)
-                .0
-                .as_str(),
-        ))
-    }
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
+    key = "String",
+    convert = r#"{ format!("chess-{}", game_mode) }"#
+)]
+async fn chess_stats_content(
+    app_state: web::Data<AppState>,
+    game_mode: String,
+) -> Result<String, String> {
+    let (player_stats, rating_history) = ChessModule::get_player_data(&app_state.lichess_state)
+        .await
+        .map_err(|err| {
+            log::error!("Error fetching chess data: {}", err);
+            chess_fallback_html()
+        })?;
+
+    Ok(render_chess_page(game_mode, rating_history, player_stats).into_string())
+}
+
+#[cached(
+    ttl_secs = 3600,
     key = "String",
     convert = r#"{ "chess-games-analysis".to_string() }"#
 )]
-#[get("/chess/games/analysis")]
-async fn chess_games_analysis(app_state: web::Data<AppState>) -> Html {
-    let data = ChessModule::get_last_games_analysis(
-        &app_state.lichess_state.lichess_token,
-        &app_state.lichess_state.lichess_username,
-        10,
-    )
-    .await;
+async fn chess_games_analysis_content(app_state: web::Data<AppState>) -> Result<String, String> {
+    let games = ChessModule::get_last_games_analysis(&app_state.lichess_state, 10)
+        .await
+        .map_err(|err| {
+            log::error!("Error fetching chess games analysis: {}", err);
+            chess_fallback_html()
+        })?;
 
-    let games = match data {
-        Ok(data) => data,
-        Err(err) => {
-            eprintln!("Error fetching chess data: {}", err);
-            let template_path =
-                std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
-            let fallback_html =
-                std::fs::read_to_string(format!("{}/chess_stats_fallback.md", template_path))
-                    .unwrap_or_else(|_| "Error loading chess stats".to_string());
-            return Html::new(markdown::to_html(&fallback_html));
+    Ok(render_analysis_page(games, &app_state.lichess_state.lichess_username).into_string())
+}
+
+fn chess_fallback_html() -> String {
+    let template_path =
+        std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
+    let fallback_md = std::fs::read_to_string(format!("{}/chess_stats_fallback.md", template_path))
+        .unwrap_or_else(|_| "Error loading chess stats".to_string());
+    markdown::to_html(&fallback_md)
+}
+
+fn normalize_game_mode(game_mode: &str) -> String {
+    match game_mode {
+        "kingOfTheHill" => "King of the Hill".to_string(),
+        "racingKings" => "Racing Kings".to_string(),
+        "threeCheck" => "Three-check".to_string(),
+        "ultraBullet" => "UltraBullet".to_string(),
+        mode => {
+            let mut chars = mode.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => format!("{}{}", first.to_uppercase(), chars.as_str()),
+            }
         }
-    };
+    }
+}
 
-    Html::new(render_analysis_page(games))
+fn perf_for_mode<'a>(perfs: Option<&'a Perfs>, game_mode: &str) -> Option<&'a PerfStat> {
+    let perfs = perfs?;
+    match game_mode {
+        "ultraBullet" => perfs.ultra_bullet.as_ref(),
+        "bullet" => perfs.bullet.as_ref(),
+        "blitz" => perfs.blitz.as_ref(),
+        "rapid" => perfs.rapid.as_ref(),
+        "classical" => perfs.classical.as_ref(),
+        "correspondence" => perfs.correspondence.as_ref(),
+        "chess960" => perfs.chess960.as_ref(),
+        "crazyhouse" => perfs.crazyhouse.as_ref(),
+        "antichess" => perfs.antichess.as_ref(),
+        "atomic" => perfs.atomic.as_ref(),
+        "horde" => perfs.horde.as_ref(),
+        "kingOfTheHill" => perfs.king_of_the_hill.as_ref(),
+        "racingKings" => perfs.racing_kings.as_ref(),
+        "threeCheck" => perfs.three_check.as_ref(),
+        _ => perfs.blitz.as_ref(),
+    }
 }
 
 fn render_chess_page(
@@ -103,19 +125,8 @@ fn render_chess_page(
     rating_history: Vec<GameRatingHistory>,
     player_stats: LichessUser,
 ) -> PreEscaped<String> {
-    let game_mode_normalized = match game_mode.as_str() {
-        "kingOfTheHill" => "King of the Hill",
-        "racingKings" => "Racing Kings",
-        "threeCheck" => "Three-check",
-        "ultraBullet" => "UltraBullet",
-        mode => {
-            let mut chars = mode.chars();
-            match chars.next() {
-                None => "",
-                Some(first) => &format!("{}{}", first.to_uppercase(), chars.as_str()),
-            }
-        }
-    };
+    let game_mode_normalized = normalize_game_mode(&game_mode);
+    let game_mode_normalized = game_mode_normalized.as_str();
 
     let game_mode_history = rating_history
         .iter()
@@ -139,46 +150,7 @@ fn render_chess_page(
 
     let data_json = serde_json::to_string(&chart_data).unwrap_or_default();
 
-    let perf_stat = match game_mode_normalized {
-        "Blitz" => player_stats.perfs.as_ref().and_then(|p| p.blitz.as_ref()),
-        "Bullet" => player_stats.perfs.as_ref().and_then(|p| p.bullet.as_ref()),
-        "Rapid" => player_stats.perfs.as_ref().and_then(|p| p.rapid.as_ref()),
-        "Classical" => player_stats
-            .perfs
-            .as_ref()
-            .and_then(|p| p.classical.as_ref()),
-        "Correspondence" => player_stats
-            .perfs
-            .as_ref()
-            .and_then(|p| p.correspondence.as_ref()),
-        "Chess960" => player_stats
-            .perfs
-            .as_ref()
-            .and_then(|p| p.chess960.as_ref()),
-        "Crazyhouse" => player_stats
-            .perfs
-            .as_ref()
-            .and_then(|p| p.crazyhouse.as_ref()),
-        "Antichess" => player_stats
-            .perfs
-            .as_ref()
-            .and_then(|p| p.antichess.as_ref()),
-        "Atomic" => player_stats.perfs.as_ref().and_then(|p| p.atomic.as_ref()),
-        "Horde" => player_stats.perfs.as_ref().and_then(|p| p.horde.as_ref()),
-        "KingOfTheHill" => player_stats
-            .perfs
-            .as_ref()
-            .and_then(|p| p.king_of_the_hill.as_ref()),
-        "RacingKings" => player_stats
-            .perfs
-            .as_ref()
-            .and_then(|p| p.racing_kings.as_ref()),
-        "ThreeCheck" => player_stats
-            .perfs
-            .as_ref()
-            .and_then(|p| p.three_check.as_ref()),
-        _ => player_stats.perfs.as_ref().and_then(|p| p.blitz.as_ref()), // default to blitz
-    };
+    let perf_stat = perf_for_mode(player_stats.perfs.as_ref(), &game_mode);
 
     let current_rating = perf_stat.map(|p| p.rating).unwrap_or(0);
     let total_games = perf_stat.map(|p| p.games).unwrap_or(0);
@@ -283,7 +255,15 @@ fn render_chess_page(
     }
 }
 
-fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
+fn plays_white(game: &Game, username: &str) -> bool {
+    game.players
+        .white
+        .user
+        .as_ref()
+        .is_some_and(|user| user.name.eq_ignore_ascii_case(username))
+}
+
+fn render_analysis_page(games: Vec<Game>, username: &str) -> PreEscaped<String> {
     let total = games.len();
 
     let mut white_openings: HashMap<String, usize> = HashMap::new();
@@ -291,7 +271,7 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
 
     for game in &games {
         if let Some(opening) = &game.opening {
-            if game.players.white.user.as_ref().map(|u| u.name.as_str()) == Some("chemchu") {
+            if plays_white(game, username) {
                 *white_openings
                     .entry(
                         opening
@@ -379,7 +359,7 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
             }
             div class="flex flex-col border-t border-shade-color" {
                 @for game in games.iter() {
-                    @let main_player_color = if game.players.white.user.as_ref().map(|u| u.name.as_str()) == Some("chemchu") { "white" } else { "black" };
+                    @let main_player_color = if plays_white(game, username) { "white" } else { "black" };
                     @let (border, badge_cls, result_label) = match (&game.winner, main_player_color) {
                         (Some(Winner::White), "white") | (Some(Winner::Black), "black") => (
                             "border-l-2 border-l-emerald-500",
@@ -421,5 +401,93 @@ fn render_analysis_page(games: Vec<Game>) -> PreEscaped<String> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn standard_modes_are_capitalised() {
+        assert_eq!(normalize_game_mode("rapid"), "Rapid");
+        assert_eq!(normalize_game_mode("blitz"), "Blitz");
+        assert_eq!(normalize_game_mode("chess960"), "Chess960");
+    }
+
+    #[test]
+    fn camel_case_variants_use_the_lichess_display_name() {
+        assert_eq!(normalize_game_mode("kingOfTheHill"), "King of the Hill");
+        assert_eq!(normalize_game_mode("racingKings"), "Racing Kings");
+        assert_eq!(normalize_game_mode("threeCheck"), "Three-check");
+        assert_eq!(normalize_game_mode("ultraBullet"), "UltraBullet");
+    }
+
+    fn perfs() -> Perfs {
+        serde_json::from_value(serde_json::json!({
+            "blitz": {"games": 1, "rating": 1000, "rd": 50, "prog": 0},
+            "rapid": {"games": 1, "rating": 1100, "rd": 50, "prog": 0},
+            "ultraBullet": {"games": 1, "rating": 1200, "rd": 50, "prog": 0},
+            "kingOfTheHill": {"games": 1, "rating": 1300, "rd": 50, "prog": 0},
+            "racingKings": {"games": 1, "rating": 1400, "rd": 50, "prog": 0},
+            "threeCheck": {"games": 1, "rating": 1500, "rd": 50, "prog": 0}
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn perf_lookup_uses_the_url_game_mode() {
+        let perfs = perfs();
+        let rating = |mode| perf_for_mode(Some(&perfs), mode).map(|p| p.rating);
+
+        assert_eq!(rating("rapid"), Some(1100));
+        assert_eq!(rating("ultraBullet"), Some(1200));
+        assert_eq!(rating("kingOfTheHill"), Some(1300));
+        assert_eq!(rating("racingKings"), Some(1400));
+        assert_eq!(rating("threeCheck"), Some(1500));
+    }
+
+    #[test]
+    fn unknown_modes_fall_back_to_blitz_and_missing_perfs_to_none() {
+        let perfs = perfs();
+
+        assert_eq!(
+            perf_for_mode(Some(&perfs), "made-up").map(|p| p.rating),
+            Some(1000)
+        );
+        assert_eq!(perf_for_mode(Some(&perfs), "horde").map(|p| p.rating), None);
+        assert!(perf_for_mode(None, "rapid").is_none());
+    }
+
+    fn game_with_white(name: &str) -> Game {
+        serde_json::from_value(serde_json::json!({
+            "id": "g1", "rated": true, "variant": "standard", "speed": "rapid", "perf": "rapid",
+            "createdAt": 1, "lastMoveAt": 2, "status": "mate",
+            "players": {
+                "white": {"user": {"id": name.to_lowercase(), "name": name}},
+                "black": {"user": {"id": "opponent", "name": "Opponent"}}
+            },
+            "opening": {"eco": "C50", "name": "Italian Game: Giuoco Piano", "ply": 7}
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn white_player_is_matched_case_insensitively_against_the_configured_user() {
+        assert!(plays_white(&game_with_white("SomeUser"), "someuser"));
+        assert!(!plays_white(&game_with_white("Opponent2"), "someuser"));
+    }
+
+    #[test]
+    fn analysis_groups_openings_by_colour_for_the_configured_user() {
+        let html =
+            render_analysis_page(vec![game_with_white("SomeUser")], "someuser").into_string();
+
+        assert!(html.contains("Italian Game"));
+    }
+
+    #[test]
+    fn empty_mode_stays_empty() {
+        assert_eq!(normalize_game_mode(""), "");
     }
 }

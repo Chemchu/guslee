@@ -1,5 +1,5 @@
 use actix_web::{
-    HttpRequest, Responder, get,
+    HttpRequest, HttpResponse, Responder, get,
     web::{self, Data, Html},
 };
 use cached::cached;
@@ -10,9 +10,12 @@ use search_engine::{
     utils::Post,
 };
 use std::collections::{HashMap, HashSet};
-use std::{fs, io};
+use std::fs;
+use std::path::{Component, Path};
 
-use crate::controllers::{AppState, wrap_content_into_full_page};
+use crate::controllers::{
+    AppState, is_partial_request, render_not_found, render_page, wrap_content_into_full_page,
+};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(landing)
@@ -22,7 +25,7 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 
 #[get("/")]
 async fn landing(app_state: web::Data<AppState>) -> impl Responder {
-    let content = match std::fs::read_to_string("./garden/welcome.md") {
+    let content = match std::fs::read_to_string(format!("{}/welcome.md", app_state.garden_path)) {
         Ok(content) => content,
         Err(e) => {
             log::error!("Failed to read welcome.md: {}", e);
@@ -46,73 +49,62 @@ async fn get_post_page(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     route: web::Path<String>,
-) -> Html {
-    let content: io::Result<String> = fs::read_to_string(format!("./garden/{}.md", route));
+) -> HttpResponse {
+    if !is_safe_post_route(&route) {
+        return render_not_found(&app_state, &req);
+    }
 
-    let is_htmx_req = req.headers().get("HX-Request").is_some();
-    if is_htmx_req {
-        Html::new(match content {
-            Ok(md) => post_page_shell(md, route.to_string()).into_string(),
-            Err(_err) => String::from("Post not found"),
-        })
-    } else {
-        Html::new(match content {
-            Ok(md) => wrap_content_into_full_page(
-                &app_state.app_name,
-                post_page_shell(md, route.to_string())
-                    .into_string()
-                    .as_str(),
-            ),
-            Err(_err) => String::from("Post not found"),
-        })
+    match fs::read_to_string(format!("{}/{}.md", app_state.garden_path, route)) {
+        Ok(md) => render_page(
+            &app_state,
+            &req,
+            &post_page_shell(md, route.to_string()).into_string(),
+        )
+        .respond_to(&req)
+        .map_into_boxed_body(),
+        Err(_err) => render_not_found(&app_state, &req),
     }
 }
 
-#[cached(
-    key = "String",
-    convert = r##"{ 
-        format!(
-            "{}:{}",
-            params
-                .clone()
-                .query
-                .clone()
-                .unwrap_or("empty".to_string()),
-            params
-                .clone()
-                .limit
-                .clone()
-                .unwrap_or(DEFAULT_SEARCH_LIMIT)
-                .value()
-        )
-    }"##
-)]
+fn is_safe_post_route(route: &str) -> bool {
+    !route.is_empty()
+        && Path::new(route)
+            .components()
+            .all(|component| matches!(component, Component::Normal(_)))
+}
+
 #[get("/search")]
 async fn search_post(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     params: web::Query<Params>,
 ) -> Html {
-    let is_htmx_req = req.headers().get("HX-Request").is_some();
-    if is_htmx_req {
-        let is_empty_query = params.query.is_none()
-            || params.query.as_ref().unwrap().is_empty()
-            || params.query.as_ref().unwrap().len() < 3;
-
-        let matching_posts = match is_empty_query {
-            true => get_default_posts(app_state).await,
-            false => {
-                app_state
-                    .post_search_engine
-                    .query_posts(&params.clone())
-                    .await
-            }
-        };
-
-        build_posts_list(matching_posts)
-    } else {
-        Html::new(String::from("Only HTMX requests for search engine"))
+    if !is_partial_request(&req) {
+        return Html::new(String::from("Only HTMX requests for search engine"));
     }
+
+    Html::new(search_results_content(app_state, params.into_inner()).await)
+}
+
+#[cached(
+    key = "String",
+    convert = r#"{
+        format!(
+            "{}:{}",
+            params.query.clone().unwrap_or("empty".to_string()),
+            params.limit.clone().unwrap_or(DEFAULT_SEARCH_LIMIT).value()
+        )
+    }"#
+)]
+async fn search_results_content(app_state: web::Data<AppState>, params: Params) -> String {
+    let is_empty_query = params.query.as_ref().is_none_or(|query| query.len() < 3);
+
+    let matching_posts = match is_empty_query {
+        true => get_default_posts(app_state).await,
+        false => app_state.post_search_engine.query_posts(&params).await,
+    };
+
+    build_posts_list(matching_posts)
 }
 
 async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
@@ -134,7 +126,7 @@ async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
         .post_search_engine
         .raw_query::<Vec<Post>>(
             format!(
-                "SELECT * FROM posts WHERE file_name AND metadata.is_draft = false IN [{}]",
+                "SELECT * FROM posts WHERE file_name IN [{}] AND metadata.is_draft = false",
                 default_posts_string,
             )
             .as_str(),
@@ -155,7 +147,7 @@ async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
         .post_search_engine
         .raw_query::<Vec<Post>>(
             format!(
-                "SELECT * FROM posts WHERE file_name NOT IN [{}]",
+                "SELECT * FROM posts WHERE file_name NOT IN [{}] AND metadata.is_draft = false",
                 default_posts_string,
             )
             .as_str(),
@@ -165,7 +157,7 @@ async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
     [ordered_files, all_missing_posts].concat()
 }
 
-fn build_posts_list(matching_posts: Vec<Post>) -> Html {
+fn build_posts_list(matching_posts: Vec<Post>) -> String {
     let mut posts_per_topic: HashMap<String, Vec<Post>> = HashMap::default();
     let mut posts_by_filename: HashMap<String, Post> = HashMap::default();
     for m_post in matching_posts.clone() {
@@ -252,7 +244,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> Html {
             }
         }
     };
-    Html::new(html)
+    html.into_string()
 }
 
 fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
@@ -278,7 +270,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
         class="hidden lg:flex flex-col min-w-[16rem] xl:min-w-[20rem] max-w-md h-full border-l border-shade-color"
         {
             div
-            class="flex flex-col flex-grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
+            class="flex flex-col grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
             {
                 div
                 id="upper-right-section"
@@ -286,11 +278,11 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
                 hx-trigger="load"
                 hx-target="#upper-right-section"
                 hx-swap="innerHTML"
-                class="flex w-full flex-grow cursor-grab active:cursor-grabbing h-full"
+                class="flex w-full grow cursor-grab active:cursor-grabbing h-full"
                 {}
             }
             div
-            class="flex flex-col flex-grow w-full"
+            class="flex flex-col grow w-full"
             {
                 div
                 id="bottom-right-section"
@@ -298,11 +290,95 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
                 hx-trigger="load"
                 hx-target="#bottom-right-section"
                 hx-swap="innerHTML"
-                class="flex w-full flex-grow p-2"
+                class="flex w-full grow p-2"
                 {
                     "Loading..."
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use search_engine::utils::MdMetadata;
+
+    fn post(file_path: &str, title: &str, topic: Option<&str>) -> Post {
+        Post {
+            file_name: file_path.rsplit('/').next().unwrap().to_string(),
+            file_path: file_path.to_string(),
+            metadata: MdMetadata {
+                title: title.to_string(),
+                topic: topic.map(str::to_string),
+                description: String::new(),
+                tags: vec![],
+                date: String::new(),
+                is_draft: false,
+                post_source_url: String::new(),
+                reading_time: 1,
+            },
+            content: String::new(),
+        }
+    }
+
+    #[test]
+    fn plain_and_nested_post_routes_are_allowed() {
+        assert!(is_safe_post_route("welcome"));
+        assert!(is_safe_post_route("journal/2025/rathmines"));
+    }
+
+    #[test]
+    fn routes_escaping_the_garden_are_rejected() {
+        assert!(!is_safe_post_route("../README"));
+        assert!(!is_safe_post_route("journal/../../secrets"));
+        assert!(!is_safe_post_route("/etc/passwd"));
+        assert!(!is_safe_post_route("./welcome"));
+        assert!(!is_safe_post_route(""));
+    }
+
+    #[test]
+    fn posts_with_a_topic_are_grouped_under_it() {
+        let html = build_posts_list(vec![
+            post("gaming/a.md", "Game A", Some("Gaming")),
+            post("welcome.md", "Welcome", None),
+            post("gaming/b.md", "Game B", Some("Gaming")),
+        ]);
+
+        assert_eq!(html.matches("<summary").count(), 1);
+        assert!(html.contains(">Gaming</summary>"));
+        let a = html.find("Game A").unwrap();
+        let b = html.find("Game B").unwrap();
+        let welcome = html.find(">Welcome<").unwrap();
+        assert!(a < b && b < welcome, "topics come first, in result order");
+    }
+
+    #[test]
+    fn post_links_drop_the_markdown_extension_and_target_the_main_section() {
+        let html = build_posts_list(vec![post("journal/2025/x.md", "X", None)]);
+
+        assert!(html.contains("href=\"/posts/journal/2025/x\""));
+        assert!(html.contains("hx-target=\"#main-section\""));
+    }
+
+    #[test]
+    fn titles_are_html_escaped() {
+        let html = build_posts_list(vec![post("x.md", "<script>alert(1)</script>", None)]);
+
+        assert!(!html.contains("<script>"));
+        assert!(html.contains("&lt;script&gt;"));
+    }
+
+    #[test]
+    fn post_shell_renders_markdown_without_the_frontmatter() {
+        let md = "---\ntitle: \"Hidden\"\n---\n# Heading\n\nSome *text*.".to_string();
+
+        let html = post_page_shell(md, "notes/first".to_string()).into_string();
+
+        assert!(html.contains("<h1>Heading</h1>"));
+        assert!(html.contains("<em>text</em>"));
+        assert!(!html.contains("title: "));
+        assert!(html.contains("hx-get=\"/graph/notes/first\""));
+        assert!(html.contains("hx-get=\"/metadata/notes/first\""));
     }
 }

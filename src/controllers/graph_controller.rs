@@ -4,7 +4,7 @@ use actix_web::{
 };
 use maud::html;
 
-use crate::controllers::{AppState, wrap_content_into_full_page};
+use crate::controllers::{AppState, render_page};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(graph_network)
@@ -52,12 +52,7 @@ async fn garden_view_dispatcher(
     }
     .into_string();
 
-    let is_htmx_req = req.headers().get("HX-Request").is_some();
-    if is_htmx_req {
-        Html::new(h)
-    } else {
-        Html::new(wrap_content_into_full_page(&app_state.app_name, &h))
-    }
+    render_page(&app_state, &req, &h)
 }
 
 #[get("/garden-view")]

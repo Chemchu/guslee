@@ -1,50 +1,77 @@
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
+
+const REQUIRED_VARS: [&str; 9] = [
+    "LICHESS_API_TOKEN",
+    "LICHESS_USERNAME",
+    "SPOTIFY_CLIENT_ID",
+    "SPOTIFY_CLIENT_SECRET",
+    "SPOTIFY_USER_ID",
+    "SPOTIFY_REFRESH_TOKEN",
+    "STEAM_API_KEY",
+    "STEAM_ID",
+    "REPO_SOURCE",
+];
 
 pub fn read_env_file() -> HashMap<String, String> {
-    let mut env_vars: HashMap<String, String> = HashMap::new();
-    let content = fs::read_to_string(format!("{}/.env", env!("CARGO_MANIFEST_DIR"))).ok();
+    match dotenvy::dotenv() {
+        Ok(path) => log::info!("Loaded environment variables from {}", path.display()),
+        Err(e) if e.not_found() => log::info!("No .env file found, using system environment"),
+        Err(e) => panic!("Failed to parse .env file: {}", e),
+    }
 
-    match content {
-        Some(c) => {
-            for line in c.lines() {
-                let cleaned_line = line.replace("\"", "");
-                let mut split_line = cleaned_line.split("=");
+    collect_required_vars(|var| std::env::var(var).ok()).unwrap_or_else(|missing_vars| {
+        panic!("Missing environment variables: {}", missing_vars.join(", "))
+    })
+}
 
-                let key = split_line.next();
-                let value = split_line.next();
+fn collect_required_vars(
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Result<HashMap<String, String>, Vec<&'static str>> {
+    let mut vars = HashMap::new();
+    let mut missing_vars = Vec::new();
 
-                if key.is_none() || value.is_none() {
-                    panic!("ENV variable missing. Please follow 'Key=Value' pattern")
-                }
-
-                env_vars.insert(key.unwrap().to_string(), value.unwrap().to_string());
+    for var in REQUIRED_VARS {
+        match lookup(var) {
+            Some(value) => {
+                vars.insert(var.to_string(), value);
             }
-            env_vars
+            None => missing_vars.push(var),
         }
-        None => load_vars_from_environment(),
+    }
+
+    if missing_vars.is_empty() {
+        Ok(vars)
+    } else {
+        Err(missing_vars)
     }
 }
 
-// This function tries to load the environment variables already present in the system.
-// It is useful if the environment in which the app is deployed does not have a .env file defined
-fn load_vars_from_environment() -> HashMap<String, String> {
-    let required_vars = [
-        "LICHESS_API_TOKEN",
-        "LICHESS_USERNAME",
-        "SPOTIFY_CLIENT_ID",
-        "SPOTIFY_CLIENT_SECRET",
-        "SPOTIFY_USER_ID",
-        "SPOTIFY_REFRESH_TOKEN",
-        "STEAM_API_KEY",
-        "STEAM_ID",
-        "REPO_SOURCE",
-    ];
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    required_vars
-        .iter()
-        .map(|&var| {
-            let value = std::env::var(var).unwrap_or_else(|_| panic!("{} not defined", var));
-            (var.to_string(), value)
-        })
-        .collect()
+    #[test]
+    fn collects_every_required_variable() {
+        let vars = collect_required_vars(|var| Some(format!("{var}-value"))).unwrap();
+
+        assert_eq!(vars.len(), REQUIRED_VARS.len());
+        assert_eq!(vars["STEAM_ID"], "STEAM_ID-value");
+    }
+
+    #[test]
+    fn reports_all_missing_variables_at_once() {
+        let missing =
+            collect_required_vars(|var| (!var.starts_with("SPOTIFY")).then(|| "value".to_string()))
+                .unwrap_err();
+
+        assert_eq!(
+            missing,
+            vec![
+                "SPOTIFY_CLIENT_ID",
+                "SPOTIFY_CLIENT_SECRET",
+                "SPOTIFY_USER_ID",
+                "SPOTIFY_REFRESH_TOKEN"
+            ]
+        );
+    }
 }

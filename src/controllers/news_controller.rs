@@ -1,8 +1,5 @@
-use crate::controllers::{AppState, wrap_content_into_full_page};
-use actix_web::{
-    HttpRequest, Responder, get,
-    web::{self, Html},
-};
+use crate::controllers::{AppState, render_page};
+use actix_web::{HttpRequest, Responder, get, web};
 use maud::html;
 use serde::{Deserialize, Serialize};
 use surrealdb::types::SurrealValue;
@@ -29,6 +26,7 @@ async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Res
         metadata.title AS title,
         metadata.tags AS tags
     FROM posts
+    WHERE metadata.is_draft = false
     ORDER BY date DESC";
 
     let news: Vec<News> = app_state
@@ -211,13 +209,5 @@ async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Res
         }
     }};
 
-    let is_htmx_req = req.headers().get("HX-Request").is_some();
-    if is_htmx_req {
-        Html::new(template)
-    } else {
-        Html::new(wrap_content_into_full_page(
-            &app_state.app_name,
-            &template.0,
-        ))
-    }
+    render_page(&app_state, &req, &template.0)
 }

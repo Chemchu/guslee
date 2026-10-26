@@ -6,7 +6,7 @@ use cached::cached;
 use maud::{PreEscaped, html};
 use music_module::{SpotifyUser, TopArtistsResponse, TopTracksResponse};
 
-use crate::controllers::{AppState, wrap_content_into_full_page};
+use crate::controllers::{AppState, render_page};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(get_user_profile)
@@ -30,15 +30,7 @@ async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> H
         false => render_spotify_profile(user_profile.unwrap()),
     };
 
-    let is_htmx_req = req.headers().get("HX-Request").is_some();
-    if is_htmx_req {
-        Html::new(html_to_render)
-    } else {
-        Html::new(wrap_content_into_full_page(
-            &app_state.app_name,
-            &html_to_render.0,
-        ))
-    }
+    render_page(&app_state, &req, &html_to_render.0)
 }
 
 fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
@@ -46,9 +38,11 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
         div class="flex flex-col w-full gap-4 p-6 lg:p-8 overflow-auto" {
             div class="bg-background-color p-6 border border-shade-color border-l-[3px] border-l-primary-color" {
                 div class="flex items-center gap-6" {
-                    a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" {
-                        img src=(user.images.into_iter().next().unwrap().url)
-                        class="w-28 h-28 transition-all duration-300 rounded-full ring-2 ring-bright-color hover:ring-primary-color shadow-2xl" {}
+                    @if let Some(image) = user.images.first() {
+                        a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" {
+                            img src=(image.url)
+                            class="w-28 h-28 transition-all duration-300 rounded-full ring-2 ring-bright-color hover:ring-primary-color shadow-2xl" {}
+                        }
                     }
                     div class="flex-1" {
                         h2 class="transition-all duration-300 text-4xl font-bold mb-2 bg-clip-text text-bright-color hover:text-primary-color" {
@@ -136,122 +130,116 @@ pub enum TopItems {
     Tracks(TopTracksResponse),
 }
 
-#[cached(
-    ttl = 86400,
-    key = "String",
-    convert = r##"{ 
-        format!(
-            "top_item-{}-time_range-{}",
-            &args.0,
-            &args.1
-        )
-    }"##
-)]
 #[get("/music/user-top/{item:.*}/{time_range:.*}")]
 async fn get_user_top_item(
     app_state: web::Data<AppState>,
     args: web::Path<(String, String)>,
-) -> PreEscaped<String> {
-    let item = &args.0;
-    let time_range = &args.1;
-    let mut spotify_state = app_state.spotify_state.lock().await;
-
-    let top_items: Result<TopItems, _> = match item.as_str() {
-        "artists" => spotify_state
-            .fetch_top_items::<TopArtistsResponse>(item, time_range)
+) -> Html {
+    let (item, time_range) = args.into_inner();
+    Html::new(
+        user_top_item_content(app_state, item, time_range)
             .await
-            .map(TopItems::Artists),
-        "tracks" => spotify_state
-            .fetch_top_items::<TopTracksResponse>(item, time_range)
-            .await
-            .map(TopItems::Tracks),
-        _ => {
-            return html! {
-                div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
-                    "Error loading Spotify item"
-                }
-            };
-        }
-    };
-
-    match top_items {
-        Ok(TopItems::Artists(top_artists)) => render_artists_list(&top_artists),
-        Ok(TopItems::Tracks(top_tracks)) => render_tracks_list(&top_tracks),
-        Err(e) => html! {
-            div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
-                "Error loading Spotify item: " (e)
-            }
-        },
-    }
+            .unwrap_or_else(|error_html| error_html),
+    )
 }
 
-#[cached(
-    ttl = 86400,
-    key = "String",
-    convert = r##"{ 
-        format!(
-            "type-{}-term-{}",
-            &args.0,
-            &args.1
-        )
-    }"##
-)]
 #[get("/music/time-range/{type}/{term}/next")]
 async fn cycle_time_range(
     app_state: web::Data<AppState>,
     args: web::Path<(String, String)>,
-) -> PreEscaped<String> {
-    let content_type: &str = &args.0;
-    let current_term: &str = &args.1;
-    let (next_term, label) = match current_term {
-        "long_term" => ("medium_term", "Last 6 months"),
-        "medium_term" => ("short_term", "Last 4 weeks"),
-        "short_term" => ("long_term", "Last year"),
-        _ => ("long_term", "Last year"),
+) -> Html {
+    let (content_type, current_term) = args.into_inner();
+    Html::new(
+        cycle_time_range_content(app_state, content_type, current_term)
+            .await
+            .unwrap_or_else(|error_html| error_html),
+    )
+}
+
+#[cached(
+    ttl_secs = 86400,
+    key = "String",
+    convert = r#"{ format!("top_item-{}-time_range-{}", item, time_range) }"#
+)]
+async fn user_top_item_content(
+    app_state: web::Data<AppState>,
+    item: String,
+    time_range: String,
+) -> Result<String, String> {
+    let error_html = |message: String| {
+        html! {
+            div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
+                (message)
+            }
+        }
+        .into_string()
     };
 
     let mut spotify_state = app_state.spotify_state.lock().await;
-    let top_items_html = match content_type {
-        "artists" => {
-            match spotify_state
-                .fetch_top_items::<TopArtistsResponse>(content_type, next_term)
-                .await
-            {
-                Ok(top_artists) => render_artists_list(&top_artists),
-                Err(e) => html! {
-                    div { "Error loading artists: " (e) }
-                },
-            }
-        }
-        "tracks" => {
-            match spotify_state
-                .fetch_top_items::<TopTracksResponse>(content_type, next_term)
-                .await
-            {
-                Ok(top_tracks) => render_tracks_list(&top_tracks),
-                Err(e) => html! {
-                    div { "Error loading tracks: " (e) }
-                },
-            }
-        }
-        _ => html! {
-            div { "Invalid content type" }
-        },
+    let top_items: Result<TopItems, _> = match item.as_str() {
+        "artists" => spotify_state
+            .fetch_top_items::<TopArtistsResponse>(&item, &time_range)
+            .await
+            .map(TopItems::Artists),
+        "tracks" => spotify_state
+            .fetch_top_items::<TopTracksResponse>(&item, &time_range)
+            .await
+            .map(TopItems::Tracks),
+        _ => return Err(error_html("Error loading Spotify item".to_string())),
     };
 
-    html! {
-        span
-            class="flex items-center gap-2 group"
-            hx-get={"/music/time-range/"(content_type)"/"(next_term)"/next"}
-            hx-target="this"
-            hx-swap="outerHTML" {
-                (label)
-                span class="text-sm opacity-90 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-300 inline-block" { "⟳" }
-        }
-        div id={"top-"(content_type)} hx-swap-oob="innerHTML" {
-            (top_items_html)
-        }
+    match top_items {
+        Ok(TopItems::Artists(top_artists)) => Ok(render_artists_list(&top_artists).into_string()),
+        Ok(TopItems::Tracks(top_tracks)) => Ok(render_tracks_list(&top_tracks).into_string()),
+        Err(e) => Err(error_html(format!("Error loading Spotify item: {}", e))),
     }
+}
+
+#[cached(
+    ttl_secs = 86400,
+    key = "String",
+    convert = r#"{ format!("type-{}-term-{}", content_type, current_term) }"#
+)]
+async fn cycle_time_range_content(
+    app_state: web::Data<AppState>,
+    content_type: String,
+    current_term: String,
+) -> Result<String, String> {
+    let (next_term, label) = next_time_range(&current_term);
+
+    let mut spotify_state = app_state.spotify_state.lock().await;
+    let top_items_html = match content_type.as_str() {
+        "artists" => spotify_state
+            .fetch_top_items::<TopArtistsResponse>(&content_type, next_term)
+            .await
+            .map(|top_artists| render_artists_list(&top_artists))
+            .map_err(|e| html! { div { "Error loading artists: " (e) } }),
+        "tracks" => spotify_state
+            .fetch_top_items::<TopTracksResponse>(&content_type, next_term)
+            .await
+            .map(|top_tracks| render_tracks_list(&top_tracks))
+            .map_err(|e| html! { div { "Error loading tracks: " (e) } }),
+        _ => Err(html! { div { "Invalid content type" } }),
+    };
+
+    let render = |items_html: PreEscaped<String>| {
+        html! {
+            span
+                class="flex items-center gap-2 group"
+                hx-get={"/music/time-range/"(content_type)"/"(next_term)"/next"}
+                hx-target="this"
+                hx-swap="outerHTML" {
+                    (label)
+                    span class="text-sm opacity-90 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-300 inline-block" { "⟳" }
+            }
+            div id={"top-"(content_type)} hx-swap-oob="innerHTML" {
+                (items_html)
+            }
+        }
+        .into_string()
+    };
+
+    top_items_html.map(render).map_err(render)
 }
 
 fn render_artists_list(top_artists: &TopArtistsResponse) -> PreEscaped<String> {
@@ -261,8 +249,10 @@ fn render_artists_list(top_artists: &TopArtistsResponse) -> PreEscaped<String> {
                 a href=(artist.external_urls.spotify) target="_blank" rel="noopener noreferrer"
                     style="background-color:#1F1F1F;"
                     class="group h-[90px] p-4 flex items-center gap-4 hover:brightness-125 transition-all duration-300 border border-transparent hover:border-primary-color" {
-                    img src=(artist.images.first().unwrap().url)
-                        class="w-14 h-14 rounded-full shadow-md" {}
+                    @if let Some(image) = artist.images.first() {
+                        img src=(image.url)
+                            class="w-14 h-14 rounded-full shadow-md" {}
+                    }
                     div class="flex-1 min-w-0" {
                         h3 class="font-semibold text-base text-white truncate" {
                             (artist.name)
@@ -313,6 +303,15 @@ fn render_tracks_list(top_tracks: &TopTracksResponse) -> PreEscaped<String> {
     }
 }
 
+fn next_time_range(current_term: &str) -> (&'static str, &'static str) {
+    match current_term {
+        "long_term" => ("medium_term", "Last 6 months"),
+        "medium_term" => ("short_term", "Last 4 weeks"),
+        "short_term" => ("long_term", "Last year"),
+        _ => ("long_term", "Last year"),
+    }
+}
+
 fn title_case(s: &str) -> String {
     s.split_whitespace()
         .map(|word| {
@@ -324,4 +323,34 @@ fn title_case(s: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn time_ranges_cycle_long_medium_short() {
+        assert_eq!(
+            next_time_range("long_term"),
+            ("medium_term", "Last 6 months")
+        );
+        assert_eq!(
+            next_time_range("medium_term"),
+            ("short_term", "Last 4 weeks")
+        );
+        assert_eq!(next_time_range("short_term"), ("long_term", "Last year"));
+    }
+
+    #[test]
+    fn unknown_time_ranges_restart_the_cycle() {
+        assert_eq!(next_time_range("forever"), ("long_term", "Last year"));
+    }
+
+    #[test]
+    fn title_case_capitalises_each_word() {
+        assert_eq!(title_case("premium subscriber"), "Premium Subscriber");
+        assert_eq!(title_case("  extra   spaces "), "Extra Spaces");
+        assert_eq!(title_case(""), "");
+    }
 }

@@ -3,6 +3,7 @@ use serde::Deserialize;
 pub struct SteamState {
     steam_token: String,
     steam_id: String,
+    api_base_url: String,
 }
 
 #[derive(Deserialize)]
@@ -146,39 +147,64 @@ pub struct TopGame {
     pub achievement_progress_percentage: f32,
 }
 
+pub const STEAM_API_BASE_URL: &str = "https://api.steampowered.com";
+
+const EXCLUDED_APP_IDS: [u32; 2] = [431960, 323370];
+
 impl SteamState {
     pub fn new(steam_token: String, steam_id: String) -> Self {
         Self {
             steam_token,
             steam_id,
+            api_base_url: STEAM_API_BASE_URL.to_string(),
         }
+    }
+
+    pub fn with_api_base_url(mut self, api_base_url: impl Into<String>) -> Self {
+        self.api_base_url = api_base_url.into();
+        self
     }
 
     pub async fn get_profile(&self) -> Result<SteamProfile, reqwest::Error> {
         let client = reqwest::Client::new();
 
         let profile_url = format!(
-            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={}&steamids={}",
-            self.steam_token, self.steam_id
+            "{}/ISteamUser/GetPlayerSummaries/v2/?key={}&steamids={}",
+            self.api_base_url, self.steam_token, self.steam_id
         );
-        let profile_response: SteamProfileResponse =
-            client.get(&profile_url).send().await?.json().await?;
+        let profile_response: SteamProfileResponse = client
+            .get(&profile_url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
 
         let player = &profile_response.response.players[0];
 
         let level_url = format!(
-            "https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key={}&steamid={}",
-            self.steam_token, self.steam_id
+            "{}/IPlayerService/GetSteamLevel/v1/?key={}&steamid={}",
+            self.api_base_url, self.steam_token, self.steam_id
         );
-        let level_response: PlayerLevelResponse =
-            client.get(&level_url).send().await?.json().await?;
+        let level_response: PlayerLevelResponse = client
+            .get(&level_url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
 
         let games_url = format!(
-            "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={}&steamid={}",
-            self.steam_token, self.steam_id
+            "{}/IPlayerService/GetOwnedGames/v1/?key={}&steamid={}",
+            self.api_base_url, self.steam_token, self.steam_id
         );
-        let games_response: OwnedGamesResponse =
-            client.get(&games_url).send().await?.json().await?;
+        let games_response: OwnedGamesResponse = client
+            .get(&games_url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
 
         Ok(SteamProfile {
             personaname: player.personaname.clone(),
@@ -201,73 +227,33 @@ impl SteamState {
         let client = reqwest::Client::new();
 
         let recent_url = format!(
-            "https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key={}&steamid={}&count={}",
-            self.steam_token, self.steam_id, recent_games_count
+            "{}/IPlayerService/GetRecentlyPlayedGames/v1/?key={}&steamid={}&count={}",
+            self.api_base_url, self.steam_token, self.steam_id, recent_games_count
         );
-        let recent_response: RecentGamesResponse =
-            client.get(&recent_url).send().await?.json().await?;
+        let recent_response: RecentGamesResponse = client
+            .get(&recent_url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
 
-        let achievement_futures: Vec<_> = recent_response
-            .response
-            .games
-            .iter()
-            .map(|game| {
-                let appid = game.appid;
-                let token = self.steam_token.clone();
-                let steam_id = self.steam_id.clone();
-                async move {
-                    let client = reqwest::Client::new();
-                    let url = format!(
-                        "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key={}&steamid={}&appid={}",
-                        token, steam_id, appid
-                    );
-                    
-                    match client.get(&url).send().await {
-                        Ok(response) => {
-                            match response.json::<PlayerAchievementsResponse>().await {
-                                Ok(ach_response) => {
-                                    ach_response
-                                        .playerstats
-                                        .achievements
-                                        .unwrap_or_default()
-                                        .into_iter()
-                                        .map(|ach| Achievement {
-                                            apiname: ach.apiname,
-                                            achieved: ach.achieved == 1,
-                                            unlocktime: ach.unlocktime,
-                                            name: ach.name,
-                                            description: ach.description,
-                                        })
-                                        .collect()
-                                }
-                                Err(_) => Vec::new(),
-                            }
-                        }
-                        Err(_) => Vec::new(),
-                    }
-                }
-            })
-            .collect();
+        let achievements_results = futures::future::join_all(
+            recent_response
+                .response
+                .games
+                .iter()
+                .map(|game| self.get_achievements(game.appid)),
+        )
+        .await;
 
-        let achievements_results = futures::future::join_all(achievement_futures).await;
         let games: Vec<RecentGame> = recent_response
             .response
             .games
             .iter()
-            .zip(achievements_results.iter())
+            .zip(achievements_results)
             .map(|(game, achievements)| {
-                let logo_url = format!(
-                    "https://cdn.cloudflare.steamstatic.com/steam/apps/{}/header.jpg",
-                    game.appid
-                );
-
-                let total = achievements.len() as u32;
-                let unlocked = achievements.iter().filter(|a| a.achieved).count() as u32;
-                let progress = if total > 0 {
-                    (unlocked as f32 / total as f32) * 100.0
-                } else {
-                    0.0
-                };
+                let progress = AchievementProgress::from_achievements(&achievements);
 
                 RecentGame {
                     name: game.name.clone(),
@@ -275,11 +261,11 @@ impl SteamState {
                     playtime_2weeks: game.playtime_2weeks,
                     playtime_forever: game.playtime_forever,
                     img_icon_url: game.img_icon_url.clone(),
-                    img_logo_url: logo_url,
-                    achievements: achievements.clone(),
-                    total_achievements: total,
-                    unlocked_achievements: unlocked,
-                    achievement_progress_percentage: progress,
+                    img_logo_url: header_image_url(game.appid),
+                    achievements,
+                    total_achievements: progress.total,
+                    unlocked_achievements: progress.unlocked,
+                    achievement_progress_percentage: progress.percentage,
                 }
             })
             .collect();
@@ -294,99 +280,220 @@ impl SteamState {
         let client = reqwest::Client::new();
 
         let games_url = format!(
-            "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={}&steamid={}&include_appinfo=true&include_played_free_games=true",
-            self.steam_token, self.steam_id
+            "{}/IPlayerService/GetOwnedGames/v1/?key={}&steamid={}&include_appinfo=true&include_played_free_games=true",
+            self.api_base_url, self.steam_token, self.steam_id
         );
-        let games_response: OwnedGamesResponse =
-            client.get(&games_url).send().await?.json().await?;
+        let games_response: OwnedGamesResponse = client
+            .get(&games_url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
 
-        let excluded_app_ids = [431960, 323370]; 
-        let mut owned_games: Vec<OwnedGameData> = games_response
-            .response
-            .games
-            .unwrap_or_default()
-            .into_iter()
-            .filter(|game| !excluded_app_ids.contains(&game.appid))
-            .filter(|game| game.playtime_forever > 0)
-            .collect();
+        let owned_games = select_top_games(
+            games_response.response.games.unwrap_or_default(),
+            top_games_count as usize,
+        );
 
-        owned_games.sort_by_key(|b| std::cmp::Reverse(b.playtime_forever));
-        owned_games.truncate(top_games_count as usize);
-
-        let achievement_futures: Vec<_> = owned_games
-            .iter()
-            .map(|game| {
-                let appid = game.appid;
-                let token = self.steam_token.clone();
-                let steam_id = self.steam_id.clone();
-                async move {
-                    let client = reqwest::Client::new();
-                    let url = format!(
-                        "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key={}&steamid={}&appid={}",
-                        token, steam_id, appid
-                    );
-                    
-                    match client.get(&url).send().await {
-                        Ok(response) => {
-                            match response.json::<PlayerAchievementsResponse>().await {
-                                Ok(ach_response) => {
-                                    ach_response
-                                        .playerstats
-                                        .achievements
-                                        .unwrap_or_default()
-                                        .into_iter()
-                                        .map(|ach| Achievement {
-                                            apiname: ach.apiname,
-                                            achieved: ach.achieved == 1,
-                                            unlocktime: ach.unlocktime,
-                                            name: ach.name,
-                                            description: ach.description,
-                                        })
-                                        .collect()
-                                }
-                                Err(_) => Vec::new(),
-                            }
-                        }
-                        Err(_) => Vec::new(),
-                    }
-                }
-            })
-            .collect();
-
-        let achievements_results = futures::future::join_all(achievement_futures).await;
+        let achievements_results = futures::future::join_all(
+            owned_games
+                .iter()
+                .map(|game| self.get_achievements(game.appid)),
+        )
+        .await;
 
         let games: Vec<TopGame> = owned_games
             .iter()
-            .zip(achievements_results.iter())
+            .zip(achievements_results)
             .map(|(game, achievements)| {
-                let logo_url = format!(
-                    "https://cdn.cloudflare.steamstatic.com/steam/apps/{}/header.jpg",
-                    game.appid
-                );
-
-                let total = achievements.len() as u32;
-                let unlocked = achievements.iter().filter(|a| a.achieved).count() as u32;
-                let progress = if total > 0 {
-                    (unlocked as f32 / total as f32) * 100.0
-                } else {
-                    0.0
-                };
+                let progress = AchievementProgress::from_achievements(&achievements);
 
                 TopGame {
-                    name: game.name.clone().unwrap_or_else(|| format!("Game {}", game.appid)),
+                    name: game
+                        .name
+                        .clone()
+                        .unwrap_or_else(|| format!("Game {}", game.appid)),
                     appid: game.appid.to_string(),
                     playtime_forever: game.playtime_forever,
                     img_icon_url: game.img_icon_url.clone().unwrap_or_default(),
-                    img_logo_url: logo_url,
+                    img_logo_url: header_image_url(game.appid),
                     playtime_2weeks: game.playtime_2weeks,
-                    achievements: achievements.clone(),
-                    total_achievements: total,
-                    unlocked_achievements: unlocked,
-                    achievement_progress_percentage: progress,
+                    achievements,
+                    total_achievements: progress.total,
+                    unlocked_achievements: progress.unlocked,
+                    achievement_progress_percentage: progress.percentage,
                 }
             })
             .collect();
 
         Ok(games)
+    }
+
+    async fn get_achievements(&self, appid: u32) -> Vec<Achievement> {
+        let url = format!(
+            "{}/ISteamUserStats/GetPlayerAchievements/v1/?key={}&steamid={}&appid={}",
+            self.api_base_url, self.steam_token, self.steam_id, appid
+        );
+
+        let response = match reqwest::Client::new().get(&url).send().await {
+            Ok(response) => response,
+            Err(_) => return Vec::new(),
+        };
+
+        match response.json::<PlayerAchievementsResponse>().await {
+            Ok(ach_response) => ach_response
+                .playerstats
+                .achievements
+                .unwrap_or_default()
+                .into_iter()
+                .map(|ach| Achievement {
+                    apiname: ach.apiname,
+                    achieved: ach.achieved == 1,
+                    unlocktime: ach.unlocktime,
+                    name: ach.name,
+                    description: ach.description,
+                })
+                .collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct AchievementProgress {
+    total: u32,
+    unlocked: u32,
+    percentage: f32,
+}
+
+impl AchievementProgress {
+    fn from_achievements(achievements: &[Achievement]) -> Self {
+        let total = achievements.len() as u32;
+        let unlocked = achievements.iter().filter(|a| a.achieved).count() as u32;
+        let percentage = if total > 0 {
+            (unlocked as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
+
+        Self {
+            total,
+            unlocked,
+            percentage,
+        }
+    }
+}
+
+fn select_top_games(games: Vec<OwnedGameData>, count: usize) -> Vec<OwnedGameData> {
+    let mut games: Vec<OwnedGameData> = games
+        .into_iter()
+        .filter(|game| !EXCLUDED_APP_IDS.contains(&game.appid))
+        .filter(|game| game.playtime_forever > 0)
+        .collect();
+
+    games.sort_by_key(|game| std::cmp::Reverse(game.playtime_forever));
+    games.truncate(count);
+    games
+}
+
+fn header_image_url(appid: u32) -> String {
+    format!(
+        "https://cdn.cloudflare.steamstatic.com/steam/apps/{}/header.jpg",
+        appid
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn owned_game(appid: u32, playtime_forever: u32) -> OwnedGameData {
+        OwnedGameData {
+            appid,
+            name: Some(format!("Game {}", appid)),
+            playtime_forever,
+            img_icon_url: None,
+            playtime_2weeks: None,
+        }
+    }
+
+    fn achievement(achieved: bool) -> Achievement {
+        Achievement {
+            apiname: "ACH".to_string(),
+            achieved,
+            unlocktime: 0,
+            name: None,
+            description: None,
+        }
+    }
+
+    #[test]
+    fn top_games_are_sorted_by_playtime_and_truncated() {
+        let games = vec![owned_game(1, 10), owned_game(2, 300), owned_game(3, 50)];
+
+        let top: Vec<u32> = select_top_games(games, 2).iter().map(|g| g.appid).collect();
+
+        assert_eq!(top, vec![2, 3]);
+    }
+
+    #[test]
+    fn top_games_skip_excluded_and_never_played_games() {
+        let games = vec![
+            owned_game(EXCLUDED_APP_IDS[0], 10_000),
+            owned_game(EXCLUDED_APP_IDS[1], 9_000),
+            owned_game(7, 0),
+            owned_game(8, 5),
+        ];
+
+        let top: Vec<u32> = select_top_games(games, 5).iter().map(|g| g.appid).collect();
+
+        assert_eq!(top, vec![8]);
+    }
+
+    #[test]
+    fn achievement_progress_counts_unlocked_achievements() {
+        let achievements = vec![
+            achievement(true),
+            achievement(false),
+            achievement(true),
+            achievement(false),
+        ];
+
+        let progress = AchievementProgress::from_achievements(&achievements);
+
+        assert_eq!(
+            progress,
+            AchievementProgress {
+                total: 4,
+                unlocked: 2,
+                percentage: 50.0
+            }
+        );
+    }
+
+    #[test]
+    fn achievement_progress_is_zero_without_achievements() {
+        let progress = AchievementProgress::from_achievements(&[]);
+
+        assert_eq!(progress.total, 0);
+        assert_eq!(progress.percentage, 0.0);
+    }
+
+    #[test]
+    fn header_image_points_to_the_steam_cdn() {
+        assert_eq!(
+            header_image_url(620),
+            "https://cdn.cloudflare.steamstatic.com/steam/apps/620/header.jpg"
+        );
+    }
+
+    #[test]
+    fn steam_state_defaults_to_the_public_api() {
+        let state = SteamState::new("key".into(), "id".into());
+        assert_eq!(state.api_base_url, STEAM_API_BASE_URL);
+
+        let state = state.with_api_base_url("http://localhost:1234");
+        assert_eq!(state.api_base_url, "http://localhost:1234");
     }
 }

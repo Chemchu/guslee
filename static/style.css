@@ -14,6 +14,10 @@
   --color-shade-color: #323c49;
 }
 
+@view-transition {
+  navigation: auto;
+}
+
 @utility prose-theme {
   --tw-prose-body: #dbdfe5;
   --tw-prose-headings: #dbdfe5;
@@ -70,33 +74,29 @@ footer {
 }
 
 @font-face {
-  font-family: "Iosevka Regular"; /* Give your font a name */
-  src: url("Iosevka-Regular-subset.woff2") format("truetype");
-  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
-  font-style: normal; /* Specify the style (e.g., normal, italic) */
+  font-family: "Iosevka Regular";
+  src: url("Iosevka-Regular-subset.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
   font-display: swap;
-  letter-spacing: 0em;
 }
 
 @font-face {
-  font-family: "Tusker Grotesk"; /* Give your font a name */
-  src: url("TuskerGrotesk-subset.woff2") format("truetype");
-  font-weight: 600; /* Specify the weight (e.g., normal, bold) */
-  font-style: normal; /* Specify the style (e.g., normal, italic) */
+  font-family: "Tusker Grotesk";
+  src: url("TuskerGrotesk-subset.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
   font-display: swap;
-  letter-spacing: 0em;
 }
 
-.htmx-indicator {
-  display: none;
-}
-.htmx-request .htmx-indicator {
-  display: inline;
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(219, 223, 229, 0.5) transparent;
 }
 
 ::-webkit-scrollbar {
-  width: 5;
-  height: 8;
+  width: 5px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -111,7 +111,6 @@ footer {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #f58a07;
-  border-radius: 100vh;
 }
 
 details[open] summary::marker {

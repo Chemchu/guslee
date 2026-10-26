@@ -4,7 +4,6 @@ use std::fs;
 use surrealdb::Surreal;
 use surrealdb::engine::any::Any;
 use surrealdb::engine::any::connect;
-#[cfg(debug_assertions)]
 use surrealdb::types::SurrealValue;
 use walkdir::WalkDir;
 
@@ -20,8 +19,21 @@ pub struct PostsSearchEngine {
     db: Surreal<Any>,
 }
 
+#[cfg(debug_assertions)]
+pub const DEFAULT_DB_ENDPOINT: &str = "ws://127.0.0.1:8000";
+#[cfg(not(debug_assertions))]
+pub const DEFAULT_DB_ENDPOINT: &str = "mem://";
+
 impl PostsSearchEngine {
     pub async fn new(repo_path: &str, documents_path: &str) -> PostsSearchEngine {
+        Self::new_with_endpoint(DEFAULT_DB_ENDPOINT, repo_path, documents_path).await
+    }
+
+    pub async fn new_with_endpoint(
+        db_endpoint: &str,
+        repo_path: &str,
+        documents_path: &str,
+    ) -> PostsSearchEngine {
         let mut posts: Vec<Post> = Vec::new();
         for entry in WalkDir::new(documents_path) {
             let entry = entry.expect("Error while accessing the WalkDir entry");
@@ -35,7 +47,7 @@ impl PostsSearchEngine {
                     .unwrap()
                     .to_string_lossy()
                     .to_string();
-                let full_path = format!("{}/{}", documents_path, &file_path);
+                let full_path = format!("{}/{}", documents_path, file_path);
 
                 match fs::read_to_string(path) {
                     Ok(content) => {
@@ -54,15 +66,14 @@ impl PostsSearchEngine {
             }
         }
 
-        #[cfg(debug_assertions)]
-        let db = connect("ws://127.0.0.1:8000").await.unwrap();
-
-        #[cfg(not(debug_assertions))]
-        let db = connect("mem://").await.unwrap();
+        let db = connect(db_endpoint).await.unwrap();
 
         db.use_ns("guslee").use_db("guslee").await.unwrap();
-        let _  = db.query(
-            "DEFINE TABLE posts SCHEMAFULL;
+        db.query(
+            "REMOVE TABLE IF EXISTS posts;
+            REMOVE TABLE IF EXISTS points_to;
+
+            DEFINE TABLE posts SCHEMAFULL;
             DEFINE FIELD file_name ON posts TYPE string;
             DEFINE FIELD file_path ON posts TYPE string;
             DEFINE FIELD metadata ON posts TYPE object;
@@ -73,18 +84,20 @@ impl PostsSearchEngine {
             DEFINE FIELD metadata.topic ON posts TYPE option<string>;
             DEFINE FIELD metadata.post_source_url ON posts TYPE string;
             DEFINE FIELD metadata.is_draft ON posts TYPE bool DEFAULT false;
-            DEFINE FIELD metadata.reading_time ON posts TYPE integer;
+            DEFINE FIELD metadata.reading_time ON posts TYPE int;
             DEFINE FIELD content ON posts TYPE string;
             DEFINE INDEX file_path_index ON TABLE posts COLUMNS file_path UNIQUE;
 
             -- Define a custom analyzer
-            DEFINE ANALYZER full_text_analyzer TOKENIZERS class FILTERS lowercase, ascii, edgengram(2, 15);
+            DEFINE ANALYZER OVERWRITE full_text_analyzer TOKENIZERS class FILTERS lowercase, ascii, edgengram(2, 15);
             
             -- Create a full-text search index
-            DEFINE INDEX ml_title ON TABLE posts FIELDS metadata.title SEARCH ANALYZER full_text_analyzer BM25 HIGHLIGHTS;
-            DEFINE INDEX ml_content ON TABLE posts FIELDS content SEARCH ANALYZER full_text_analyzer BM25 HIGHLIGHTS;",
+            DEFINE INDEX ml_title ON TABLE posts FIELDS metadata.title FULLTEXT ANALYZER full_text_analyzer BM25 HIGHLIGHTS;
+            DEFINE INDEX ml_content ON TABLE posts FIELDS content FULLTEXT ANALYZER full_text_analyzer BM25 HIGHLIGHTS;",
         )
-        .await;
+        .await
+        .and_then(|response| response.check())
+        .expect("Failed to define the posts schema");
         let inserted_posts = db
             .insert::<Vec<Post>>("posts")
             .content(posts)
@@ -119,26 +132,35 @@ impl PostsSearchEngine {
             None => DEFAULT_SEARCH_LIMIT.value(),
         };
 
-        let query = params.query.as_ref().unwrap().to_lowercase();
-        let mut response = self
+        let query = params
+            .query
+            .as_ref()
+            .map(|q| q.to_lowercase())
+            .unwrap_or_default();
+        let response = self
             .db
-            .query(format!(
+            .query(
                 "SELECT *,
                     search::score(0) AS title_score,
                     search::score(1) AS content_score,
                     search::score(0) * 2 + search::score(1) AS combined_score
-                FROM posts 
-                WHERE metadata.title @0@ '{}' 
-                   OR content @1@ '{}'
+                FROM posts
+                WHERE (metadata.title @0@ $query OR content @1@ $query)
                    AND metadata.is_draft = false
                 ORDER BY combined_score DESC
-                LIMIT {}",
-                query, query, limit
-            ))
-            .await
-            .unwrap();
+                LIMIT $limit",
+            )
+            .bind(("query", query))
+            .bind(("limit", limit))
+            .await;
 
-        response.take(0).unwrap()
+        match response.and_then(|mut r| r.take(0)) {
+            Ok(posts) => posts,
+            Err(e) => {
+                eprintln!("Search query failed: {}", e);
+                Vec::new()
+            }
+        }
     }
 
     pub async fn get_post(&self, file_path: &str) -> Option<Post> {
@@ -152,7 +174,11 @@ impl PostsSearchEngine {
     }
 
     pub async fn get_overall_graph_data(&self) -> GraphData {
-        let mut posts_result = self.db.query("SELECT * FROM posts").await.unwrap();
+        let mut posts_result = self
+            .db
+            .query("SELECT * FROM posts WHERE metadata.is_draft = false")
+            .await
+            .unwrap();
         let posts: Vec<Post> = posts_result.take(0).unwrap();
 
         let mut edges_result = self
@@ -286,4 +312,46 @@ fn get_mentioned_posts_in_post_content(post: &Post) -> Vec<String> {
         .collect();
 
     links
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::MdMetadata;
+
+    fn post_with_content(content: &str) -> Post {
+        Post {
+            file_name: "post.md".to_string(),
+            file_path: "post.md".to_string(),
+            metadata: MdMetadata {
+                title: "Post".to_string(),
+                topic: None,
+                description: String::new(),
+                tags: vec![],
+                date: String::new(),
+                is_draft: false,
+                post_source_url: String::new(),
+                reading_time: 0,
+            },
+            content: content.to_string(),
+        }
+    }
+
+    #[test]
+    fn internal_markdown_links_become_post_paths() {
+        let post = post_with_content("See [my intro](hello) and [notes](journal/2025/notes).");
+
+        assert_eq!(
+            get_mentioned_posts_in_post_content(&post),
+            vec!["hello.md", "journal/2025/notes.md"]
+        );
+    }
+
+    #[test]
+    fn external_links_are_ignored() {
+        let post =
+            post_with_content("[Rust](https://rust-lang.org/) and [plain](http://example.com)");
+
+        assert!(get_mentioned_posts_in_post_content(&post).is_empty());
+    }
 }

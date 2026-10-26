@@ -1,0 +1,17 @@
+[package]
+name = "e2e"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+guslee = { path = "../.." }
+search-engine = { path = "../search-engine" }
+chess-module = { path = "../chess-module" }
+music-module = { path = "../music-module" }
+games-module = { path = "../games-module" }
+actix-web = "4.18.1"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "io-util"] }
+reqwest = { workspace = true, features = ["query"] }
+wiremock = "0.6.5"
+serde_json.workspace = true

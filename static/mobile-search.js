@@ -1,5 +1,5 @@
-document.addEventListener("htmx:afterSwap", function (evt) {
-  if (evt.detail.target.id === "main-section") {
+document.addEventListener("htmx:after:swap", function (evt) {
+  if (evt.detail.ctx.target?.id === "main-section") {
     // Clear mobile search when content loads
     const mobileInput = document.querySelector(
       ".md\\:hidden input[name=query]",
