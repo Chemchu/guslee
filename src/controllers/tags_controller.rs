@@ -12,7 +12,8 @@ pub fn tag_url(tag: &str) -> String {
     let mut url = String::from("/tags/");
     for byte in tag.bytes() {
         match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+            // `/` stays as is so nested tags read as paths: /tags/gaming/horror
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => {
                 url.push(byte as char)
             }
             _ => url.push_str(&format!("%{byte:02X}")),
@@ -21,7 +22,7 @@ pub fn tag_url(tag: &str) -> String {
     url
 }
 
-#[get("/tags/{tag}")]
+#[get("/tags/{tag:.*}")]
 async fn tag_page(
     app_state: web::Data<AppState>,
     req: HttpRequest,
@@ -102,6 +103,7 @@ mod tests {
     fn tag_urls_percent_encode_anything_but_plain_characters() {
         assert_eq!(tag_url("gaming"), "/tags/gaming");
         assert_eq!(tag_url("digital garden"), "/tags/digital%20garden");
-        assert_eq!(tag_url("c#/ñ"), "/tags/c%23%2F%C3%B1");
+        assert_eq!(tag_url("c#ñ"), "/tags/c%23%C3%B1");
+        assert_eq!(tag_url("gaming/horror"), "/tags/gaming/horror");
     }
 }

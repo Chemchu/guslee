@@ -399,3 +399,24 @@ async fn tags_only_used_by_drafts_or_unknown_are_404s() {
     assert_eq!(app.htmx_get("/tags/draft").await.status, 404);
     assert_eq!(app.htmx_get("/tags/nothing-here").await.status, 404);
 }
+
+#[tokio::test]
+async fn inline_tags_link_to_tag_pages_that_include_them() {
+    let app = TestApp::spawn().await;
+
+    let fog = app.htmx_get("/posts/notes/fog").await.body;
+    let metadata = app.htmx_get("/metadata/notes/fog").await.body;
+    let nested = app.htmx_get("/tags/games/survival-horror").await;
+    let parent = app.htmx_get("/tags/games").await;
+
+    assert!(fog.contains(">#games/survival-horror</a>"));
+    assert!(fog.contains("painted in #2F3E46"), "colours are not tags");
+    assert!(fog.contains("<code>#not-a-tag</code>"));
+    assert!(metadata.contains(r#"href="/tags/games/survival-horror""#));
+    assert!(!metadata.contains("/tags/2F3E46"));
+    assert_eq!(nested.status, 200);
+    assert!(nested.body.contains("Notes about the fog"));
+    assert_eq!(parent.status, 200, "nested tags count for their parent");
+    assert!(parent.body.contains("Notes about the fog"));
+    assert_eq!(app.htmx_get("/tags/not-a-tag").await.status, 404);
+}

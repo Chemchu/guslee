@@ -9,12 +9,14 @@ use surrealdb::types::SurrealValue;
 use walkdir::WalkDir;
 
 use crate::links::{LinkIndex, WikiLink, find_wikilinks, markdown_link_target};
+use crate::tags::{markdown_inline_tags, tag_matches};
 use crate::types::EdgeFilePath;
 use crate::types::Params;
 use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode};
 use crate::utils::{Post, extract_full_metadata};
 
 pub mod links;
+pub mod tags;
 pub mod types;
 pub mod utils;
 
@@ -61,10 +63,17 @@ impl PostsSearchEngine {
 
                 match fs::read_to_string(path) {
                     Ok(content) => {
+                        let mut metadata =
+                            extract_full_metadata(repo_path, full_path.as_str()).unwrap();
+                        for tag in markdown_inline_tags(&content) {
+                            if !metadata.tags.iter().any(|t| t.eq_ignore_ascii_case(&tag)) {
+                                metadata.tags.push(tag);
+                            }
+                        }
                         let post = Post {
                             file_name,
                             file_path,
-                            metadata: extract_full_metadata(repo_path, full_path.as_str()).unwrap(),
+                            metadata,
                             content,
                         };
                         posts.push(post);
@@ -217,18 +226,14 @@ impl PostsSearchEngine {
             .unwrap()
     }
 
-    /// Published posts tagged with `tag` (ignoring case), newest first.
+    /// Published posts tagged with `tag` or one of its nested tags (ignoring
+    /// case), newest first. Tags written inline in a post count too.
     pub async fn posts_with_tag(&self, tag: &str) -> Vec<Post> {
         let mut posts: Vec<Post> = self
             .raw_query::<Vec<Post>>("SELECT * FROM posts WHERE metadata.is_draft = false")
             .await
             .into_iter()
-            .filter(|post| {
-                post.metadata
-                    .tags
-                    .iter()
-                    .any(|t| t.eq_ignore_ascii_case(tag))
-            })
+            .filter(|post| post.metadata.tags.iter().any(|t| tag_matches(t, tag)))
             .collect();
         posts.sort_by(|a, b| {
             b.metadata

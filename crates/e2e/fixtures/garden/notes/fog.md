@@ -11,3 +11,5 @@ tags:
 # The fog
 
 The **fog** never lifts in Silent Hill. James's letter talks about it.
+
+Filed under #games/survival-horror, painted in #2F3E46, see `#not-a-tag`.

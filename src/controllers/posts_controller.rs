@@ -7,6 +7,7 @@ use markdown::{Constructs, Options, ParseOptions};
 use maud::{PreEscaped, html};
 use search_engine::{
     links::{LinkIndex, WikiLink, find_wikilinks, markdown_link_target, slugify},
+    tags::find_inline_tags,
     types::{DEFAULT_SEARCH_LIMIT, Params},
     utils::Post,
 };
@@ -15,7 +16,8 @@ use std::fs;
 use std::path::{Component, Path};
 
 use crate::controllers::{
-    AppState, is_partial_request, render_not_found, render_page, wrap_content_into_full_page,
+    AppState, is_partial_request, render_not_found, render_page, tags_controller::tag_url,
+    wrap_content_into_full_page,
 };
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
@@ -368,6 +370,59 @@ fn render_wikilinks_in_text(text: &str, link_index: &LinkIndex) -> String {
     result
 }
 
+/// Turns inline `#tags` in rendered post HTML into links to their tag page.
+/// Code, links and the inside of HTML tags are left alone.
+fn render_inline_tags(html: &str) -> String {
+    let mut result = String::with_capacity(html.len());
+    let mut rest = html;
+
+    while let Some(open) = rest.find('<') {
+        result.push_str(&render_inline_tags_in_text(&rest[..open]));
+        rest = &rest[open..];
+
+        let name_len = rest[1..]
+            .find(|c: char| !c.is_ascii_alphanumeric())
+            .unwrap_or(rest.len() - 1);
+        let skipped_element = matches!(&rest[1..1 + name_len], "a" | "code" | "pre");
+        let end = match skipped_element {
+            true => {
+                let closing = format!("</{}>", &rest[1..1 + name_len]);
+                rest.find(&closing).map(|i| i + closing.len())
+            }
+            false => rest.find('>').map(|i| i + 1),
+        }
+        .unwrap_or(rest.len());
+
+        result.push_str(&rest[..end]);
+        rest = &rest[end..];
+    }
+
+    result.push_str(&render_inline_tags_in_text(rest));
+    result
+}
+
+fn render_inline_tags_in_text(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    let mut last = 0;
+
+    for tag in find_inline_tags(text) {
+        result.push_str(&text[last..tag.start]);
+        result.push_str(
+            &html! {
+                a
+                href=(tag_url(tag.name))
+                class="px-1.5 py-0.5 text-[0.9em] no-underline font-medium bg-primary-color/10 text-primary-color hover:bg-primary-color/25 rounded-full transition-colors"
+                { "#" (tag.name) }
+            }
+            .into_string(),
+        );
+        last = tag.end;
+    }
+
+    result.push_str(&text[last..]);
+    result
+}
+
 fn unescape_html(text: &str) -> String {
     text.replace("&lt;", "<")
         .replace("&gt;", ">")
@@ -445,7 +500,7 @@ fn render_post_html(md: &str, link_index: &LinkIndex, anchor_attribute: &str) ->
     };
 
     let html = markdown::to_html_with_options(md, &frontmatter).unwrap();
-    let html = render_wikilinks(&absolutize_post_links(&html), link_index);
+    let html = render_inline_tags(&render_wikilinks(&absolutize_post_links(&html), link_index));
     add_heading_anchors(&html, anchor_attribute)
 }
 
@@ -729,5 +784,35 @@ mod tests {
         assert!(html.contains(r#"<a href="/posts/notes/fog">fog</a>"#));
         assert!(!html.contains(" id="));
         assert!(!html.contains("title:"));
+    }
+
+    #[test]
+    fn inline_tags_link_to_their_tag_page() {
+        let html = render_inline_tags("<p>#intro and #gaming/horror, colour #2F3E46</p>");
+
+        assert!(html.starts_with(r#"<p><a href="/tags/intro" class="#));
+        assert!(html.contains(r#"href="/tags/gaming/horror""#));
+        assert!(html.contains(">#gaming/horror</a>, colour #2F3E46</p>"));
+    }
+
+    #[test]
+    fn inline_tags_in_code_links_and_attributes_are_left_alone() {
+        let html = r##"<pre><code>#fenced</code></pre><p><code>#code</code> <a href="#top" title="x #y">#link</a> <abbr>#abbr</abbr></p>"##;
+
+        let rendered = render_inline_tags(html);
+
+        assert!(rendered.starts_with(
+            r##"<pre><code>#fenced</code></pre><p><code>#code</code> <a href="#top" title="x #y">#link</a> <abbr><a href="/tags/abbr""##
+        ));
+    }
+
+    #[test]
+    fn post_shell_renders_inline_tags_but_not_headings() {
+        let md = "# Title\n\nText #intro.".to_string();
+
+        let html = post_page_shell(md, "welcome".to_string(), &index()).into_string();
+
+        assert!(html.contains(r#"<h1 id="title">Title</h1>"#));
+        assert!(html.contains(r#"href="/tags/intro""#));
     }
 }
