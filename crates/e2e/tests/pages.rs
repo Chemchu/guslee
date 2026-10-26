@@ -30,6 +30,20 @@ async fn layout_is_wired_for_htmx_4() {
 }
 
 #[tokio::test]
+async fn links_inside_the_content_only_swap_the_main_section() {
+    let app = TestApp::spawn().await;
+
+    let body = app.get("/posts/welcome").await.body;
+    let main_start = body.find("id=\"main-section\"").unwrap();
+    let main_tag = &body[main_start..main_start + body[main_start..].find('>').unwrap()];
+
+    assert!(main_tag.contains("hx-target:inherited=\"#main-section\""));
+    assert!(main_tag.contains("hx-swap:inherited=\"innerHTML transition:true\""));
+    assert!(main_tag.contains("hx-history-elt"));
+    assert!(body[main_start..].contains("href=\"notes/fog\""));
+}
+
+#[tokio::test]
 async fn posts_are_full_pages_for_browsers_and_fragments_for_htmx() {
     let app = TestApp::spawn().await;
 
