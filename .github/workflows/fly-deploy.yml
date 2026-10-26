@@ -7,6 +7,9 @@ on:
 jobs:
   rust-test:
     runs-on: ubuntu-latest
+    env:
+      COVERAGE_MIN_LINES: 80
+      COVERAGE_IGNORE: crates/e2e/
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -28,7 +31,26 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Run tests with coverage
-        run: cargo llvm-cov --workspace --ignore-filename-regex 'crates/e2e/' --fail-under-lines 80
+        run: cargo llvm-cov --workspace --no-report
+
+      - name: Write coverage report
+        run: |
+          cargo llvm-cov report --workspace --ignore-filename-regex "$COVERAGE_IGNORE" --html
+          cargo llvm-cov report --workspace --ignore-filename-regex "$COVERAGE_IGNORE" \
+            --json --summary-only --output-path target/llvm-cov/coverage.json
+          python3 .github/scripts/coverage_summary.py target/llvm-cov/coverage.json "$COVERAGE_MIN_LINES" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: target/llvm-cov/html
+
+      - name: Check coverage
+        run: |
+          cargo llvm-cov report --workspace --ignore-filename-regex "$COVERAGE_IGNORE" \
+            --fail-under-lines "$COVERAGE_MIN_LINES"
   docker-test:
     needs: rust-test
     runs-on: ubuntu-latest
