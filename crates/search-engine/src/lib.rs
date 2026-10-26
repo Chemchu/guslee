@@ -1,5 +1,6 @@
 use regex::Regex;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::fs;
 use surrealdb::Surreal;
 use surrealdb::engine::any::Any;
@@ -7,16 +8,25 @@ use surrealdb::engine::any::connect;
 use surrealdb::types::SurrealValue;
 use walkdir::WalkDir;
 
+use crate::links::{LinkIndex, WikiLink, find_wikilinks, markdown_link_target};
 use crate::types::EdgeFilePath;
 use crate::types::Params;
 use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode};
 use crate::utils::{Post, extract_full_metadata};
 
+pub mod links;
 pub mod types;
 pub mod utils;
 
 pub struct PostsSearchEngine {
     db: Surreal<Any>,
+    link_index: LinkIndex,
+}
+
+#[derive(SurrealValue, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct Backlink {
+    pub file_path: String,
+    pub title: String,
 }
 
 #[cfg(debug_assertions)]
@@ -66,6 +76,13 @@ impl PostsSearchEngine {
             }
         }
 
+        let link_index = LinkIndex::new(
+            posts
+                .iter()
+                .filter(|post| !post.metadata.is_draft)
+                .map(|post| &post.file_path),
+        );
+
         let db = connect(db_endpoint).await.unwrap();
 
         db.use_ns("guslee").use_db("guslee").await.unwrap();
@@ -105,7 +122,7 @@ impl PostsSearchEngine {
             .unwrap();
 
         for inserted_post in inserted_posts.iter() {
-            let mentioned_posts = get_mentioned_posts_in_post_content(inserted_post);
+            let mentioned_posts = get_mentioned_posts_in_post_content(inserted_post, &link_index);
             if mentioned_posts.is_empty() {
                 continue;
             }
@@ -123,7 +140,34 @@ impl PostsSearchEngine {
             }
         }
 
-        PostsSearchEngine { db }
+        PostsSearchEngine { db, link_index }
+    }
+
+    pub fn link_index(&self) -> &LinkIndex {
+        &self.link_index
+    }
+
+    /// Published posts that link to `file_path`, sorted by title.
+    pub async fn get_backlinks(&self, file_path: &str) -> Vec<Backlink> {
+        let response = self
+            .db
+            .query(
+                "SELECT in.file_path AS file_path, in.metadata.title AS title
+                FROM points_to
+                WHERE out.file_path = $path AND in.metadata.is_draft = false",
+            )
+            .bind(("path", file_path.to_string()))
+            .await;
+
+        let mut backlinks: Vec<Backlink> = match response.and_then(|mut r| r.take(0)) {
+            Ok(backlinks) => backlinks,
+            Err(e) => {
+                eprintln!("Backlinks query failed: {}", e);
+                Vec::new()
+            }
+        };
+        backlinks.sort_by(|a, b| a.title.cmp(&b.title));
+        backlinks
     }
 
     pub async fn query_posts(&self, params: &Params) -> Vec<Post> {
@@ -235,31 +279,51 @@ impl PostsSearchEngine {
             .await
             .unwrap();
 
-        let related_posts: Vec<(String, String)> = result
+        let linked_posts: Vec<(String, String)> = result
             .take::<Option<QueryRelatedPostResult>>(0)
             .unwrap()
             .map(|r| r.related_posts)
             .unwrap_or_default()
             .iter()
+            .filter(|p| !p.metadata.is_draft)
             .map(|p| (p.metadata.title.clone(), p.file_path.clone()))
             .collect::<Vec<(String, String)>>();
+        let backlinks = self.get_backlinks(main_node_file_path).await;
+
         let main_node = GraphNode {
             id: 1,
             label: curr_post.as_ref().unwrap().metadata.title.to_string(),
             file_path: curr_post.unwrap().file_path.to_string(),
         };
 
-        let mut nodes: Vec<GraphNode> = Vec::new();
+        let mut nodes: Vec<GraphNode> = vec![main_node];
         let mut edges: Vec<GraphEdge> = Vec::new();
-        nodes.push(main_node);
-        for (index, node) in related_posts.iter().enumerate() {
-            nodes.push(GraphNode {
-                id: index + 2,
-                label: node.0.clone(),
-                file_path: node.1.clone(),
-            });
+        let node_id = |nodes: &mut Vec<GraphNode>, title: &str, file_path: &str| match nodes
+            .iter()
+            .find(|n| n.file_path == file_path)
+        {
+            Some(node) => node.id,
+            None => {
+                let id = nodes.len() + 1;
+                nodes.push(GraphNode {
+                    id,
+                    label: title.to_string(),
+                    file_path: file_path.to_string(),
+                });
+                id
+            }
+        };
+        for (title, file_path) in &linked_posts {
+            let id = node_id(&mut nodes, title, file_path);
             edges.push(GraphEdge {
-                source: index + 2,
+                source: 1,
+                target: id,
+            });
+        }
+        for backlink in &backlinks {
+            let id = node_id(&mut nodes, &backlink.title, &backlink.file_path);
+            edges.push(GraphEdge {
+                source: id,
                 target: 1,
             });
         }
@@ -295,23 +359,27 @@ struct QueryRelatedPostResult {
     related_posts: Vec<Post>,
 }
 
-fn get_mentioned_posts_in_post_content(post: &Post) -> Vec<String> {
-    let content = post.content.to_owned();
+/// Garden file paths (with `.md`) of the published posts that `post` links to,
+/// through markdown links or `[[wikilinks]]`.
+fn get_mentioned_posts_in_post_content(post: &Post, link_index: &LinkIndex) -> Vec<String> {
     let regex_pattern = Regex::new(r"\[([^\]]+)\]\(([^\)]+)\)").unwrap();
 
-    let links: Vec<String> = regex_pattern
-        .captures_iter(&content)
-        .filter_map(|cap| {
-            let link = &cap[2];
-            if link.starts_with("http") || link.starts_with("https") {
-                None
-            } else {
-                Some(format!("{}.md", link))
-            }
-        })
-        .collect();
+    let markdown_links = regex_pattern
+        .captures_iter(&post.content)
+        .filter_map(|cap| markdown_link_target(&cap[2]))
+        .filter(|target| link_index.contains(&target.path))
+        .map(|target| target.file_path());
+    let wikilinks = find_wikilinks(&post.content)
+        .into_iter()
+        .filter(|m| !m.is_embed)
+        .filter_map(|m| link_index.wikilink_target(&WikiLink::parse(m.inner)))
+        .map(|target| target.file_path());
 
-    links
+    let mut seen = HashSet::new();
+    markdown_links
+        .chain(wikilinks)
+        .filter(|file_path| *file_path != post.file_path && seen.insert(file_path.clone()))
+        .collect()
 }
 
 #[cfg(test)]
@@ -337,14 +405,50 @@ mod tests {
         }
     }
 
+    fn index() -> LinkIndex {
+        LinkIndex::new([
+            "hello.md",
+            "post.md",
+            "notes/fog.md",
+            "journal/2025/notes.md",
+        ])
+    }
+
     #[test]
     fn internal_markdown_links_become_post_paths() {
         let post = post_with_content("See [my intro](hello) and [notes](journal/2025/notes).");
 
         assert_eq!(
-            get_mentioned_posts_in_post_content(&post),
+            get_mentioned_posts_in_post_content(&post, &index()),
             vec!["hello.md", "journal/2025/notes.md"]
         );
+    }
+
+    #[test]
+    fn markdown_links_with_anchors_or_extensions_are_found() {
+        let post = post_with_content("[a](notes/fog#the-fog), [b](./hello.md) and [c](hello)");
+
+        assert_eq!(
+            get_mentioned_posts_in_post_content(&post, &index()),
+            vec!["notes/fog.md", "hello.md"]
+        );
+    }
+
+    #[test]
+    fn wikilinks_are_found_by_note_name() {
+        let post = post_with_content("[[fog#The fog|that fog]], [[Hello]] and [[missing]]");
+
+        assert_eq!(
+            get_mentioned_posts_in_post_content(&post, &index()),
+            vec!["notes/fog.md", "hello.md"]
+        );
+    }
+
+    #[test]
+    fn embeds_self_links_and_missing_posts_are_not_links() {
+        let post = post_with_content("![[fog]] [[post]] [me](post) [gone](gone) ![img](pic.png)");
+
+        assert!(get_mentioned_posts_in_post_content(&post, &index()).is_empty());
     }
 
     #[test]
@@ -352,6 +456,6 @@ mod tests {
         let post =
             post_with_content("[Rust](https://rust-lang.org/) and [plain](http://example.com)");
 
-        assert!(get_mentioned_posts_in_post_content(&post).is_empty());
+        assert!(get_mentioned_posts_in_post_content(&post, &index()).is_empty());
     }
 }

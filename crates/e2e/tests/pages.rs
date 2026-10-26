@@ -195,7 +195,7 @@ async fn garden_graph_contains_published_posts_and_their_links() {
 }
 
 #[tokio::test]
-async fn post_graph_shows_the_posts_it_links_to() {
+async fn post_graph_shows_its_links_and_backlinks() {
     let app = TestApp::spawn().await;
 
     let body = app.htmx_get("/graph/welcome").await.body;
@@ -209,8 +209,40 @@ async fn post_graph_shows_the_posts_it_links_to() {
         .collect();
     assert_eq!(
         labels,
-        vec!["Welcome to the fixture garden", "Notes about the fog"]
+        vec![
+            "Welcome to the fixture garden",
+            "Notes about the fog",
+            "Hello fixture"
+        ]
     );
+}
+
+#[tokio::test]
+async fn wikilinks_render_as_links_or_unresolved_notes() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/letters").await.body;
+
+    assert!(body.contains(r#"<a href="/posts/notes/fog#the-fog">the fog itself</a>"#));
+    assert!(body.contains(r#"<span class="wikilink-unresolved""#));
+    assert!(body.contains(">ghosts</span>"));
+}
+
+#[tokio::test]
+async fn metadata_panel_lists_linked_mentions() {
+    let app = TestApp::spawn().await;
+
+    let fog = app.htmx_get("/metadata/notes/fog").await.body;
+    let welcome = app.htmx_get("/metadata/welcome").await.body;
+    let hello = app.htmx_get("/metadata/hello").await.body;
+
+    assert!(fog.contains("Linked mentions"));
+    let letters = fog.find("href=\"/posts/notes/letters\"").unwrap();
+    let welcome_link = fog.find("href=\"/posts/welcome\"").unwrap();
+    assert!(letters < welcome_link, "sorted by title");
+    assert!(welcome.contains("href=\"/posts/hello\""));
+    assert!(!welcome.contains("/posts/draft"), "drafts are not mentions");
+    assert!(hello.contains("No notes link here yet."));
 }
 
 #[tokio::test]

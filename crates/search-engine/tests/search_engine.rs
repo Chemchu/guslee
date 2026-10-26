@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::Path;
 
-use search_engine::PostsSearchEngine;
 use search_engine::types::{Limit, Params};
 use search_engine::utils::Post;
+use search_engine::{Backlink, PostsSearchEngine};
 use tempfile::TempDir;
 
 const REPO: &str = "https://github.com/user/repo/blob/main";
@@ -200,12 +200,107 @@ async fn related_graph_centres_on_the_requested_post() {
 
     let graph = engine.get_graph_from_related_posts("welcome.md").await;
 
-    assert_eq!(graph.nodes.len(), 2);
-    assert_eq!(graph.nodes[0].id, 1);
-    assert_eq!(graph.nodes[0].file_path, "welcome.md");
-    assert_eq!(graph.nodes[1].file_path, "notes/first_note.md");
-    assert_eq!(graph.edges.len(), 1);
-    assert_eq!((graph.edges[0].source, graph.edges[0].target), (2, 1));
+    let nodes: Vec<(usize, &str)> = graph
+        .nodes
+        .iter()
+        .map(|n| (n.id, n.file_path.as_str()))
+        .collect();
+    assert_eq!(
+        nodes,
+        vec![
+            (1, "welcome.md"),
+            (2, "notes/first_note.md"),
+            (3, "notes/second_note.md"),
+        ]
+    );
+    let edges: Vec<(usize, usize)> = graph.edges.iter().map(|e| (e.source, e.target)).collect();
+    assert_eq!(
+        edges,
+        vec![(1, 2), (3, 1)],
+        "edges follow the link direction"
+    );
+}
+
+#[tokio::test]
+async fn related_graph_shows_mutual_links_once() {
+    let garden = garden();
+    write_post(
+        garden.path(),
+        "notes/first_note.md",
+        "title: \"First note\"\ndate: \"2025-02-01\"\ndescription: \"Fog\"\ntags: []",
+        "Back to [welcome](welcome).",
+    );
+    let engine = engine(&garden).await;
+
+    let graph = engine.get_graph_from_related_posts("welcome.md").await;
+
+    let first_note = graph
+        .nodes
+        .iter()
+        .filter(|n| n.file_path == "notes/first_note.md")
+        .count();
+    assert_eq!(first_note, 1);
+    assert_eq!(graph.nodes.len(), 3);
+    assert_eq!(graph.edges.len(), 3);
+}
+
+#[tokio::test]
+async fn backlinks_list_published_posts_linking_here() {
+    let garden = garden();
+    let engine = engine(&garden).await;
+
+    let backlinks = engine.get_backlinks("welcome.md").await;
+
+    assert_eq!(
+        backlinks,
+        vec![Backlink {
+            file_path: "notes/second_note.md".to_string(),
+            title: "Second note".to_string(),
+        }],
+        "the draft linking to welcome is left out"
+    );
+    assert!(
+        engine
+            .get_backlinks("notes/second_note.md")
+            .await
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn wikilinks_and_anchored_links_create_graph_edges() {
+    let garden = garden();
+    write_post(
+        garden.path(),
+        "journal/wiki.md",
+        "title: \"Wiki\"\ndate: \"2025-05-01\"\ndescription: \"x\"\ntags: []",
+        "See [[First_Note|the first one]], [[secret]] and [second](notes/second_note#fog).",
+    );
+    let engine = engine(&garden).await;
+
+    let first: Vec<String> = engine
+        .get_backlinks("notes/first_note.md")
+        .await
+        .into_iter()
+        .map(|b| b.file_path)
+        .collect();
+    let second: Vec<String> = engine
+        .get_backlinks("notes/second_note.md")
+        .await
+        .into_iter()
+        .map(|b| b.file_path)
+        .collect();
+
+    assert_eq!(
+        first,
+        vec!["welcome.md", "journal/wiki.md"],
+        "sorted by title"
+    );
+    assert_eq!(second, vec!["journal/wiki.md"]);
+    assert!(
+        engine.link_index().resolve("secret").is_none(),
+        "drafts can't be linked to"
+    );
 }
 
 #[tokio::test]

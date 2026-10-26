@@ -6,6 +6,7 @@ use cached::cached;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::{PreEscaped, html};
 use search_engine::{
+    links::{LinkIndex, WikiLink, find_wikilinks, markdown_link_target},
     types::{DEFAULT_SEARCH_LIMIT, Params},
     utils::Post,
 };
@@ -38,9 +39,13 @@ async fn landing(app_state: web::Data<AppState>) -> impl Responder {
 
     Html::new(wrap_content_into_full_page(
         &app_state.app_name,
-        post_page_shell(content, "welcome".to_string())
-            .into_string()
-            .as_str(),
+        post_page_shell(
+            content,
+            "welcome".to_string(),
+            app_state.post_search_engine.link_index(),
+        )
+        .into_string()
+        .as_str(),
     ))
 }
 
@@ -58,7 +63,12 @@ async fn get_post_page(
         Ok(md) => render_page(
             &app_state,
             &req,
-            &post_page_shell(md, route.to_string()).into_string(),
+            &post_page_shell(
+                md,
+                route.to_string(),
+                app_state.post_search_engine.link_index(),
+            )
+            .into_string(),
         )
         .respond_to(&req)
         .map_into_boxed_body(),
@@ -248,21 +258,7 @@ fn build_posts_list(matching_posts: Vec<Post>) -> String {
 }
 
 fn post_url(href: &str) -> Option<String> {
-    let has_scheme = href
-        .split_once(':')
-        .is_some_and(|(scheme, _)| !scheme.contains('/'));
-    if href.is_empty() || href.starts_with(['/', '#', '?']) || has_scheme {
-        return None;
-    }
-
-    let (path, fragment) = match href.split_once('#') {
-        Some((path, fragment)) => (path, format!("#{fragment}")),
-        None => (href, String::new()),
-    };
-    let path = path.trim_start_matches("./");
-    let path = path.strip_suffix(".md").unwrap_or(path);
-
-    Some(format!("/posts/{path}{fragment}"))
+    markdown_link_target(href).map(|target| target.url())
 }
 
 fn absolutize_post_links(html: &str) -> String {
@@ -286,7 +282,72 @@ fn absolutize_post_links(html: &str) -> String {
     result
 }
 
-fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
+/// Turns `[[wikilinks]]` in rendered post HTML into links, leaving code alone.
+/// Links to notes that don't exist yet are shown faded, like in Obsidian.
+fn render_wikilinks(html: &str, link_index: &LinkIndex) -> String {
+    const CODE_END: &str = "</code>";
+    let mut result = String::with_capacity(html.len());
+    let mut rest = html;
+
+    loop {
+        let code_start = rest.find("<code").unwrap_or(rest.len());
+        result.push_str(&render_wikilinks_in_text(&rest[..code_start], link_index));
+        rest = &rest[code_start..];
+        if rest.is_empty() {
+            break;
+        }
+
+        let code_end = rest
+            .find(CODE_END)
+            .map_or(rest.len(), |end| end + CODE_END.len());
+        result.push_str(&rest[..code_end]);
+        rest = &rest[code_end..];
+    }
+
+    result
+}
+
+fn render_wikilinks_in_text(text: &str, link_index: &LinkIndex) -> String {
+    let mut result = String::with_capacity(text.len());
+    let mut last = 0;
+
+    // Embeds (`![[note]]`) aren't supported yet, so they stay as written
+    for found in find_wikilinks(text).into_iter().filter(|m| !m.is_embed) {
+        let inner = unescape_html(found.inner);
+        let link = WikiLink::parse(&inner);
+        let href = match link.target {
+            "" => link.heading_anchor().map(|anchor| format!("#{anchor}")),
+            _ => link_index.wikilink_target(&link).map(|target| target.url()),
+        };
+
+        let rendered = match href {
+            Some(href) => html! { a href=(href) { (link.display_text()) } },
+            None => html! {
+                span
+                class="wikilink-unresolved"
+                title="This note hasn't been written yet"
+                { (link.display_text()) }
+            },
+        };
+        result.push_str(&text[last..found.start]);
+        result.push_str(&rendered.into_string());
+        last = found.end;
+    }
+
+    result.push_str(&text[last..]);
+    result
+}
+
+fn unescape_html(text: &str) -> String {
+    text.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#x27;", "'")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
+}
+
+fn post_page_shell(md: String, post_path: String, link_index: &LinkIndex) -> PreEscaped<String> {
     let frontmatter = Options {
         parse: ParseOptions {
             constructs: Constructs {
@@ -302,7 +363,10 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
         div
         class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
             {
-               (PreEscaped(absolutize_post_links(&markdown::to_html_with_options(&md, &frontmatter).unwrap())))
+               (PreEscaped(render_wikilinks(
+                   &absolutize_post_links(&markdown::to_html_with_options(&md, &frontmatter).unwrap()),
+                   link_index,
+               )))
             }
         div
         id="right-section-resizer"
@@ -333,7 +397,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
                 {}
             }
             div
-            class="flex flex-col grow w-full"
+            class="flex flex-col grow w-full min-h-0 overflow-y-auto"
             {
                 div
                 id="bottom-right-section"
@@ -354,6 +418,10 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
 mod tests {
     use super::*;
     use search_engine::utils::MdMetadata;
+
+    fn index() -> LinkIndex {
+        LinkIndex::new(["welcome.md", "notes/fog.md", "journal/2025/rock & roll.md"])
+    }
 
     fn post(file_path: &str, title: &str, topic: Option<&str>) -> Post {
         Post {
@@ -464,7 +532,8 @@ mod tests {
     fn post_shell_links_resolve_from_the_garden_root() {
         let md = "See [the fog](notes/fog) and [Rust](https://rust-lang.org/).".to_string();
 
-        let html = post_page_shell(md, "journal/2025/deep_post".to_string()).into_string();
+        let html =
+            post_page_shell(md, "journal/2025/deep_post".to_string(), &index()).into_string();
 
         assert!(html.contains(r#"<a href="/posts/notes/fog">the fog</a>"#));
         assert!(html.contains(r#"<a href="https://rust-lang.org/">Rust</a>"#));
@@ -474,12 +543,62 @@ mod tests {
     fn post_shell_renders_markdown_without_the_frontmatter() {
         let md = "---\ntitle: \"Hidden\"\n---\n# Heading\n\nSome *text*.".to_string();
 
-        let html = post_page_shell(md, "notes/first".to_string()).into_string();
+        let html = post_page_shell(md, "notes/first".to_string(), &index()).into_string();
 
         assert!(html.contains("<h1>Heading</h1>"));
         assert!(html.contains("<em>text</em>"));
         assert!(!html.contains("title: "));
         assert!(html.contains("hx-get=\"/graph/notes/first\""));
         assert!(html.contains("hx-get=\"/metadata/notes/first\""));
+    }
+
+    #[test]
+    fn wikilinks_link_to_the_note_they_name() {
+        let html = render_wikilinks(
+            "<p>[[fog]], [[Fog#The fog|that fog]] and [[#Intro]]</p>",
+            &index(),
+        );
+
+        assert_eq!(
+            html,
+            r##"<p><a href="/posts/notes/fog">fog</a>, <a href="/posts/notes/fog#the-fog">that fog</a> and <a href="#intro">Intro</a></p>"##
+        );
+    }
+
+    #[test]
+    fn missing_notes_render_as_unresolved_links() {
+        let html = render_wikilinks("<p>[[not yet]]</p>", &index());
+
+        assert_eq!(
+            html,
+            r#"<p><span class="wikilink-unresolved" title="This note hasn't been written yet">not yet</span></p>"#
+        );
+    }
+
+    #[test]
+    fn wikilinks_in_code_and_embeds_are_left_alone() {
+        let html = "<pre><code>[[fog]]</code></pre><p><code>[[fog]]</code> ![[fog]]</p>";
+
+        assert_eq!(render_wikilinks(html, &index()), html);
+    }
+
+    #[test]
+    fn wikilink_text_is_unescaped_to_resolve_and_escaped_again() {
+        let html = render_wikilinks("<p>[[rock &amp; roll|R&amp;R &lt;3]]</p>", &index());
+
+        assert_eq!(
+            html,
+            r#"<p><a href="/posts/journal/2025/rock &amp; roll">R&amp;R &lt;3</a></p>"#
+        );
+    }
+
+    #[test]
+    fn post_shell_renders_wikilinks() {
+        let md = "Read [[fog]] and `[[fog]]`.".to_string();
+
+        let html = post_page_shell(md, "welcome".to_string(), &index()).into_string();
+
+        assert!(html.contains(r#"<a href="/posts/notes/fog">fog</a>"#));
+        assert!(html.contains("<code>[[fog]]</code>"));
     }
 }

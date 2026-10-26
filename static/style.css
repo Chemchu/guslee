@@ -37,6 +37,12 @@
   --tw-prose-td-borders: #cad2c5;
 }
 
+.wikilink-unresolved {
+  color: var(--color-primary-color);
+  opacity: 0.5;
+  cursor: help;
+}
+
 .fade {
   transition: opacity 0.5s ease-in-out;
 }
