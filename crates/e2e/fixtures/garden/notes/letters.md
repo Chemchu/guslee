@@ -9,6 +9,5 @@ tags:
 
 # Letters
 
-Read [the fog note](notes/fog) first.
-Then compare it with [[fog#The fog|the fog itself]] or the [[ghosts]] note I
-haven't written yet.
+Read [the fog note](notes/fog) first. Then compare it with
+[[fog#The fog|the fog itself]] or the [[ghosts]] note I haven't written yet.

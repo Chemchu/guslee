@@ -12,3 +12,4 @@ node_modules
 /crates/**/target
 
 /result
+/.pre-commit-config.yaml
