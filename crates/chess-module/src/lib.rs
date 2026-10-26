@@ -65,7 +65,7 @@ impl ChessModule {
         let client = reqwest::Client::new();
         let response = client
             .get(format!(
-                "{}/api/games/user/{}?opening=true&perfType=rapid&accuracy=true&max={}",
+                "{}/api/games/user/{}?opening=true&perfType=blitz&accuracy=true&max={}",
                 state.api_base_url, state.lichess_username, number_of_games
             ))
             .header("Accept", "application/x-ndjson")

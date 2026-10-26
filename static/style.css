@@ -37,6 +37,101 @@
   --tw-prose-td-borders: #cad2c5;
 }
 
+.callout {
+  --callout-color: #4c9aff;
+  margin: 1.5em 0;
+  padding: 0.75em 1em;
+  border-left: 4px solid var(--callout-color);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--callout-color) 10%, transparent);
+}
+
+.callout-title {
+  color: var(--callout-color);
+  font-weight: 600;
+}
+
+details.callout > summary {
+  cursor: pointer;
+}
+
+.callout-content > :first-child {
+  margin-top: 0.5em;
+}
+
+.callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+.callout:is([data-callout="abstract"], [data-callout="summary"], [data-callout="tldr"]) {
+  --callout-color: #22c3d6;
+}
+
+.callout:is([data-callout="tip"], [data-callout="hint"], [data-callout="important"]) {
+  --callout-color: #2ebfa5;
+}
+
+.callout:is([data-callout="success"], [data-callout="check"], [data-callout="done"]) {
+  --callout-color: #4fbf67;
+}
+
+.callout:is([data-callout="question"], [data-callout="help"], [data-callout="faq"]) {
+  --callout-color: #e0b43a;
+}
+
+.callout:is([data-callout="warning"], [data-callout="caution"], [data-callout="attention"]) {
+  --callout-color: var(--color-primary-color);
+}
+
+.callout:is(
+    [data-callout="failure"],
+    [data-callout="fail"],
+    [data-callout="missing"],
+    [data-callout="danger"],
+    [data-callout="error"],
+    [data-callout="bug"]
+  ) {
+  --callout-color: #e5534b;
+}
+
+.callout[data-callout="example"] {
+  --callout-color: #a77bdb;
+}
+
+.callout:is([data-callout="quote"], [data-callout="cite"]) {
+  --callout-color: #9aa5b4;
+}
+
+.embed {
+  margin: 1.5em 0;
+  padding: 0.5em 1em 0.75em;
+  border-left: 2px solid var(--color-primary-color);
+  background: color-mix(in srgb, var(--color-shade-color) 45%, transparent);
+}
+
+.prose .embed-link {
+  display: block;
+  font-size: 0.8em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.embed-content > :first-child {
+  margin-top: 0.5em;
+}
+
+.embed-content > :last-child {
+  margin-bottom: 0;
+}
+
+.prose mark {
+  color: inherit;
+  padding: 0 0.15em;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-primary-color) 35%, transparent);
+}
+
 .wikilink-unresolved {
   color: var(--color-primary-color);
   opacity: 0.5;

@@ -1,10 +1,7 @@
-/// An Obsidian-style `#tag` written in a post's text.
 #[derive(Debug, PartialEq, Eq)]
 pub struct InlineTag<'a> {
-    /// Byte range of the whole `#tag`, including the `#`.
     pub start: usize,
     pub end: usize,
-    /// The tag without the `#`. Nested tags keep their slashes: `gaming/horror`.
     pub name: &'a str,
 }
 
@@ -12,15 +9,12 @@ fn is_tag_char(c: char) -> bool {
     c.is_alphanumeric() || matches!(c, '_' | '-' | '/')
 }
 
-/// `#2F3E46` and friends are colours, not tags.
 fn looks_like_hex_colour(name: &str) -> bool {
     matches!(name.len(), 3 | 4 | 6 | 8)
         && name.chars().all(|c| c.is_ascii_hexdigit())
         && name.chars().any(|c| c.is_ascii_digit())
 }
 
-/// Finds `#tags` in plain text (no markup or code). Like Obsidian, a tag starts
-/// at the beginning of the text or after whitespace and needs a non-digit.
 pub fn find_inline_tags(text: &str) -> Vec<InlineTag<'_>> {
     let mut tags = Vec::new();
     let mut previous: Option<char> = None;
@@ -52,8 +46,6 @@ pub fn find_inline_tags(text: &str) -> Vec<InlineTag<'_>> {
     tags
 }
 
-/// The inline `#tags` of a markdown post, in order and without repeats.
-/// Frontmatter and code are skipped.
 pub fn markdown_inline_tags(md: &str) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     let mut in_fence = false;
@@ -78,7 +70,6 @@ pub fn markdown_inline_tags(md: &str) -> Vec<String> {
             continue;
         }
 
-        // Every other backtick-separated piece is an inline code span
         for text in line.split('`').step_by(2) {
             for tag in find_inline_tags(text) {
                 if !found.iter().any(|f| f.eq_ignore_ascii_case(tag.name)) {
@@ -91,8 +82,6 @@ pub fn markdown_inline_tags(md: &str) -> Vec<String> {
     found
 }
 
-/// Whether a post tagged `tag` belongs on the page of `wanted`. Nested tags
-/// count for their parents: `gaming/horror` is listed under `gaming`.
 pub fn tag_matches(tag: &str, wanted: &str) -> bool {
     let (tag, wanted) = (tag.to_lowercase(), wanted.to_lowercase());
     tag == wanted || tag.starts_with(&format!("{wanted}/"))

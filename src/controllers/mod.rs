@@ -7,10 +7,12 @@ use std::sync::{Arc, OnceLock};
 
 pub mod chess_controller;
 pub mod fallback_controller;
+pub mod feed_controller;
 pub mod graph_controller;
 pub mod metadata_controller;
 pub mod music_controller;
 pub mod news_controller;
+pub mod obsidian_markdown;
 pub mod posts_controller;
 pub mod routines_controller;
 pub mod steam_controller;
@@ -27,7 +29,84 @@ pub struct AppState {
     pub post_search_engine: Arc<PostsSearchEngine>,
 }
 
+pub const SITE_DESCRIPTION: &str = "My personal digital garden, built with Rust + HTMX";
+
+#[derive(Default)]
+pub struct PageMeta {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub is_article: bool,
+}
+
+impl PageMeta {
+    pub fn titled(title: impl Into<String>) -> PageMeta {
+        PageMeta {
+            title: Some(title.into()),
+            ..PageMeta::default()
+        }
+    }
+
+    pub fn full_title(&self, app_name: &str) -> String {
+        match &self.title {
+            Some(title) => format!("{title} · {app_name}"),
+            None => app_name.to_string(),
+        }
+    }
+
+    fn head(&self, app_name: &str, url: Option<&str>) -> String {
+        let description = self.description.as_deref().unwrap_or(SITE_DESCRIPTION);
+        let og_type = if self.is_article {
+            "article"
+        } else {
+            "website"
+        };
+
+        maud::html! {
+            title { (self.full_title(app_name)) }
+            meta name="description" content=(description);
+            meta property="og:site_name" content=(app_name);
+            meta property="og:type" content=(og_type);
+            meta property="og:title" content=(self.title.as_deref().unwrap_or(app_name));
+            meta property="og:description" content=(description);
+            @if let Some(url) = url {
+                meta property="og:url" content=(url);
+                link rel="canonical" href=(url);
+            }
+            meta name="twitter:card" content="summary";
+            link rel="alternate" type="application/rss+xml" title=(app_name) href="/rss.xml";
+        }
+        .into_string()
+    }
+}
+
+pub fn base_url(req: &HttpRequest) -> String {
+    let info = req.connection_info();
+    format!("{}://{}", info.scheme(), info.host())
+}
+
+pub fn encode_path(path: &str) -> String {
+    let mut encoded = String::with_capacity(path.len());
+    for byte in path.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => {
+                encoded.push(byte as char)
+            }
+            _ => encoded.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    encoded
+}
+
 pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {
+    wrap_content_with_meta(app_name, content, &PageMeta::default(), None)
+}
+
+pub fn wrap_content_with_meta(
+    app_name: &str,
+    content: &str,
+    meta: &PageMeta,
+    url: Option<&str>,
+) -> String {
     let html = INDEX_TEMPLATE.get_or_init(|| {
         let template_path =
             std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
@@ -35,7 +114,7 @@ pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {
             .expect("Failed to read index.html template")
     });
 
-    html.replace("{{APPNAME}}", app_name)
+    html.replace("{{HEAD}}", &meta.head(app_name, url))
         .replace("{{CONTENT}}", content)
 }
 
@@ -51,10 +130,26 @@ pub fn is_partial_request(req: &HttpRequest) -> bool {
 }
 
 pub fn render_page(app_state: &AppState, req: &HttpRequest, content: &str) -> Html {
+    render_page_with_meta(app_state, req, content, &PageMeta::default())
+}
+
+pub fn render_page_with_meta(
+    app_state: &AppState,
+    req: &HttpRequest,
+    content: &str,
+    meta: &PageMeta,
+) -> Html {
     if is_partial_request(req) {
-        Html::new(content.to_string())
+        let title = maud::html! { title { (meta.full_title(&app_state.app_name)) } };
+        Html::new(format!("{}{content}", title.into_string()))
     } else {
-        Html::new(wrap_content_into_full_page(&app_state.app_name, content))
+        let url = format!("{}{}", base_url(req), req.path());
+        Html::new(wrap_content_with_meta(
+            &app_state.app_name,
+            content,
+            meta,
+            Some(&url),
+        ))
     }
 }
 
@@ -131,6 +226,36 @@ mod tests {
         assert!(page.starts_with("<!doctype html>"));
         assert!(page.contains("<title>Test garden</title>"));
         assert!(page.contains("<p id=\"marker\">hi</p>"));
-        assert!(!page.contains("{{APPNAME}}") && !page.contains("{{CONTENT}}"));
+        assert!(!page.contains("{{HEAD}}") && !page.contains("{{CONTENT}}"));
+        assert!(page.contains(&format!(
+            "<meta name=\"description\" content=\"{SITE_DESCRIPTION}\">"
+        )));
+        assert!(page.contains(r#"<meta property="og:type" content="website">"#));
+        assert!(!page.contains("og:url"), "no URL without a request");
+    }
+
+    #[test]
+    fn page_meta_fills_titles_descriptions_and_links() {
+        let meta = PageMeta {
+            title: Some("Fog <notes>".to_string()),
+            description: Some("About \"fog\"".to_string()),
+            is_article: true,
+        };
+
+        let page = wrap_content_with_meta("Garden", "", &meta, Some("https://g.dev/posts/fog"));
+
+        assert!(page.contains("<title>Fog &lt;notes&gt; · Garden</title>"));
+        assert!(page.contains(r#"<meta property="og:title" content="Fog &lt;notes&gt;">"#));
+        assert!(page.contains(r#"<meta name="description" content="About &quot;fog&quot;">"#));
+        assert!(page.contains(r#"<meta property="og:type" content="article">"#));
+        assert!(page.contains(r#"<meta property="og:url" content="https://g.dev/posts/fog">"#));
+        assert!(page.contains(r#"<link rel="alternate" type="application/rss+xml""#));
+    }
+
+    #[test]
+    fn paths_are_percent_encoded_except_slashes() {
+        assert_eq!(encode_path("gaming/horror"), "gaming/horror");
+        assert_eq!(encode_path("digital garden"), "digital%20garden");
+        assert_eq!(encode_path("c#ñ"), "c%23%C3%B1");
     }
 }

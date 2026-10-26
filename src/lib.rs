@@ -36,5 +36,6 @@ pub fn create_app(
         .configure(controllers::music_controller::configure_services)
         .configure(controllers::routines_controller::configure_services)
         .configure(controllers::tags_controller::configure_services)
+        .configure(controllers::feed_controller::configure_services)
         .service(controllers::fallback_controller::fallback_route) // This service should be last one in the list because it matches any string
 }

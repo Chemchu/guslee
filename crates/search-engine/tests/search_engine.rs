@@ -3,7 +3,7 @@ use std::path::Path;
 
 use search_engine::types::{Limit, Params};
 use search_engine::utils::Post;
-use search_engine::{Backlink, PostsSearchEngine};
+use search_engine::{Backlink, Mention, PostsSearchEngine};
 use tempfile::TempDir;
 
 const REPO: &str = "https://github.com/user/repo/blob/main";
@@ -54,6 +54,7 @@ fn search(query: &str, limit: Option<usize>) -> Params {
     Params {
         query: Some(query.to_string()),
         limit: limit.map(Limit::Number),
+        view: None,
     }
 }
 
@@ -198,7 +199,7 @@ async fn related_graph_centres_on_the_requested_post() {
     let garden = garden();
     let engine = engine(&garden).await;
 
-    let graph = engine.get_graph_from_related_posts("welcome.md").await;
+    let graph = engine.get_graph_from_related_posts("welcome.md", 1).await;
 
     let nodes: Vec<(usize, &str)> = graph
         .nodes
@@ -232,7 +233,7 @@ async fn related_graph_shows_mutual_links_once() {
     );
     let engine = engine(&garden).await;
 
-    let graph = engine.get_graph_from_related_posts("welcome.md").await;
+    let graph = engine.get_graph_from_related_posts("welcome.md", 1).await;
 
     let first_note = graph
         .nodes
@@ -309,7 +310,7 @@ async fn related_graph_is_empty_for_unknown_or_draft_posts() {
     let engine = engine(&garden).await;
 
     for path in ["missing.md", "secret.md"] {
-        let graph = engine.get_graph_from_related_posts(path).await;
+        let graph = engine.get_graph_from_related_posts(path, 1).await;
         assert!(graph.nodes.is_empty() && graph.edges.is_empty());
     }
 }
@@ -345,4 +346,181 @@ async fn in_memory_engines_are_isolated_from_each_other() {
 
     assert_eq!(posts_a.len(), 4);
     assert_eq!(posts_b.len(), 1);
+}
+
+#[tokio::test]
+async fn tag_counts_include_parents_of_nested_tags() {
+    let garden = garden();
+    write_post(
+        garden.path(),
+        "nested.md",
+        "title: \"Nested\"\ndate: \"2025-06-01\"\ndescription: \"x\"\ntags: [Gaming/horror, gaming-news]",
+        "Inline #gaming/horror/fog tag.",
+    );
+    let engine = engine(&garden).await;
+
+    let counts = engine.tag_counts().await;
+
+    assert_eq!(
+        counts,
+        vec![
+            ("Gaming".to_string(), 3),
+            ("Gaming/horror".to_string(), 1),
+            ("gaming/horror/fog".to_string(), 1),
+            ("gaming-news".to_string(), 1),
+            ("intro".to_string(), 1),
+        ],
+        "draft-only tags are left out, parents count nested posts and the newest post's casing wins"
+    );
+}
+
+#[tokio::test]
+async fn published_posts_are_newest_first() {
+    let garden = garden();
+    let engine = engine(&garden).await;
+
+    let posts: Vec<String> = engine
+        .published_posts()
+        .await
+        .into_iter()
+        .map(|p| p.file_path)
+        .collect();
+
+    assert_eq!(
+        posts,
+        vec!["notes/second_note.md", "notes/first_note.md", "welcome.md"]
+    );
+}
+
+#[tokio::test]
+async fn last_updated_comes_from_the_git_history() {
+    let garden = garden();
+    let git = |args: &[&str], date: &str| {
+        let status = std::process::Command::new("git")
+            .args([
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "-c",
+                "commit.gpgsign=false",
+            ])
+            .args(args)
+            .current_dir(garden.path())
+            .env("GIT_AUTHOR_DATE", date)
+            .env("GIT_COMMITTER_DATE", date)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    };
+    git(&["init", "-q"], "2025-01-01T00:00:00Z");
+    git(&["add", "."], "2025-01-01T00:00:00Z");
+    git(&["commit", "-qm", "first"], "2025-03-04T12:00:00Z");
+    fs::write(
+        garden.path().join("welcome.md"),
+        "---\ntitle: \"Welcome\"\ndate: \"2025-01-01\"\ndescription: \"x\"\ntags: []\n---\nEdited",
+    )
+    .unwrap();
+    git(&["commit", "-qam", "edit"], "2025-07-08T12:00:00Z");
+    write_post(
+        garden.path(),
+        "notes/uncommitted.md",
+        "title: \"New\"\ndate: \"2025-08-01\"\ndescription: \"x\"\ntags: []",
+        "",
+    );
+    let engine = engine(&garden).await;
+
+    let updated = |path: &'static str| {
+        let engine = &engine;
+        async move { engine.get_post(path).await.unwrap().metadata.last_updated }
+    };
+
+    assert_eq!(updated("welcome.md").await.as_deref(), Some("2025-07-08"));
+    assert_eq!(
+        updated("notes/first_note.md").await.as_deref(),
+        Some("2025-03-04")
+    );
+    assert_eq!(updated("notes/uncommitted.md").await, None);
+}
+
+#[tokio::test]
+async fn deeper_local_graphs_include_links_of_links() {
+    let garden = garden();
+    write_post(
+        garden.path(),
+        "notes/third_note.md",
+        "title: \"Third\"\ndate: \"2025-05-01\"\ndescription: \"x\"\ntags: []",
+        "Follows [[first_note]].",
+    );
+    let engine = engine(&garden).await;
+
+    let paths = |graph: &search_engine::types::GraphData| {
+        graph
+            .nodes
+            .iter()
+            .map(|n| n.file_path.clone())
+            .collect::<Vec<_>>()
+    };
+    let one = engine
+        .get_graph_from_related_posts("notes/second_note.md", 1)
+        .await;
+    let two = engine
+        .get_graph_from_related_posts("notes/second_note.md", 2)
+        .await;
+
+    assert_eq!(paths(&one), vec!["notes/second_note.md", "welcome.md"]);
+    assert_eq!(
+        paths(&two),
+        vec!["notes/second_note.md", "welcome.md", "notes/first_note.md"]
+    );
+    let edges: Vec<(usize, usize)> = two.edges.iter().map(|e| (e.source, e.target)).collect();
+    assert_eq!(
+        edges,
+        vec![(1, 2), (2, 3)],
+        "every link between the shown posts"
+    );
+    let three = engine
+        .get_graph_from_related_posts("notes/second_note.md", 3)
+        .await;
+    assert_eq!(three.nodes.len(), 4, "third note links to first note");
+    assert!(!paths(&three).contains(&"secret.md".to_string()));
+}
+
+#[tokio::test]
+async fn unlinked_mentions_find_the_title_in_other_posts() {
+    let garden = garden();
+    write_post(
+        garden.path(),
+        "notes/mentions.md",
+        "title: \"Mentions\"\ndate: \"2025-05-01\"\ndescription: \"x\"\ntags: []",
+        "Yesterday I reread my SECOND NOTE, which was fun.",
+    );
+    write_post(
+        garden.path(),
+        "notes/linked.md",
+        "title: \"Linked\"\ndate: \"2025-05-02\"\ndescription: \"x\"\ntags: []",
+        "My second note is [[second_note|here]].",
+    );
+    write_post(
+        garden.path(),
+        "notes/word.md",
+        "title: \"Word\"\ndate: \"2025-05-03\"\ndescription: \"x\"\ntags: []",
+        "A second notebook is not a mention.",
+    );
+    let engine = engine(&garden).await;
+
+    let mentions = engine.get_unlinked_mentions("notes/second_note.md").await;
+
+    assert_eq!(
+        mentions,
+        vec![Mention {
+            file_path: "notes/mentions.md".to_string(),
+            title: "Mentions".to_string(),
+            before: "Yesterday I reread my ".to_string(),
+            matched: "SECOND NOTE".to_string(),
+            after: ", which was fun.".to_string(),
+        }],
+        "linked posts, partial words, drafts and the post itself are left out"
+    );
+    assert!(engine.get_unlinked_mentions("missing.md").await.is_empty());
 }

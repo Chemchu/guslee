@@ -25,12 +25,13 @@ in {
     tailwindcss_4
     clang
     surrealdb3
+    (cargo-llvm-cov.overrideAttrs (_: {doCheck = false;}))
   ];
 
   env.SURREALDB_PATH = surrealdb3 + "/bin/surreal";
+  env.LLVM_COV = "${pkgs.llvmPackages_23.llvm}/bin/llvm-cov";
+  env.LLVM_PROFDATA = "${pkgs.llvmPackages_23.llvm}/bin/llvm-profdata";
 
-  # Installed into .git/hooks when entering the shell. Options live in
-  # .prettierrc.json so editors format markdown the same way.
   git-hooks.hooks.prettier = {
     enable = true;
     types_or = ["markdown"];

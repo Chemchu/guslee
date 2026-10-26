@@ -1384,7 +1384,9 @@ dependencies = [
  "reqwest 0.13.5",
  "search-engine",
  "serde_json",
+ "tempfile",
  "tokio",
+ "walkdir",
  "wiremock",
 ]
 

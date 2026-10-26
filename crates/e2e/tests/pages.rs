@@ -168,7 +168,11 @@ async fn garden_view_dispatcher_lazy_loads_the_graph() {
 fn data_attribute(body: &str, name: &str) -> serde_json::Value {
     let start = body.find(&format!("{name}=\"")).unwrap() + name.len() + 2;
     let end = start + body[start..].find('"').unwrap();
-    let json = body[start..end].replace("&quot;", "\"");
+    let json = body[start..end]
+        .replace("&quot;", "\"")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&");
     serde_json::from_str(&json).unwrap()
 }
 
@@ -191,7 +195,7 @@ async fn garden_graph_contains_published_posts_and_their_links() {
         paths,
         vec!["hello.md", "notes/fog.md", "notes/letters.md", "welcome.md"]
     );
-    assert_eq!(edges.as_array().unwrap().len(), 3);
+    assert_eq!(edges.as_array().unwrap().len(), 4, "embeds count as links");
 }
 
 #[tokio::test]
@@ -383,13 +387,13 @@ async fn tag_pages_list_published_posts_with_that_tag() {
 
     assert_eq!(intro.status, 200);
     assert!(intro.body.contains("#intro"));
-    assert!(intro.body.contains("2 notes"));
+    assert!(intro.body.contains("2 posts"));
     let hello = intro.body.find(r#"href="/posts/hello""#).unwrap();
     let welcome = intro.body.find(r#"href="/posts/welcome""#).unwrap();
     assert!(hello < welcome, "newest first");
     assert!(!intro.body.contains("/posts/draft"));
-    assert!(spaced.body.contains("1 note<"));
-    assert!(full.is_full_page() && full.body.contains("2 notes"));
+    assert!(spaced.body.contains("1 post<"));
+    assert!(full.is_full_page() && full.body.contains("2 posts"));
 }
 
 #[tokio::test]
@@ -419,4 +423,329 @@ async fn inline_tags_link_to_tag_pages_that_include_them() {
     assert_eq!(parent.status, 200, "nested tags count for their parent");
     assert!(parent.body.contains("Notes about the fog"));
     assert_eq!(app.htmx_get("/tags/not-a-tag").await.status, 404);
+}
+
+#[tokio::test]
+async fn callouts_and_highlights_render() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/fog").await.body;
+
+    assert!(body.contains(
+        r#"<div class="callout" data-callout="tip"><div class="callout-title">Bring a radio</div>"#
+    ));
+    assert!(body.contains("It crackles when <mark>something</mark> is near."));
+}
+
+#[tokio::test]
+async fn side_panel_has_metadata_and_outline_tabs() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/fog").await.body;
+    let outline = &body[body.find("id=\"outline-section\"").unwrap()..];
+
+    assert!(body.contains(r#"data-panel-tab="metadata""#));
+    assert!(body.contains(r#"data-panel-tab="outline""#));
+    assert!(outline.contains(r##"<li class="pl-0"><a href="#the-fog""##));
+    assert!(outline.contains(r##"<li class="pl-3"><a href="#getting-around""##));
+    let layout = app.get("/").await.body;
+    assert!(layout.contains("/_static/outline.js"));
+    assert_eq!(app.get("/_static/outline.js").await.status, 200);
+}
+
+#[tokio::test]
+async fn metadata_shows_the_last_commit_date() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/metadata/welcome").await.body;
+
+    let needle = "<time id=\"last-updated\" datetime=\"";
+    let start = body.find(needle).unwrap() + needle.len();
+    let date = &body[start..start + 10];
+    let is_date = date.char_indices().all(|(i, c)| {
+        if i == 4 || i == 7 {
+            c == '-'
+        } else {
+            c.is_ascii_digit()
+        }
+    });
+    assert!(is_date, "{date}");
+    assert!(body.contains("Last updated"));
+}
+
+#[tokio::test]
+async fn tag_index_lists_every_tag_with_its_count() {
+    let app = TestApp::spawn().await;
+
+    let index = app.htmx_get("/tags").await;
+    let slash = app.htmx_get("/tags/").await;
+    let body = &index.body;
+
+    assert_eq!(index.status, 200);
+    assert_eq!(slash.body, index.body);
+    assert!(body.contains("<title>TAGS · "));
+    assert!(body.contains(">TAGS</h1>"), "the heading matches the title");
+    let games = body.find(r#"href="/tags/games""#).unwrap();
+    let nested = body.find(r#"href="/tags/games/survival-horror""#).unwrap();
+    let intro = body.find(r#"href="/tags/intro""#).unwrap();
+    assert!(
+        games < nested && nested < intro,
+        "sorted, nested tags under their parent"
+    );
+    assert!(body[nested - 80..nested].contains("pl-4"));
+    assert!(
+        body[nested..]
+            .starts_with(r##"href="/tags/games/survival-horror" title="#games/survival-horror""##)
+    );
+    assert!(
+        body[intro..]
+            .contains(">#intro</a><span class=\"text-zinc-500 text-sm shrink-0\">2</span>")
+    );
+    assert!(
+        !body.contains("/tags/draft"),
+        "tags only used by drafts are left out"
+    );
+    assert!(
+        app.get("/").await.body.contains(r#"href="/tags""#),
+        "linked from the nav"
+    );
+}
+
+#[tokio::test]
+async fn post_pages_describe_themselves_for_link_previews() {
+    let app = TestApp::spawn().await;
+
+    let full = app.get("/posts/notes/fog").await.body;
+    let partial = app.htmx_get("/posts/notes/fog").await.body;
+    let landing = app.get("/").await.body;
+
+    assert!(full.contains(&format!("<title>Notes about the fog · {APP_NAME}</title>")));
+    assert!(full.contains(r#"<meta name="description" content="Everything about the fog">"#));
+    assert!(full.contains(r#"<meta property="og:type" content="article">"#));
+    assert!(full.contains(&format!(
+        r#"<meta property="og:url" content="{}/posts/notes/fog">"#,
+        app.address
+    )));
+    assert!(partial.starts_with(&format!("<title>Notes about the fog · {APP_NAME}</title>")));
+    assert!(landing.contains(&format!("<title>{APP_NAME}</title>")));
+    assert!(
+        landing
+            .contains(r#"<meta name="description" content="Landing page used by the e2e tests">"#)
+    );
+    assert!(landing.contains(r#"<link rel="alternate" type="application/rss+xml""#));
+}
+
+#[tokio::test]
+async fn rss_feed_lists_published_posts() {
+    let app = TestApp::spawn().await;
+
+    let feed = app.get("/rss.xml").await;
+
+    assert_eq!(feed.status, 200);
+    assert_eq!(
+        feed.header("content-type"),
+        Some("application/rss+xml; charset=utf-8")
+    );
+    assert_eq!(
+        feed.body.matches("<item>").count(),
+        4,
+        "drafts are left out"
+    );
+    assert!(
+        feed.body
+            .contains(&format!("<link>{}/posts/notes/fog</link>", app.address))
+    );
+    assert!(
+        feed.body
+            .contains("<title>Letters &lt;and&gt; escaping</title>")
+    );
+    assert!(!feed.body.contains("Secret silent draft"));
+    let letters = feed.body.find("Letters &lt;and&gt;").unwrap();
+    let welcome = feed
+        .body
+        .find("<title>Welcome to the fixture garden")
+        .unwrap();
+    assert!(letters < welcome, "newest first");
+}
+
+#[tokio::test]
+async fn embeds_show_the_embedded_section() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/hello").await.body;
+
+    assert!(body.contains(
+        r#"<div class="embed"><a class="embed-link" href="/posts/notes/fog#getting-around">"#
+    ));
+    assert!(body.contains("Bring a radio"));
+    assert!(
+        !body.contains("never lifts in Silent Hill"),
+        "only the section is embedded"
+    );
+    assert!(
+        !body.contains(r#"id="getting-around""#),
+        "embedded headings don't get ids"
+    );
+}
+
+#[tokio::test]
+async fn metadata_lists_unlinked_mentions_with_context() {
+    let app = TestApp::spawn().await;
+
+    let welcome = app.htmx_get("/metadata/welcome").await.body;
+    let hello = app.htmx_get("/metadata/hello").await.body;
+
+    let mentions = &welcome[welcome.find("id=\"unlinked-mentions\"").unwrap()..];
+    assert!(mentions.contains(r#"href="/posts/notes/letters""#));
+    assert!(mentions.contains(">welcome to the fixture garden</mark>, though."));
+    assert!(
+        !mentions.contains(r#"href="/posts/hello""#),
+        "hello links to welcome, so it's a linked mention"
+    );
+    assert!(
+        !hello.contains("Unlinked mentions"),
+        "the section is hidden when empty"
+    );
+}
+
+#[tokio::test]
+async fn sidebar_lists_posts_by_folder_or_by_topic() {
+    let app = TestApp::spawn().await;
+
+    let folders = app.htmx_get("/search?limit=100&view=folders").await.body;
+    let topics = app.htmx_get("/search?limit=100&view=topics").await.body;
+    let searched = app
+        .htmx_get("/search?limit=100&view=folders&query=fog")
+        .await
+        .body;
+
+    assert!(folders.starts_with(r#"<ul id="file-tree""#));
+    assert!(folders.contains(r#"<details data-folder="notes">"#));
+    assert!(folders.contains(r#"href="/posts/notes/fog""#));
+    assert!(!folders.contains("/posts/draft"));
+    assert!(!topics.contains("file-tree") && topics.contains(">Notes</summary>"));
+    assert!(
+        !searched.contains("file-tree"),
+        "searching lists results, not folders"
+    );
+    assert!(searched.contains(r#"href="/posts/notes/fog""#));
+
+    let layout = app.get("/").await.body;
+    let selected = |view: &str| {
+        let tab = &layout[layout
+            .find(&format!("data-explorer-view=\"{view}\""))
+            .unwrap()..];
+        tab[..tab.find('>').unwrap()].contains("aria-selected=\"true\"")
+    };
+    assert!(
+        selected("topics") && !selected("folders"),
+        "topics is the default"
+    );
+    assert!(
+        layout.contains(r#"<input type="hidden" id="explorer-view" name="view" value="topics" />"#)
+    );
+    assert!(layout.contains(r##"hx-include="#explorer-view""##));
+    assert!(layout.contains("/_static/explorer.js"));
+}
+
+#[tokio::test]
+async fn quick_switcher_gets_every_published_post() {
+    let app = TestApp::spawn().await;
+
+    let response = app.get("/switcher.json").await;
+    let posts: serde_json::Value = serde_json::from_str(&response.body).unwrap();
+
+    assert_eq!(response.status, 200);
+    assert_eq!(
+        posts[0],
+        serde_json::json!({"title": "Letters <and> escaping", "path": "notes/letters"}),
+        "newest first"
+    );
+    assert_eq!(posts.as_array().unwrap().len(), 4, "no drafts");
+    assert!(app.get("/").await.body.contains("/_static/switcher.js"));
+    assert_eq!(app.get("/_static/switcher.js").await.status, 200);
+}
+
+#[tokio::test]
+async fn local_graph_depth_can_be_chosen() {
+    let app = TestApp::spawn().await;
+
+    let labels = |body: &str| -> Vec<String> {
+        data_attribute(body, "data-nodes")
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| n["label"].as_str().unwrap().to_string())
+            .collect()
+    };
+    let one = app.htmx_get("/graph/notes/letters").await.body;
+    let two = app.htmx_get("/graph/notes/letters?depth=2").await.body;
+    let too_deep = app.htmx_get("/graph/notes/letters?depth=9").await.body;
+
+    assert_eq!(
+        labels(&one),
+        vec!["Letters <and> escaping", "Notes about the fog"]
+    );
+    assert_eq!(
+        labels(&two),
+        vec![
+            "Letters <and> escaping",
+            "Notes about the fog",
+            "Hello fixture",
+            "Welcome to the fixture garden"
+        ]
+    );
+    assert!(one.contains(r#"data-depth="1""#));
+    assert!(one.contains(r#"<button type="button" data-graph-depth="1" aria-pressed="true""#));
+    assert!(too_deep.contains(r#"data-depth="3""#), "depth is capped");
+    assert_eq!(
+        data_attribute(&one, "data-folders"),
+        serde_json::json!(["notes"])
+    );
+    let garden = app.htmx_get("/garden-view").await.body;
+    assert!(garden.contains(r#"data-root-label="garden entry""#));
+
+    let post = app.htmx_get("/posts/notes/fog").await.body;
+    assert!(post.contains("window.graphDepth"));
+}
+
+#[tokio::test]
+async fn sidebar_search_has_a_hidden_clear_button() {
+    let app = TestApp::spawn().await;
+
+    let layout = app.get("/").await.body;
+    let input = layout.find(r#"id="desktop-search-input""#).unwrap();
+    let clear = layout.find(r#"id="desktop-search-clear""#).unwrap();
+    let icon = layout.find(r#"id="desktop-search-icon""#).unwrap();
+    let button = &layout[clear..clear + layout[clear..].find('>').unwrap()];
+
+    assert!(
+        input < clear && clear < icon,
+        "between the input and the search icon"
+    );
+    assert!(button.contains(r#"type="button""#));
+    assert!(button.contains(r#"aria-label="Clear search""#));
+    assert!(button.contains("hidden"), "hidden until something is typed");
+}
+
+#[tokio::test]
+async fn graph_panel_height_does_not_depend_on_the_graph() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/fog").await.body;
+    let section = body.find(r#"id="upper-right-section""#).unwrap();
+    let section_start = body[..section].rfind("<div").unwrap();
+    let panel_start = body[..section_start].rfind("<div").unwrap();
+    let panel = &body[panel_start..panel_start + body[panel_start..].find('>').unwrap()];
+    let section_tag = &body[section..section + body[section..].find('>').unwrap()];
+
+    assert!(panel.contains("h-[34vh] shrink-0"), "fixed height: {panel}");
+    assert!(
+        !panel.contains("grow"),
+        "a growing panel sizes itself from the graph"
+    );
+    assert!(
+        section_tag.contains("absolute inset-0"),
+        "swapped graphs can't resize it"
+    );
 }

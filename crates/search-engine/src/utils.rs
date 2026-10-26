@@ -37,6 +37,8 @@ pub struct MdMetadata {
     pub is_draft: bool,
     pub post_source_url: String,
     pub reading_time: u8,
+    #[serde(default)]
+    pub last_updated: Option<String>,
 }
 
 pub fn extract_full_metadata(repo_source: &str, post_path: &str) -> Option<MdMetadata> {
@@ -62,6 +64,7 @@ pub fn extract_full_metadata(repo_source: &str, post_path: &str) -> Option<MdMet
         is_draft: post_metadata.is_draft,
         post_source_url: source_url(repo_source, post_path),
         reading_time: calc_reading_time(post_path),
+        last_updated: None,
     })
 }
 
@@ -71,6 +74,19 @@ fn source_url(repo_source: &str, post_path: &str) -> String {
         repo_source.trim_end_matches('/'),
         post_path.trim_start_matches("./")
     )
+}
+
+pub fn strip_frontmatter(content: &str) -> &str {
+    let Some(rest) = content.strip_prefix("---\n") else {
+        return content;
+    };
+    match rest.find("\n---") {
+        Some(end) => {
+            let after = &rest[end + "\n---".len()..];
+            after.strip_prefix('\n').unwrap_or(after)
+        }
+        None => content,
+    }
 }
 
 pub fn calc_reading_time(post_path: &str) -> u8 {
@@ -123,6 +139,13 @@ mod tests {
             source_url(&format!("{repo}/"), "garden/x.md"),
             "https://github.com/u/r/blob/main/garden/x.md"
         );
+    }
+
+    #[test]
+    fn frontmatter_is_stripped_from_the_body() {
+        assert_eq!(strip_frontmatter("---\ntitle: x\n---\n# Body"), "# Body");
+        assert_eq!(strip_frontmatter("# No frontmatter"), "# No frontmatter");
+        assert_eq!(strip_frontmatter("---\nunclosed"), "---\nunclosed");
     }
 
     #[test]

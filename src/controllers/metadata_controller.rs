@@ -14,12 +14,12 @@ async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>
     match post {
         Some(p) => {
             let backlinks = app_state.post_search_engine.get_backlinks(&file_path).await;
+            let mentions = app_state
+                .post_search_engine
+                .get_unlinked_mentions(&file_path)
+                .await;
             let html = html! {
                 div class="flex flex-col gap-2 w-full" {
-                    div class="flex items-center gap-3 w-full" {
-                        p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Metadata" }
-                        div class="flex-1 h-px bg-shade-color" {}
-                    }
                     div class="flex flex-col gap-px border-t border-shade-color" {
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
                             p class="text-zinc-500 text-xs uppercase tracking-widest" { "Title" }
@@ -36,6 +36,12 @@ async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
                             p class="text-zinc-500 text-xs uppercase tracking-widest" { "Date" }
                             p class="text-sm font-semibold" { (p.metadata.date) }
+                        }
+                        @if let Some(last_updated) = &p.metadata.last_updated {
+                            div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
+                                p class="text-zinc-500 text-xs uppercase tracking-widest" { "Last updated" }
+                                time id="last-updated" datetime=(last_updated) class="text-sm font-semibold" { (last_updated) }
+                            }
                         }
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
                             p class="text-zinc-500 text-xs uppercase tracking-widest" { "Tags" }
@@ -71,6 +77,35 @@ async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>
                                 }
                             }
                         }
+                        @if !mentions.is_empty() {
+                            div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
+                                p
+                                class="text-zinc-500 text-xs uppercase tracking-widest"
+                                title="Notes that mention this one's title without linking to it"
+                                { "Unlinked mentions" }
+                                ul id="unlinked-mentions" class="flex flex-col gap-2" {
+                                    @for mention in &mentions {
+                                        li class="flex flex-col" {
+                                            a href=(format!(
+                                                "/posts/{}",
+                                                mention
+                                                    .file_path
+                                                    .strip_suffix(".md")
+                                                    .unwrap_or(&mention.file_path)
+                                            ))
+                                            class="block text-zinc-100 hover:text-primary-color text-sm truncate"
+                                            title=(mention.title)
+                                            { (mention.title) }
+                                            p class="text-zinc-500 text-xs line-clamp-2" {
+                                                (mention.before)
+                                                mark class="bg-primary-color/25 text-zinc-200 rounded-sm px-0.5" { (mention.matched) }
+                                                (mention.after)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
                             p class="text-zinc-500 text-xs uppercase tracking-widest" { "Post Source" }
                             a href={(p.metadata.post_source_url) "?plain=1"} target="_blank" rel="noopener noreferrer"
@@ -83,13 +118,7 @@ async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>
         }
         None => {
             let html = html! {
-                div class="flex flex-col gap-3 p-6 border border-shade-color" {
-                    div class="flex items-center gap-3" {
-                        p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Metadata" }
-                        div class="flex-1 h-px bg-shade-color" {}
-                    }
-                    p class="text-zinc-500 text-sm" { "No metadata found for this post." }
-                }
+                p class="text-zinc-500 text-sm" { "No metadata found for this post." }
             };
             Html::new(html)
         }

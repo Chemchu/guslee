@@ -52,5 +52,5 @@ opt-level = 0
 lto = true
 strip = true
 opt-level = 3
-panic = 'abort'
+panic = 'unwind'
 codegen-units = 1

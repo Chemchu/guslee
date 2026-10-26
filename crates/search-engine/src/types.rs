@@ -12,6 +12,8 @@ pub enum Limit {
 pub struct Params {
     pub query: Option<String>,
     pub limit: Option<Limit>,
+    #[serde(default)]
+    pub view: Option<String>,
 }
 
 pub const DEFAULT_SEARCH_LIMIT: Limit = Limit::Number(100);
