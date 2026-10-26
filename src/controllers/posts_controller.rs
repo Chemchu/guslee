@@ -247,6 +247,45 @@ fn build_posts_list(matching_posts: Vec<Post>) -> String {
     html.into_string()
 }
 
+fn post_url(href: &str) -> Option<String> {
+    let has_scheme = href
+        .split_once(':')
+        .is_some_and(|(scheme, _)| !scheme.contains('/'));
+    if href.is_empty() || href.starts_with(['/', '#', '?']) || has_scheme {
+        return None;
+    }
+
+    let (path, fragment) = match href.split_once('#') {
+        Some((path, fragment)) => (path, format!("#{fragment}")),
+        None => (href, String::new()),
+    };
+    let path = path.trim_start_matches("./");
+    let path = path.strip_suffix(".md").unwrap_or(path);
+
+    Some(format!("/posts/{path}{fragment}"))
+}
+
+fn absolutize_post_links(html: &str) -> String {
+    const HREF: &str = "<a href=\"";
+    let mut result = String::with_capacity(html.len());
+    let mut rest = html;
+
+    while let Some(start) = rest.find(HREF) {
+        let value_start = start + HREF.len();
+        let Some(value_len) = rest[value_start..].find('"') else {
+            break;
+        };
+        let href = &rest[value_start..value_start + value_len];
+
+        result.push_str(&rest[..value_start]);
+        result.push_str(&post_url(href).unwrap_or_else(|| href.to_string()));
+        rest = &rest[value_start + value_len..];
+    }
+
+    result.push_str(rest);
+    result
+}
+
 fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
     let frontmatter = Options {
         parse: ParseOptions {
@@ -263,7 +302,7 @@ fn post_page_shell(md: String, post_path: String) -> PreEscaped<String> {
         div
         class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
             {
-               (PreEscaped(markdown::to_html_with_options(&md, &frontmatter).unwrap()))
+               (PreEscaped(absolutize_post_links(&markdown::to_html_with_options(&md, &frontmatter).unwrap())))
             }
         div
         id="right-section"
@@ -367,6 +406,56 @@ mod tests {
 
         assert!(!html.contains("<script>"));
         assert!(html.contains("&lt;script&gt;"));
+    }
+
+    #[test]
+    fn garden_relative_links_become_absolute_post_urls() {
+        assert_eq!(post_url("hello").as_deref(), Some("/posts/hello"));
+        assert_eq!(
+            post_url("journal/2025/notes").as_deref(),
+            Some("/posts/journal/2025/notes")
+        );
+        assert_eq!(post_url("./hello.md").as_deref(), Some("/posts/hello"));
+        assert_eq!(
+            post_url("notes/fog#the-fog").as_deref(),
+            Some("/posts/notes/fog#the-fog")
+        );
+    }
+
+    #[test]
+    fn external_absolute_and_anchor_links_are_left_alone() {
+        for href in [
+            "https://rust-lang.org/",
+            "http://example.com",
+            "mailto:me@example.com",
+            "/news",
+            "#section",
+            "?query=1",
+            "",
+        ] {
+            assert_eq!(post_url(href), None, "{href:?}");
+        }
+    }
+
+    #[test]
+    fn rendered_links_are_rewritten_in_place() {
+        let html = r#"<p><a href="notes/fog">fog</a> and <a href="https://htmx.org/" title="htmx">htmx</a></p>"#;
+
+        assert_eq!(
+            absolutize_post_links(html),
+            r#"<p><a href="/posts/notes/fog">fog</a> and <a href="https://htmx.org/" title="htmx">htmx</a></p>"#
+        );
+        assert_eq!(absolutize_post_links("<p>no links</p>"), "<p>no links</p>");
+    }
+
+    #[test]
+    fn post_shell_links_resolve_from_the_garden_root() {
+        let md = "See [the fog](notes/fog) and [Rust](https://rust-lang.org/).".to_string();
+
+        let html = post_page_shell(md, "journal/2025/deep_post".to_string()).into_string();
+
+        assert!(html.contains(r#"<a href="/posts/notes/fog">the fog</a>"#));
+        assert!(html.contains(r#"<a href="https://rust-lang.org/">Rust</a>"#));
     }
 
     #[test]

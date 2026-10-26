@@ -40,7 +40,17 @@ async fn links_inside_the_content_only_swap_the_main_section() {
     assert!(main_tag.contains("hx-target:inherited=\"#main-section\""));
     assert!(main_tag.contains("hx-swap:inherited=\"innerHTML transition:true\""));
     assert!(main_tag.contains("hx-history-elt"));
-    assert!(body[main_start..].contains("href=\"notes/fog\""));
+    assert!(body[main_start..].contains("href=\"/posts/notes/fog\""));
+}
+
+#[tokio::test]
+async fn links_in_nested_posts_resolve_from_the_garden_root() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/letters").await.body;
+
+    assert!(body.contains("<a href=\"/posts/notes/fog\">the fog note</a>"));
+    assert_eq!(app.htmx_get("/posts/notes/fog").await.status, 200);
 }
 
 #[tokio::test]
