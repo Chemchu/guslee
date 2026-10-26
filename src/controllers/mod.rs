@@ -1,3 +1,4 @@
+use actix_web::{HttpRequest, HttpResponse, http::header::ContentType, web::Html};
 use chess_module::LichessState;
 use games_module::SteamState;
 use music_module::SpotifyState;
@@ -18,6 +19,8 @@ static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
 
 pub struct AppState {
     pub app_name: String,
+    // Directory holding the markdown posts
+    pub garden_path: String,
     pub lichess_state: LichessState,
     pub spotify_state: Arc<tokio::sync::Mutex<SpotifyState>>,
     pub steam_state: SteamState,
@@ -34,4 +37,106 @@ pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {
 
     html.replace("{{APPNAME}}", app_name)
         .replace("{{CONTENT}}", content)
+}
+
+// True when the request only needs the inner content (an HTMX swap into a section),
+// false when the full page layout must be returned. htmx 4 history restores (back button)
+// and body-level swaps are HTMX requests too, but they replace the whole <body>
+pub fn is_partial_request(req: &HttpRequest) -> bool {
+    let headers = req.headers();
+    let is_htmx_req = headers.contains_key("HX-Request");
+    let is_history_restore = headers.contains_key("HX-History-Restore-Request");
+    let is_full_swap = headers
+        .get("HX-Request-Type")
+        .is_some_and(|request_type| request_type == "full");
+
+    is_htmx_req && !is_history_restore && !is_full_swap
+}
+
+// Returns the content as-is for partial requests or wrapped into the full page otherwise
+pub fn render_page(app_state: &AppState, req: &HttpRequest, content: &str) -> Html {
+    if is_partial_request(req) {
+        Html::new(content.to_string())
+    } else {
+        Html::new(wrap_content_into_full_page(&app_state.app_name, content))
+    }
+}
+
+// 404 page: htmx 4 swaps error responses too, so partial requests get the message in place
+pub fn render_not_found(app_state: &AppState, req: &HttpRequest) -> HttpResponse {
+    let content = maud::html! {
+        div class="flex flex-col w-full gap-4 p-6 lg:p-8" {
+            h1 class="text-4xl text-primary-color" { "404" }
+            p { "This page does not exist (yet)." }
+            a href="/posts/welcome" hx-target="#main-section" class="hover:text-primary-color underline" {
+                "Back to the garden"
+            }
+        }
+    }
+    .into_string();
+
+    let body = if is_partial_request(req) {
+        content
+    } else {
+        wrap_content_into_full_page(&app_state.app_name, &content)
+    };
+
+    HttpResponse::NotFound()
+        .content_type(ContentType::html())
+        .body(body)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::test::TestRequest;
+
+    #[test]
+    fn plain_browser_requests_need_the_full_page() {
+        let req = TestRequest::get().to_http_request();
+        assert!(!is_partial_request(&req));
+    }
+
+    #[test]
+    fn htmx_requests_targeting_a_section_are_partial() {
+        let req = TestRequest::get()
+            .insert_header(("HX-Request", "true"))
+            .insert_header(("HX-Request-Type", "partial"))
+            .to_http_request();
+        assert!(is_partial_request(&req));
+
+        // htmx 2 (and htmx.ajax without a type) only sends HX-Request
+        let req = TestRequest::get()
+            .insert_header(("HX-Request", "true"))
+            .to_http_request();
+        assert!(is_partial_request(&req));
+    }
+
+    #[test]
+    fn htmx_body_swaps_need_the_full_page() {
+        let req = TestRequest::get()
+            .insert_header(("HX-Request", "true"))
+            .insert_header(("HX-Request-Type", "full"))
+            .to_http_request();
+        assert!(!is_partial_request(&req));
+    }
+
+    #[test]
+    fn htmx_history_restores_need_the_full_page() {
+        let req = TestRequest::get()
+            .insert_header(("HX-Request", "true"))
+            .insert_header(("HX-History-Restore-Request", "true"))
+            .to_http_request();
+        assert!(!is_partial_request(&req));
+    }
+
+    #[test]
+    fn content_is_wrapped_into_the_index_template() {
+        let page = wrap_content_into_full_page("Test garden", "<p id=\"marker\">hi</p>");
+
+        assert!(page.starts_with("<!doctype html>"));
+        assert!(page.contains("<title>Test garden</title>"));
+        assert!(page.contains("<p id=\"marker\">hi</p>"));
+        assert!(!page.contains("{{APPNAME}}") && !page.contains("{{CONTENT}}"));
+    }
 }

@@ -107,6 +107,76 @@ mod tests {
         assert_eq!(history[0].peak_rating(), Some(1472));
     }
 
+    fn history(points: Vec<RatingPoint>) -> GameRatingHistory {
+        GameRatingHistory {
+            name: "Rapid".to_string(),
+            points,
+        }
+    }
+
+    #[test]
+    fn rating_point_month_is_zero_indexed_when_converting_to_a_timestamp() {
+        // 2024-01-15T00:00:00Z
+        assert_eq!(
+            RatingPoint([2024, 0, 15, 1500]).to_timestamp_ms(),
+            1_705_276_800_000
+        );
+        // 2024-12-31T00:00:00Z
+        assert_eq!(
+            RatingPoint([2024, 11, 31, 1500]).to_timestamp_ms(),
+            1_735_603_200_000
+        );
+    }
+
+    #[test]
+    fn invalid_rating_point_dates_map_to_zero() {
+        assert_eq!(RatingPoint([2023, 1, 30, 1500]).to_timestamp_ms(), 0); // 30 February
+        assert_eq!(RatingPoint([2023, 12, 1, 1500]).to_timestamp_ms(), 0); // 13th month
+    }
+
+    #[test]
+    fn rating_summaries_use_last_highest_and_lowest_points() {
+        let h = history(vec![
+            RatingPoint([2024, 0, 1, 1500]),
+            RatingPoint([2024, 0, 2, 1620]),
+            RatingPoint([2024, 0, 3, 1410]),
+            RatingPoint([2024, 0, 4, 1550]),
+        ]);
+
+        assert_eq!(h.current_rating(), Some(1550));
+        assert_eq!(h.peak_rating(), Some(1620));
+        assert_eq!(h.lowest_rating(), Some(1410));
+    }
+
+    #[test]
+    fn rating_summaries_are_none_without_points() {
+        let h = history(vec![]);
+
+        assert_eq!(h.current_rating(), None);
+        assert_eq!(h.peak_rating(), None);
+        assert_eq!(h.lowest_rating(), None);
+        assert!(h.recent_points(30).is_empty());
+    }
+
+    #[test]
+    fn recent_points_only_keeps_points_inside_the_window() {
+        use chrono::{Datelike, Utc};
+
+        let today = Utc::now().date_naive();
+        let today_point = RatingPoint([
+            today.year(),
+            today.month0() as i32,
+            today.day() as i32,
+            1600,
+        ]);
+        let h = history(vec![RatingPoint([2015, 0, 1, 1200]), today_point]);
+
+        let recent = h.recent_points(7);
+
+        assert_eq!(recent.len(), 1);
+        assert_eq!(recent[0].rating(), 1600);
+    }
+
     #[test]
     fn test_rating_point_accessors() {
         let point = RatingPoint([2011, 0, 8, 1472]);

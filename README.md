@@ -41,6 +41,22 @@ which runs each time a file is saved. When that happens, it then recompiles all
 the CSS used here. This is why the tailwind cli is needed, otherwise an error
 will pop up and the styles are going to be messed up.
 
+## Testing
+
+```sh
+cargo test --workspace   # everything
+cargo test -p e2e        # end-to-end only
+```
+
+- Unit tests live next to the code in each crate. The search engine also has
+  integration tests (`crates/search-engine/tests`) that run against an embedded
+  in-memory SurrealDB, so no `surreal` server is needed.
+- `crates/e2e` boots the real app (`guslee::create_app`) on a random port against
+  the fixture garden in `crates/e2e/fixtures/garden`, with Lichess, Spotify and
+  Steam replaced by local mock servers. No credentials or network access needed.
+- Handlers cache upstream responses process-wide, so each e2e file that talks to
+  an external service keeps its scenarios in a single test function, in order.
+
 ## Hacky solutions
 
 ### Tailwind Prose

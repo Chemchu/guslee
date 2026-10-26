@@ -5,28 +5,10 @@ node_modules
 .env
 .env.*
 !.env.example
-/.direnv
-/.direnv/bin
-/.direnv/*
-/.direnv*
 /.devenv
 /.devenv.flake.nix
-tailwindcssss
 
 /target
-
 /crates/**/target
 
 /result
-# Added by cargo
-#
-# already existing elements were commented out
-
-#/target
-
-
-# Added by cargo
-#
-# already existing elements were commented out
-
-#/target

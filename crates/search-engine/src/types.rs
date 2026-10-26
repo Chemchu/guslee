@@ -20,7 +20,11 @@ impl Limit {
     pub fn value(&self) -> usize {
         match self {
             Limit::Number(val) => *val,
-            Limit::String(_val) => DEFAULT_SEARCH_LIMIT.value(),
+            // Query strings always deserialize as text, e.g. `?limit=50`
+            Limit::String(val) => val
+                .trim()
+                .parse()
+                .unwrap_or_else(|_| DEFAULT_SEARCH_LIMIT.value()),
         }
     }
 }
@@ -57,4 +61,34 @@ pub struct GraphEdge {
 pub struct EdgeFilePath {
     pub source: String,
     pub target: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn numeric_limit_is_used_as_is() {
+        assert_eq!(Limit::Number(5).value(), 5);
+    }
+
+    #[test]
+    fn numeric_text_limit_is_parsed() {
+        assert_eq!(Limit::String("50".to_string()).value(), 50);
+        assert_eq!(Limit::String(" 7 ".to_string()).value(), 7);
+    }
+
+    #[test]
+    fn non_numeric_limit_falls_back_to_the_default() {
+        assert_eq!(
+            Limit::String("lots".to_string()).value(),
+            DEFAULT_SEARCH_LIMIT.value()
+        );
+    }
+
+    #[test]
+    fn empty_graph_has_no_nodes_or_edges() {
+        let graph = GraphData::empty();
+        assert!(graph.nodes.is_empty() && graph.edges.is_empty());
+    }
 }

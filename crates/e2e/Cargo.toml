@@ -1,0 +1,20 @@
+[package]
+name = "e2e"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# End-to-end tests: boot the real app (create_app) on a random port against a fixture garden,
+# with Lichess, Spotify and Steam replaced by local mock servers. Run with `cargo test -p e2e`.
+
+[dependencies]
+guslee = { path = "../.." }
+search-engine = { path = "../search-engine" }
+chess-module = { path = "../chess-module" }
+music-module = { path = "../music-module" }
+games-module = { path = "../games-module" }
+actix-web = "4.18.1"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "io-util"] }
+reqwest = { workspace = true, features = ["query"] }
+wiremock = "0.6.5"
+serde_json.workspace = true

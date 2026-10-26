@@ -162,31 +162,12 @@ function renderGraph(targetContainerId) {
       const url = "/posts/" + d.file_path.replace(/\.md$/, "");
 
       if (typeof htmx !== "undefined") {
-        if (document.startViewTransition) {
-          document.startViewTransition(async () => {
-            const response = await fetch(url, {
-              headers: {
-                "HX-Request": "true",
-                "HX-Current-URL": window.location.origin + url,
-              },
-            });
-            const html = await response.text();
-            document.getElementById("main-section").innerHTML = html;
-            window.history.pushState({}, "", url);
-          });
-        } else {
-          htmx
-            .ajax("GET", url, {
-              target: "#main-section",
-              swap: "innerHTML",
-              headers: {
-                "HX-Current-URL": window.location.origin + url,
-              },
-            })
-            .then(() => {
-              window.history.pushState({}, "", url);
-            });
-        }
+        // push: "true" stores an htmx history entry so the back button restores it
+        htmx.ajax("GET", url, {
+          target: "#main-section",
+          swap: "innerHTML transition:true",
+          push: "true",
+        });
       } else {
         // Fallback to regular navigation
         window.location.href = url;
@@ -195,13 +176,13 @@ function renderGraph(targetContainerId) {
   }
 }
 
-document.addEventListener("htmx:afterSettle", function (evt) {
-  // Once the graph container loades, we can init the actual graph
-  if (evt.detail.target.id === "upper-right-section") {
+document.addEventListener("htmx:after:settle", function (evt) {
+  // Once the graph container loads, we can init the actual graph
+  if (evt.target.id === "upper-right-section") {
     renderGraph("graph-container");
   }
 
-  if (evt.detail.target.id === "garden-view-section") {
+  if (evt.target.id === "garden-view-section") {
     renderGraph("garden-view-content");
   }
 });

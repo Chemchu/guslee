@@ -4,7 +4,6 @@ use std::{
 };
 
 fn main() {
-    println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=static/style.css");
     println!("cargo:rerun-if-changed=templates");
     println!("cargo:rerun-if-changed=src");
@@ -27,15 +26,24 @@ fn main() {
 
     match process::Command::new(shell).arg(flag).arg(command).output() {
         Ok(output) => {
-            if !output.status.success() {
+            // 127: the shell could not find the binary (e.g. CI and Docker, which use the
+            // committed compiled.css), so skip quietly instead of emitting a build warning
+            if output.status.code() == Some(127) {
+                println!("TailwindCSS binary not found, keeping the committed static/compiled.css");
+            } else if !output.status.success() {
                 let _ = io::stdout().write_all(&output.stdout);
                 let _ = io::stdout().write_all(&output.stderr);
-                println!("Could not complete build step: TailwindCSS binary not found");
+                println!(
+                    "cargo:warning=TailwindCSS build failed, static/compiled.css was not updated"
+                );
             } else {
                 let _ = io::stdout().write_all(&output.stdout);
                 println!("Build step completed successfully!")
             }
         }
-        Err(e) => println!("Could not complete build step because of: {:?}", e),
+        Err(e) => println!(
+            "cargo:warning=Could not run the TailwindCSS build step: {:?}",
+            e
+        ),
     };
 }

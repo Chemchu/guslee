@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1-trixie AS chef
 WORKDIR /usr/src/app
 
 FROM chef AS planner
@@ -7,12 +7,13 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder 
 COPY --from=planner /usr/src/app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+# Only the server binary: skips dev-only workspace members such as the e2e crate
+RUN cargo chef cook --release --recipe-path recipe.json --bin guslee
 COPY . .
 RUN cargo build --release --bin guslee
 
-# Runtime image - same base as builder
-FROM debian:bookworm-slim
+# Runtime image - same Debian release as the builder (glibc must match)
+FROM debian:trixie-slim
 
 RUN apt-get update && \
     apt-get install -y ca-certificates && \

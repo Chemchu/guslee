@@ -4,7 +4,17 @@ members = [
     "crates/chess-module",
     "crates/music-module",
     "crates/games-module",
+    "crates/e2e",
 ]
+
+[workspace.dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+chrono = "0.4.45"
+tokio = { version = "1.54.1", features = ["macros"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls", "http2", "charset"] }
+surrealdb = { version = "3.3.4", features = ["kv-mem", "protocol-ws"], default-features = false }
+tempfile = "3.27.0"
 
 [package]
 name = "guslee"
@@ -12,22 +22,23 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-search-engine = {path = "crates/search-engine"}
-chess-module = {path = "crates/chess-module"}
-music-module = {path = "crates/music-module"}
-games-module = {path = "crates/games-module"}
-actix-files = "0.6.10"
-actix-web = "4.13.0"
+search-engine = { path = "crates/search-engine" }
+chess-module = { path = "crates/chess-module" }
+music-module = { path = "crates/music-module" }
+games-module = { path = "crates/games-module" }
+actix-files = "0.7.2"
+actix-web = "4.18.1"
 markdown = "1.0.0"
 simple_logger = "5.2.0"
-log = "0.4.32"
+log = "0.4.34"
 maud = { version = "0.27.0", features = ["actix-web"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.150"
-surrealdb = { version = "3.1.4", features = ["kv-mem", "protocol-ws"], default-features = false }
-cached = {version = "2.0.2", features = ["async"]}
-chrono = {version = "0.4.45"}
-tokio = { version = "1.52.3", features = ["macros"] }  
+serde.workspace = true
+serde_json.workspace = true
+surrealdb.workspace = true
+cached = { version = "4.0.3", features = ["async", "time_stores"] }
+chrono.workspace = true
+tokio.workspace = true
+dotenvy = "0.15.7"
 
 [profile.dev]
 opt-level = 0

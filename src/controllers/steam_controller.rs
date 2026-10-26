@@ -6,46 +6,42 @@ use cached::cached;
 use games_module::{RecentGame, SteamProfile, TopGame};
 use maud::{PreEscaped, html};
 
-use crate::controllers::{AppState, wrap_content_into_full_page};
+use crate::controllers::{AppState, render_page};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(steam_page);
 }
 
-#[cached(
-    ttl = 3600,
-    key = "String",
-    convert = r##"{ 
-        format!(
-            "steam-is_htmx_req-{}",
-            req.headers().get("HX-Request").is_some()
-        )
-    }"##
-)]
 #[get("/steam")]
 async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
+    let content = steam_page_content(app_state.clone())
+        .await
+        .unwrap_or_else(|error_html| error_html);
+
+    render_page(&app_state, &req, &content)
+}
+
+// Only successful responses are cached, so a Steam outage is retried on the next request
+#[cached(
+    ttl_secs = 3600,
+    key = "String",
+    convert = r#"{ "steam".to_string() }"#
+)]
+async fn steam_page_content(app_state: web::Data<AppState>) -> Result<String, String> {
     let profile = app_state.steam_state.get_profile().await;
     let recent_games = app_state.steam_state.get_recent_games(5).await;
     let top_games = app_state.steam_state.get_top_played_games(5).await;
-    let html_to_render = match profile.is_err() || recent_games.is_err() || top_games.is_err() {
-        true => {
-            html! {
-                div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
-                    "Error loading Steam page"
-                }
+
+    match (profile, recent_games, top_games) {
+        (Ok(profile), Ok(recent_games), Ok(top_games)) => {
+            Ok(render_steam_page(profile, recent_games, top_games).into_string())
+        }
+        _ => Err(html! {
+            div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
+                "Error loading Steam page"
             }
         }
-        false => render_steam_page(profile.unwrap(), recent_games.unwrap(), top_games.unwrap()),
-    };
-
-    let is_htmx_req = req.headers().get("HX-Request").is_some();
-    if is_htmx_req {
-        Html::new(html_to_render)
-    } else {
-        Html::new(wrap_content_into_full_page(
-            &app_state.app_name,
-            &html_to_render.0,
-        ))
+        .into_string()),
     }
 }
 
@@ -92,7 +88,7 @@ fn render_steam_page(
             div class="flex flex-col gap-6" {
                 div class="bg-gradient-to-br from-slate-800 to-slate-900 shadow-2xl p-6 border border-shade-color" {
                     div class="flex flex-col md:flex-row gap-6 items-start" {
-                        div class="flex-shrink-0" {
+                        div class="shrink-0" {
                             div class="relative" {
                                 a href=(profile.profileurl) target="_blank" rel="noopener noreferrer"
                                 {
@@ -134,7 +130,7 @@ fn render_steam_page(
                             }
                         }
 
-                        div class="flex-shrink-0 self-start md:self-center" {
+                        div class="shrink-0 self-start md:self-center" {
                             a
                                 href=(profile.profileurl)
                                 target="_blank"
@@ -160,7 +156,7 @@ fn render_steam_page(
                         }
                         div {
                             p class="text-slate-400 text-sm font-medium" { "Total Games" }
-                            p class="text-3xl font-bold text-white" { (profile.game_count - 1) }
+                            p class="text-3xl font-bold text-white" { (profile.game_count.saturating_sub(1)) }
                         }
                     }
                 }
@@ -223,7 +219,7 @@ fn render_steam_page(
                                     src=(game.img_logo_url)
                                     onerror={"this.onerror=null; this.src='http://media.steampowered.com/steamcommunity/public/images/apps/"(game.appid)"/"(game.img_icon_url)".jpg';"}
                                     alt=(game.name)
-                                    class="w-16 h-16 border-2 border-slate-600 shadow-md flex-shrink-0 object-cover";
+                                    class="w-16 h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
 
                                 div class="flex-1 min-w-0" {
                                     h3 class="text-xl font-bold text-white truncate mb-2" {
@@ -278,7 +274,7 @@ fn render_steam_page(
                                     src=(game.img_logo_url)
                                     onerror={"this.onerror=null; this.src='http://media.steampowered.com/steamcommunity/public/images/apps/"(game.appid)"/"(game.img_icon_url)".jpg';"}
                                     alt=(game.name)
-                                    class="w-16 h-16 border-2 border-slate-600 shadow-md flex-shrink-0 object-cover";
+                                    class="w-16 h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
 
                                 div class="flex-1 min-w-0" {
                                     h3 class="text-xl font-bold text-white truncate mb-2" {
@@ -329,5 +325,29 @@ fn format_playtime(minutes: u32) -> String {
         format!("{:.1}h", minutes as f32 / 60.0)
     } else {
         format!("{}h", hours)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn playtime_under_an_hour_is_shown_in_minutes() {
+        assert_eq!(format_playtime(0), "0m");
+        assert_eq!(format_playtime(59), "59m");
+    }
+
+    #[test]
+    fn playtime_under_100_hours_has_one_decimal() {
+        assert_eq!(format_playtime(60), "1.0h");
+        assert_eq!(format_playtime(90), "1.5h");
+        assert_eq!(format_playtime(99 * 60 + 59), "100.0h");
+    }
+
+    #[test]
+    fn playtime_of_100_hours_or_more_is_whole_hours() {
+        assert_eq!(format_playtime(100 * 60), "100h");
+        assert_eq!(format_playtime(1234 * 60 + 30), "1234h");
     }
 }

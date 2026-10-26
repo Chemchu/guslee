@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use actix_web::{App, HttpServer, middleware::Logger, web};
+use actix_web::{HttpServer, web};
+use guslee::{controllers::AppState, create_app, helpers};
 use log::info;
 use search_engine::PostsSearchEngine;
 
-use crate::controllers::AppState;
-
-mod controllers;
-mod helpers;
+const GARDEN_PATH: &str = "./garden";
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -22,94 +20,41 @@ async fn main() -> std::io::Result<()> {
 
     info!("Loading environment variables...");
     let env_vars = helpers::read_env_file();
+    let env_var = |name: &str| env_vars[name].clone();
 
-    let lichess_token = env_vars
-        .get("LICHESS_API_TOKEN")
-        .expect("LICHESS_API_TOKEN not defined")
-        .to_string();
+    info!("Initializing Lichess, Spotify and Steam state...");
+    let lichess_state =
+        chess_module::LichessState::new(env_var("LICHESS_API_TOKEN"), env_var("LICHESS_USERNAME"));
 
-    let lichess_username = env_vars
-        .get("LICHESS_USERNAME")
-        .expect("LICHESS_USERNAME not defined")
-        .to_string();
-
-    let spotify_user_id = env_vars
-        .get("SPOTIFY_USER_ID")
-        .expect("SPOTIFY_USER_ID not defined")
-        .to_string();
-
-    let spotify_client_id = env_vars
-        .get("SPOTIFY_CLIENT_ID")
-        .expect("SPOTIFY_CLIENT_ID not defined")
-        .to_string();
-
-    let spotify_client_secret = env_vars
-        .get("SPOTIFY_CLIENT_SECRET")
-        .expect("SPOTIFY_CLIENT_SECRET not defined")
-        .to_string();
-
-    let spotify_refresh_token = env_vars
-        .get("SPOTIFY_REFRESH_TOKEN")
-        .expect("SPOTIFY_REFRESH_TOKEN not defined")
-        .to_string();
-
-    info!("Initializing Steam state...");
-    let steam_token = env_vars
-        .get("STEAM_API_KEY")
-        .expect("STEAM_API_KEY not defined")
-        .to_string();
-
-    let steam_id = env_vars
-        .get("STEAM_ID")
-        .expect("STEAM_ID not defined")
-        .to_string();
-
-    let repo_source = env_vars
-        .get("REPO_SOURCE")
-        .expect("REPO_SOURCE not defined")
-        .to_string();
-
-    info!("Initializing Spotify state...");
     let spotify_state = Arc::new(tokio::sync::Mutex::new(
         music_module::SpotifyState::from_refresh_token(
-            spotify_user_id,
-            spotify_client_id,
-            spotify_client_secret,
-            spotify_refresh_token,
+            env_var("SPOTIFY_USER_ID"),
+            env_var("SPOTIFY_CLIENT_ID"),
+            env_var("SPOTIFY_CLIENT_SECRET"),
+            env_var("SPOTIFY_REFRESH_TOKEN"),
         ),
     ));
 
+    let steam_state = games_module::SteamState::new(env_var("STEAM_API_KEY"), env_var("STEAM_ID"));
+
     info!("Creating in-memory full-text search engine...");
-    let search_engine = Arc::new(PostsSearchEngine::new(repo_source.as_str(), "./garden").await);
+    let search_engine =
+        Arc::new(PostsSearchEngine::new(env_var("REPO_SOURCE").as_str(), GARDEN_PATH).await);
     info!("Search engine created correctly");
+
+    let app_state = web::Data::new(AppState {
+        app_name: String::from("Gus' digital garden"),
+        garden_path: GARDEN_PATH.to_string(),
+        lichess_state,
+        spotify_state,
+        steam_state,
+        post_search_engine: search_engine,
+    });
 
     info!("Server starting on port 3000");
 
-    HttpServer::new(move || {
-        App::new()
-            .wrap(Logger::new("%s %r - %Dms"))
-            .service(actix_files::Files::new("/_static", "./static").show_files_listing())
-            .app_data(web::Data::new(AppState {
-                app_name: String::from("Gus' digital garden"),
-                lichess_state: chess_module::LichessState {
-                    lichess_token: lichess_token.clone(),
-                    lichess_username: lichess_username.clone(),
-                },
-                spotify_state: Arc::clone(&spotify_state),
-                steam_state: games_module::SteamState::new(steam_token.clone(), steam_id.clone()),
-                post_search_engine: Arc::clone(&search_engine),
-            }))
-            .configure(controllers::posts_controller::configure_services)
-            .configure(controllers::news_controller::configure_services)
-            .configure(controllers::metadata_controller::configure_services)
-            .configure(controllers::steam_controller::configure_services)
-            .configure(controllers::chess_controller::configure_services)
-            .configure(controllers::graph_controller::configure_services)
-            .configure(controllers::music_controller::configure_services)
-            .configure(controllers::routines_controller::configure_services)
-            .service(controllers::fallback_controller::fallback_route) // This service should be last one in the list because it matches any string
-    })
-    .bind(("0.0.0.0", 3000))?
-    .run()
-    .await
+    HttpServer::new(move || create_app(app_state.clone()))
+        .bind(("0.0.0.0", 3000))?
+        .run()
+        .await
 }
