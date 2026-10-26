@@ -316,28 +316,25 @@
           <button
             type="button"
             role="tab"
-            data-explorer-view="folders"
-            aria-selected="false"
-            class="text-zinc-500 hover:text-bright-color aria-selected:text-primary-color transition-colors"
-          >
-            Folders
-          </button>
-          <button
-            type="button"
-            role="tab"
             data-explorer-view="topics"
             aria-selected="true"
             class="text-zinc-500 hover:text-bright-color aria-selected:text-primary-color transition-colors"
           >
             Topics
           </button>
+          <button
+            type="button"
+            role="tab"
+            data-explorer-view="folders"
+            aria-selected="false"
+            class="text-zinc-500 hover:text-bright-color aria-selected:text-primary-color transition-colors"
+          >
+            Folders
+          </button>
           <input type="hidden" id="explorer-view" name="view" value="topics" />
         </div>
 
-        <div
-          id="list-section"
-          class="grow pt-2 overflow-auto"
-        >
+        <div id="list-section" class="grow pt-2 overflow-auto">
           <div
             hx-get="/search"
             hx-vals="js:{limit: 100, view: window.explorerView ? window.explorerView() : 'topics'}"

@@ -100,12 +100,12 @@ async fn tag_page(
                     class="text-sm text-zinc-500 hover:text-primary-color"
                     { "← All tags" }
                     h1
-                    class="text-4xl md:text-5xl font-bold text-primary-color mb-2 break-words"
+                    class="pt-4 text-4xl md:text-5xl font-bold text-primary-color mb-2 break-words"
                     { "#" (tag.as_str()) }
                     p
                     class="text-zinc-500"
                     {
-                        (posts.len()) @if posts.len() == 1 { " note" } @else { " notes" }
+                        (posts.len()) @if posts.len() == 1 { " post" } @else { " posts" }
                     }
                 }
                 ul
