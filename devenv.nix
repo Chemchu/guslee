@@ -25,9 +25,12 @@ in {
     tailwindcss_4
     clang
     surrealdb3
+    (cargo-llvm-cov.overrideAttrs (_: {doCheck = false;}))
   ];
 
   env.SURREALDB_PATH = surrealdb3 + "/bin/surreal";
+  env.LLVM_COV = "${pkgs.llvmPackages_23.llvm}/bin/llvm-cov";
+  env.LLVM_PROFDATA = "${pkgs.llvmPackages_23.llvm}/bin/llvm-profdata";
 
   git-hooks.hooks.prettier = {
     enable = true;

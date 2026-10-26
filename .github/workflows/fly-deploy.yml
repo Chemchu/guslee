@@ -14,7 +14,12 @@ jobs:
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
-          components: clippy, rustfmt
+          components: clippy, rustfmt, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
       - name: Check formatting
         run: cargo fmt --all --check
@@ -22,8 +27,8 @@ jobs:
       - name: Run clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Run tests
-        run: cargo test --workspace
+      - name: Run tests with coverage
+        run: cargo llvm-cov --workspace --ignore-filename-regex 'crates/e2e/' --fail-under-lines 80
   docker-test:
     needs: rust-test
     runs-on: ubuntu-latest
