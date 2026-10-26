@@ -40,7 +40,6 @@ async fn chess_games_analysis(app_state: web::Data<AppState>) -> Html {
     )
 }
 
-// Only successful responses are cached, so a Lichess outage is retried on the next request
 #[cached(
     ttl_secs = 3600,
     key = "String",
@@ -84,8 +83,6 @@ fn chess_fallback_html() -> String {
     markdown::to_html(&fallback_md)
 }
 
-// Maps the Lichess perf key used in the URL (e.g. "kingOfTheHill") to the display name
-// Lichess uses in the rating history (e.g. "King of the Hill")
 fn normalize_game_mode(game_mode: &str) -> String {
     match game_mode {
         "kingOfTheHill" => "King of the Hill".to_string(),
@@ -102,8 +99,6 @@ fn normalize_game_mode(game_mode: &str) -> String {
     }
 }
 
-// Picks the stats for a Lichess perf key as used in the URL (e.g. "kingOfTheHill"),
-// defaulting to blitz for unknown modes
 fn perf_for_mode<'a>(perfs: Option<&'a Perfs>, game_mode: &str) -> Option<&'a PerfStat> {
     let perfs = perfs?;
     match game_mode {
@@ -260,7 +255,6 @@ fn render_chess_page(
     }
 }
 
-// Lichess usernames are case-insensitive
 fn plays_white(game: &Game, username: &str) -> bool {
     game.players
         .white
@@ -448,7 +442,6 @@ mod tests {
 
         assert_eq!(rating("rapid"), Some(1100));
         assert_eq!(rating("ultraBullet"), Some(1200));
-        // These used to fall back to blitz because the display name was matched instead
         assert_eq!(rating("kingOfTheHill"), Some(1300));
         assert_eq!(rating("racingKings"), Some(1400));
         assert_eq!(rating("threeCheck"), Some(1500));
@@ -490,7 +483,6 @@ mod tests {
         let html =
             render_analysis_page(vec![game_with_white("SomeUser")], "someuser").into_string();
 
-        // The opening family (before the colon) is shown as the top white opening
         assert!(html.contains("Italian Game"));
     }
 

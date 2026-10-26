@@ -54,13 +54,10 @@ async fn mount_lichess(app: &TestApp, rapid_rating: u32) {
         .await;
 }
 
-// One test function on purpose: handlers cache Lichess responses process-wide (see the
-// harness docs), so the scenarios must run in this order
 #[tokio::test]
 async fn chess_pages_render_lichess_data_and_retry_after_failures() {
     let app = TestApp::spawn().await;
 
-    // 1. Lichess is down: the fallback page is shown...
     Mock::given(method("GET"))
         .respond_with(ResponseTemplate::new(503))
         .mount(&app.lichess)
@@ -72,7 +69,6 @@ async fn chess_pages_render_lichess_data_and_retry_after_failures() {
         "fallback page expected"
     );
 
-    // 2. ...and not cached, so the page recovers as soon as Lichess does
     app.lichess.reset().await;
     mount_lichess(&app, 1640).await;
     let rapid = app.htmx_get("/chess/stats/rapid").await;
@@ -84,25 +80,20 @@ async fn chess_pages_render_lichess_data_and_retry_after_failures() {
     );
     assert!(rapid.body.contains(">250<"), "rapid games played");
     assert!(rapid.body.contains("50.00%"), "100 wins out of 200 games");
-    // Chart data uses 1-indexed months
     assert!(rapid.body.contains("2024-06-01"));
 
-    // 3. Successful responses are cached: a rating change upstream is not seen yet
     app.lichess.reset().await;
     mount_lichess(&app, 1999).await;
     let cached = app.htmx_get("/chess/stats/rapid").await;
     assert!(cached.body.contains(">1640<"));
     assert!(!cached.body.contains(">1999<"));
 
-    // The same content is wrapped into the layout for direct visits
     assert!(app.get("/chess/stats/rapid").await.is_full_page());
 
-    // 4. Variants use their own stats (they used to fall back to blitz)
     let koth = app.htmx_get("/chess/stats/kingOfTheHill").await;
     assert!(koth.body.contains(">1333<"));
     assert!(!koth.body.contains(">1111<"));
 
-    // 5. Games analysis groups openings by the colour the configured user played
     Mock::given(method("GET"))
         .and(path(format!("/api/games/user/{LICHESS_USERNAME}")))
         .and(query_param("max", "10"))
@@ -125,7 +116,6 @@ async fn chess_pages_render_lichess_data_and_retry_after_failures() {
     assert!(analysis.body.contains("Game Analysis"));
     assert!(analysis.body.contains("#g1 played as white"));
     assert!(analysis.body.contains("#g3 played as black"));
-    // Top white opening is the Italian (family name before the colon), played twice
     let white_card = &analysis.body[analysis.body.find("Italian Game<").unwrap()..];
     assert!(white_card.starts_with("Italian Game<"));
     assert!(white_card.contains("<span class=\"text-primary-color\">2</span> times recently"));

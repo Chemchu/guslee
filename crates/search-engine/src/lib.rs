@@ -19,8 +19,6 @@ pub struct PostsSearchEngine {
     db: Surreal<Any>,
 }
 
-// Debug builds use a local SurrealDB server (handy to inspect the data), release builds an
-// embedded in-memory database
 #[cfg(debug_assertions)]
 pub const DEFAULT_DB_ENDPOINT: &str = "ws://127.0.0.1:8000";
 #[cfg(not(debug_assertions))]
@@ -72,8 +70,7 @@ impl PostsSearchEngine {
 
         db.use_ns("guslee").use_db("guslee").await.unwrap();
         db.query(
-            "-- Start from a clean slate: in debug builds the DB is a long-lived local server
-            REMOVE TABLE IF EXISTS posts;
+            "REMOVE TABLE IF EXISTS posts;
             REMOVE TABLE IF EXISTS points_to;
 
             DEFINE TABLE posts SCHEMAFULL;

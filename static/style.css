@@ -14,7 +14,6 @@
   --color-shade-color: #323c49;
 }
 
-/* Cross-document view transitions for full page loads (replaces the old meta tag) */
 @view-transition {
   navigation: auto;
 }
@@ -90,7 +89,6 @@ footer {
   font-display: swap;
 }
 
-/* Thin scrollbars: standard properties, with WebKit fallbacks for the hover colour */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(219, 223, 229, 0.5) transparent;

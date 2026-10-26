@@ -11,8 +11,6 @@ use crate::controllers::AppState;
 pub mod controllers;
 pub mod helpers;
 
-// Builds the whole application (middleware, static files and routes). Shared by the binary
-// and the e2e tests so both exercise exactly the same app
 pub fn create_app(
     app_state: web::Data<AppState>,
 ) -> App<

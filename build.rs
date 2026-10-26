@@ -26,8 +26,6 @@ fn main() {
 
     match process::Command::new(shell).arg(flag).arg(command).output() {
         Ok(output) => {
-            // 127: the shell could not find the binary (e.g. CI and Docker, which use the
-            // committed compiled.css), so skip quietly instead of emitting a build warning
             if output.status.code() == Some(127) {
                 println!("TailwindCSS binary not found, keeping the committed static/compiled.css");
             } else if !output.status.success() {

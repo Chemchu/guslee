@@ -12,9 +12,6 @@ const REQUIRED_VARS: [&str; 9] = [
     "REPO_SOURCE",
 ];
 
-// Loads the required variables from a `.env` file (searched from the working directory
-// upwards) if present, falling back to the system environment for anything it does not
-// define. This lets deployments without a `.env` file keep working.
 pub fn read_env_file() -> HashMap<String, String> {
     match dotenvy::dotenv() {
         Ok(path) => log::info!("Loaded environment variables from {}", path.display()),
@@ -27,7 +24,6 @@ pub fn read_env_file() -> HashMap<String, String> {
     })
 }
 
-// Looks up every required variable, returning all the missing ones at once on failure
 fn collect_required_vars(
     lookup: impl Fn(&str) -> Option<String>,
 ) -> Result<HashMap<String, String>, Vec<&'static str>> {

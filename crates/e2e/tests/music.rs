@@ -54,7 +54,6 @@ async fn mount_spotify(app: &TestApp) {
     let ok = |body: serde_json::Value| ResponseTemplate::new(200).set_body_json(body);
     let authorized = || header("Authorization", format!("Bearer {ACCESS_TOKEN}"));
 
-    // Every request first exchanges the refresh token for an access token
     Mock::given(method("POST"))
         .and(path("/api/token"))
         .and(body_string_contains("grant_type=refresh_token"))
@@ -94,12 +93,10 @@ async fn mount_spotify(app: &TestApp) {
     }
 }
 
-// One test function on purpose: top items are cached process-wide (see the harness docs)
 #[tokio::test]
 async fn music_pages_render_spotify_data_and_retry_after_failures() {
     let app = TestApp::spawn().await;
 
-    // 1. Spotify rejects the refresh token: errors are shown, not cached
     Mock::given(method("POST"))
         .and(path("/api/token"))
         .respond_with(ResponseTemplate::new(401))
@@ -118,7 +115,6 @@ async fn music_pages_render_spotify_data_and_retry_after_failures() {
             .contains("Error loading Spotify item")
     );
 
-    // 2. Spotify recovers
     app.spotify.reset().await;
     mount_spotify(&app).await;
 
@@ -130,7 +126,6 @@ async fn music_pages_render_spotify_data_and_retry_after_failures() {
     assert!(app.get("/music/profile").await.is_full_page());
 
     let top_tracks = app.htmx_get("/music/user-top/tracks/long_term").await.body;
-    // Tracks render as Spotify embeds
     assert!(top_tracks.contains("https://open.spotify.com/embed/track/long_term?"));
     let top_artists = app.htmx_get("/music/user-top/artists/long_term").await.body;
     assert!(top_artists.contains("Artist of all time"));
@@ -141,7 +136,6 @@ async fn music_pages_render_spotify_data_and_retry_after_failures() {
             .contains("Error loading Spotify item")
     );
 
-    // 3. Cycling the time range swaps the label in place and the list out of band
     let cycled = app
         .htmx_get("/music/time-range/artists/long_term/next")
         .await
@@ -151,7 +145,6 @@ async fn music_pages_render_spotify_data_and_retry_after_failures() {
     assert!(cycled.contains("id=\"top-artists\" hx-swap-oob=\"innerHTML\""));
     assert!(cycled.contains("Artist of this half"));
 
-    // Artists without pictures must render too (cache key differs from the calls above)
     Mock::given(method("GET"))
         .and(path("/v1/me/top/artists"))
         .and(query_param("time_range", "short_term"))
@@ -166,7 +159,6 @@ async fn music_pages_render_spotify_data_and_retry_after_failures() {
     assert_eq!(faceless.status, 200);
     assert!(faceless.body.contains("Faceless artist"));
 
-    // 4. A profile without a picture must still render
     app.spotify.reset().await;
     mount_spotify_without_avatar(&app).await;
     let no_avatar = app.htmx_get("/music/profile").await;

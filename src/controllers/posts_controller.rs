@@ -66,8 +66,6 @@ async fn get_post_page(
     }
 }
 
-// Only plain path segments are allowed so `..` (or an absolute path) cannot escape the
-// garden directory
 fn is_safe_post_route(route: &str) -> bool {
     !route.is_empty()
         && Path::new(route)

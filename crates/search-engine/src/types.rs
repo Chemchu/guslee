@@ -20,7 +20,6 @@ impl Limit {
     pub fn value(&self) -> usize {
         match self {
             Limit::Number(val) => *val,
-            // Query strings always deserialize as text, e.g. `?limit=50`
             Limit::String(val) => val
                 .trim()
                 .parse()

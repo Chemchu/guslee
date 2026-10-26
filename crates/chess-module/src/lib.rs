@@ -9,7 +9,6 @@ pub const LICHESS_API_BASE_URL: &str = "https://lichess.org";
 pub struct LichessState {
     pub lichess_token: String,
     pub lichess_username: String,
-    // Overridable so tests can point the module at a mock server
     pub api_base_url: String,
 }
 
@@ -91,7 +90,6 @@ impl ChessModule {
     }
 }
 
-// Lichess streams games as newline-delimited JSON; lines that fail to parse are skipped
 fn parse_games_ndjson(body: &str) -> Vec<Game> {
     Deserializer::from_str(body)
         .into_iter::<Game>()

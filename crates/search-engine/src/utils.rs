@@ -65,7 +65,6 @@ pub fn extract_full_metadata(repo_source: &str, post_path: &str) -> Option<MdMet
     })
 }
 
-// Link to the post in the repository, e.g. "<repo>/garden/hello.md" for "./garden/hello.md"
 fn source_url(repo_source: &str, post_path: &str) -> String {
     format!(
         "{}/{}",
@@ -120,7 +119,6 @@ mod tests {
             source_url(repo, "./garden/journal/x.md"),
             "https://github.com/u/r/blob/main/garden/journal/x.md"
         );
-        // Used to produce "<repo>md" when the path had no leading "./"
         assert_eq!(
             source_url(&format!("{repo}/"), "garden/x.md"),
             "https://github.com/u/r/blob/main/garden/x.md"

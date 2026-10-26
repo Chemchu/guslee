@@ -38,8 +38,6 @@ async fn finds_posts_by_title_and_content() {
 
     assert_eq!(search(&app, "hello", None).await, vec!["Hello fixture"]);
 
-    // Title match plus two posts mentioning "the fog note" in their content; the draft also
-    // mentions fog but must be left out
     let mut fog = search(&app, "fog", None).await;
     fog.sort();
     assert_eq!(
@@ -82,7 +80,6 @@ async fn short_queries_list_every_published_post_with_pinned_ones_first() {
 
     let titles = search(&app, "*", None).await;
 
-    // welcome.md and hello.md are pinned (hello is grouped under its topic), the rest follow
     assert_eq!(titles.len(), 4, "{titles:?}");
     assert_eq!(titles[0], "Hello fixture");
     assert!(titles.contains(&"Welcome to the fixture garden".to_string()));

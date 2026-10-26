@@ -1,13 +1,9 @@
-//! Canned upstream responses shared by several test files
-
 use serde_json::json;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, ResponseTemplate};
 
 use crate::{STEAM_API_KEY, STEAM_ID, TestApp};
 
-/// Mounts a healthy Steam API: profile, level 42, the given owned games, one recently played
-/// game (appid 20, with 1 of 2 achievements) and failing achievement lookups for other games
 pub async fn mount_steam(app: &TestApp, owned_games: serde_json::Value, game_count: u32) {
     let ok = |body: serde_json::Value| ResponseTemplate::new(200).set_body_json(body);
 
@@ -48,7 +44,6 @@ pub async fn mount_steam(app: &TestApp, owned_games: serde_json::Value, game_cou
         }]}})))
         .mount(&app.steam)
         .await;
-    // appid 20 has 1 of 2 achievements; any other game has none (Steam answers with an error)
     Mock::given(method("GET"))
         .and(path("/ISteamUserStats/GetPlayerAchievements/v1/"))
         .and(query_param("appid", "20"))

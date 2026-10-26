@@ -7,12 +7,11 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder 
 COPY --from=planner /usr/src/app/recipe.json recipe.json
-# Only the server binary: skips dev-only workspace members such as the e2e crate
 RUN cargo chef cook --release --recipe-path recipe.json --bin guslee
 COPY . .
 RUN cargo build --release --bin guslee
 
-# Runtime image - same Debian release as the builder (glibc must match)
+# Runtime image - same base as builder
 FROM debian:trixie-slim
 
 RUN apt-get update && \

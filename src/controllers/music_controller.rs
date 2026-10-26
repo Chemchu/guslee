@@ -38,7 +38,6 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
         div class="flex flex-col w-full gap-4 p-6 lg:p-8 overflow-auto" {
             div class="bg-background-color p-6 border border-shade-color border-l-[3px] border-l-primary-color" {
                 div class="flex items-center gap-6" {
-                    // Accounts without a profile picture have no images
                     @if let Some(image) = user.images.first() {
                         a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" {
                             img src=(image.url)
@@ -157,7 +156,6 @@ async fn cycle_time_range(
     )
 }
 
-// Only successful responses are cached, so a Spotify outage is retried on the next request
 #[cached(
     ttl_secs = 86400,
     key = "String",
@@ -305,7 +303,6 @@ fn render_tracks_list(top_tracks: &TopTracksResponse) -> PreEscaped<String> {
     }
 }
 
-// Spotify time ranges cycle long -> medium -> short -> long; returns the next range and its label
 fn next_time_range(current_term: &str) -> (&'static str, &'static str) {
     match current_term {
         "long_term" => ("medium_term", "Last 6 months"),

@@ -149,7 +149,6 @@ pub struct TopGame {
 
 pub const STEAM_API_BASE_URL: &str = "https://api.steampowered.com";
 
-// App ids that are never shown in the top played games list
 const EXCLUDED_APP_IDS: [u32; 2] = [431960, 323370];
 
 impl SteamState {
@@ -161,7 +160,6 @@ impl SteamState {
         }
     }
 
-    // Overridable so tests can point the module at a mock server
     pub fn with_api_base_url(mut self, api_base_url: impl Into<String>) -> Self {
         self.api_base_url = api_base_url.into();
         self
@@ -332,8 +330,6 @@ impl SteamState {
         Ok(games)
     }
 
-    // Games without achievements (or private stats) return an error from Steam, so any
-    // failure is treated as "no achievements" instead of failing the whole page
     async fn get_achievements(&self, appid: u32) -> Vec<Achievement> {
         let url = format!(
             "{}/ISteamUserStats/GetPlayerAchievements/v1/?key={}&steamid={}&appid={}",
@@ -389,7 +385,6 @@ impl AchievementProgress {
     }
 }
 
-// Most played first, skipping non-games and games never launched
 fn select_top_games(games: Vec<OwnedGameData>, count: usize) -> Vec<OwnedGameData> {
     let mut games: Vec<OwnedGameData> = games
         .into_iter()

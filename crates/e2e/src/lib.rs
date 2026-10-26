@@ -1,13 +1,3 @@
-//! Harness for the end-to-end tests in `tests/`.
-//!
-//! Each test binary boots the real application (`guslee::create_app`) on a random port, backed
-//! by an in-memory search engine over `fixtures/garden` and by local mock servers standing in
-//! for Lichess, Spotify and Steam.
-//!
-//! Handlers cache upstream responses in process-wide caches whose keys do not include the
-//! upstream URL, so every test file that talks to an external service keeps its scenarios in a
-//! single test function (each file is its own process, so caches never leak between files).
-
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
@@ -27,7 +17,6 @@ pub const SPOTIFY_REFRESH_TOKEN: &str = "spotify-refresh-token";
 pub const STEAM_API_KEY: &str = "steam-key";
 pub const STEAM_ID: &str = "76561190000000000";
 
-// Relative to the workspace root, which is the working directory while tests run
 pub const GARDEN_PATH: &str = "crates/e2e/fixtures/garden";
 
 pub struct TestApp {
@@ -54,8 +43,6 @@ impl Response {
     }
 }
 
-// The app reads `./templates` and `./static` relative to the working directory, like in
-// production, so tests run from the workspace root
 fn enter_workspace_root() {
     static ROOT: OnceLock<PathBuf> = OnceLock::new();
     let root = ROOT.get_or_init(|| {
@@ -119,12 +106,10 @@ impl TestApp {
         }
     }
 
-    /// A plain browser navigation (no htmx headers)
     pub async fn get(&self, path: &str) -> Response {
         self.send(self.client.get(self.url(path))).await
     }
 
-    /// An htmx 4 request swapping into a section of the page
     pub async fn htmx_get(&self, path: &str) -> Response {
         self.send(
             self.client
@@ -135,7 +120,6 @@ impl TestApp {
         .await
     }
 
-    /// What htmx 4 sends when the back button restores a page
     pub async fn history_restore_get(&self, path: &str) -> Response {
         self.send(
             self.client
@@ -156,8 +140,6 @@ impl TestApp {
         }
     }
 
-    /// Sends the request target verbatim. HTTP clients normalise `..` segments away, which
-    /// is exactly what a path traversal attempt avoids
     pub async fn raw_get(&self, raw_path: &str) -> (u16, String) {
         let host = self.address.trim_start_matches("http://");
         let mut stream = tokio::net::TcpStream::connect(host).await.expect("connect");

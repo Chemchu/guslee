@@ -24,7 +24,6 @@ async fn get_current_schedule_activity() -> Html {
     Html::new(html)
 }
 
-// What I am (probably) doing at a given UTC hour
 fn schedule_activity(hour: u32) -> &'static str {
     let schedule: HashMap<u32, &'static str> = HashMap::from([
         (0, "Coding, probably"),

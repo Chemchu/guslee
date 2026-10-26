@@ -118,7 +118,6 @@ pub struct SpotifyState {
     pub spotify_client_id: String,
     pub spotify_client_secret: String,
     pub spotify_session: SpotifySession,
-    // Overridable so tests can point the module at a mock server
     pub accounts_base_url: String,
     pub api_base_url: String,
 }

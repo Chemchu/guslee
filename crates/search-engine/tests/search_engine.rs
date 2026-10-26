@@ -14,8 +14,6 @@ fn write_post(root: &Path, relative_path: &str, frontmatter: &str, body: &str) {
     fs::write(path, format!("---\n{frontmatter}\n---\n{body}")).unwrap();
 }
 
-// A small garden: two published notes under a topic, a welcome page linking to one of them,
-// and a draft that matches the same search terms but must never be returned
 fn garden() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path();
@@ -127,7 +125,6 @@ async fn quotes_in_the_query_are_treated_as_text() {
     let garden = garden();
     let engine = engine(&garden).await;
 
-    // Used to be interpolated into SurrealQL; must neither panic nor inject
     let results = engine.query_posts(&search("james's", None)).await;
     let injection = engine.query_posts(&search("x' OR true OR '", None)).await;
 
@@ -193,7 +190,6 @@ async fn overall_graph_leaves_drafts_out() {
         nodes,
         vec!["notes/first_note.md", "notes/second_note.md", "welcome.md"]
     );
-    // The draft links to welcome.md, but its edge must not show up either
     assert_eq!(graph.edges.len(), 2);
 }
 

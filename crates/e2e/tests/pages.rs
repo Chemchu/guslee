@@ -22,13 +22,10 @@ async fn layout_is_wired_for_htmx_4() {
 
     let body = app.get("/").await.body;
 
-    // htmx 4 dropped implicit inheritance: without `:inherited` no link would be boosted
     assert!(body.contains("hx-boost:inherited=\"true\""));
-    // The config meta must come before the script, which reads it on load
     let config = body.find("name=\"htmx-config\"").unwrap();
     let script = body.find("/_static/htmx.min.js").unwrap();
     assert!(config < script);
-    // hx-vals must be valid JSON for htmx 4
     assert!(body.contains(r#"hx-vals='{"limit": 100}'"#));
 }
 
@@ -99,7 +96,6 @@ async fn missing_posts_and_routes_are_404s() {
 async fn post_routes_cannot_escape_the_garden() {
     let app = TestApp::spawn().await;
 
-    // Four levels up from crates/e2e/fixtures/garden is the workspace root, which has a README.md
     let (status, body) = app.raw_get("/posts/../../../../README").await;
 
     assert_eq!(status, 404);
@@ -171,7 +167,6 @@ async fn garden_graph_contains_published_posts_and_their_links() {
         paths,
         vec!["hello.md", "notes/fog.md", "notes/letters.md", "welcome.md"]
     );
-    // welcome -> fog, hello -> welcome, letters -> fog (the draft's link is dropped)
     assert_eq!(edges.as_array().unwrap().len(), 3);
 }
 

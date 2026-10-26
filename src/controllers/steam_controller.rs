@@ -21,7 +21,6 @@ async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
     render_page(&app_state, &req, &content)
 }
 
-// Only successful responses are cached, so a Steam outage is retried on the next request
 #[cached(
     ttl_secs = 3600,
     key = "String",

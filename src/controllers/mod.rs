@@ -19,7 +19,6 @@ static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
 
 pub struct AppState {
     pub app_name: String,
-    // Directory holding the markdown posts
     pub garden_path: String,
     pub lichess_state: LichessState,
     pub spotify_state: Arc<tokio::sync::Mutex<SpotifyState>>,
@@ -39,9 +38,6 @@ pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {
         .replace("{{CONTENT}}", content)
 }
 
-// True when the request only needs the inner content (an HTMX swap into a section),
-// false when the full page layout must be returned. htmx 4 history restores (back button)
-// and body-level swaps are HTMX requests too, but they replace the whole <body>
 pub fn is_partial_request(req: &HttpRequest) -> bool {
     let headers = req.headers();
     let is_htmx_req = headers.contains_key("HX-Request");
@@ -53,7 +49,6 @@ pub fn is_partial_request(req: &HttpRequest) -> bool {
     is_htmx_req && !is_history_restore && !is_full_swap
 }
 
-// Returns the content as-is for partial requests or wrapped into the full page otherwise
 pub fn render_page(app_state: &AppState, req: &HttpRequest, content: &str) -> Html {
     if is_partial_request(req) {
         Html::new(content.to_string())
@@ -62,7 +57,6 @@ pub fn render_page(app_state: &AppState, req: &HttpRequest, content: &str) -> Ht
     }
 }
 
-// 404 page: htmx 4 swaps error responses too, so partial requests get the message in place
 pub fn render_not_found(app_state: &AppState, req: &HttpRequest) -> HttpResponse {
     let content = maud::html! {
         div class="flex flex-col w-full gap-4 p-6 lg:p-8" {
@@ -105,7 +99,6 @@ mod tests {
             .to_http_request();
         assert!(is_partial_request(&req));
 
-        // htmx 2 (and htmx.ajax without a type) only sends HX-Request
         let req = TestRequest::get()
             .insert_header(("HX-Request", "true"))
             .to_http_request();

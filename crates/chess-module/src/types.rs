@@ -116,12 +116,10 @@ mod tests {
 
     #[test]
     fn rating_point_month_is_zero_indexed_when_converting_to_a_timestamp() {
-        // 2024-01-15T00:00:00Z
         assert_eq!(
             RatingPoint([2024, 0, 15, 1500]).to_timestamp_ms(),
             1_705_276_800_000
         );
-        // 2024-12-31T00:00:00Z
         assert_eq!(
             RatingPoint([2024, 11, 31, 1500]).to_timestamp_ms(),
             1_735_603_200_000
@@ -130,8 +128,8 @@ mod tests {
 
     #[test]
     fn invalid_rating_point_dates_map_to_zero() {
-        assert_eq!(RatingPoint([2023, 1, 30, 1500]).to_timestamp_ms(), 0); // 30 February
-        assert_eq!(RatingPoint([2023, 12, 1, 1500]).to_timestamp_ms(), 0); // 13th month
+        assert_eq!(RatingPoint([2023, 1, 30, 1500]).to_timestamp_ms(), 0);
+        assert_eq!(RatingPoint([2023, 12, 1, 1500]).to_timestamp_ms(), 0);
     }
 
     #[test]

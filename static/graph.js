@@ -162,7 +162,6 @@ function renderGraph(targetContainerId) {
       const url = "/posts/" + d.file_path.replace(/\.md$/, "");
 
       if (typeof htmx !== "undefined") {
-        // push: "true" stores an htmx history entry so the back button restores it
         htmx.ajax("GET", url, {
           target: "#main-section",
           swap: "innerHTML transition:true",
