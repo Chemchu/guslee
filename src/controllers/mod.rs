@@ -14,6 +14,7 @@ pub mod news_controller;
 pub mod posts_controller;
 pub mod routines_controller;
 pub mod steam_controller;
+pub mod tags_controller;
 
 static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
 

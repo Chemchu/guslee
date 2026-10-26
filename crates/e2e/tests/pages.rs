@@ -66,7 +66,7 @@ async fn posts_are_full_pages_for_browsers_and_fragments_for_htmx() {
     assert!(!partial.is_full_page());
     assert!(!partial.body.contains("<html"));
     for body in [&full.body, &partial.body] {
-        assert!(body.contains("<h1>The fog</h1>"));
+        assert!(body.contains(r#"<h1 id="the-fog">The fog</h1>"#));
         assert!(body.contains("<strong>fog</strong>"));
         assert!(
             !body.contains("topic: \"Notes\""),
@@ -328,4 +328,74 @@ async fn post_side_panel_has_a_drag_handle_to_resize_it() {
     assert!(body[handle..panel_start].contains("data-resize-edge=\"left\""));
     assert!(panel_tag.contains("lg:w-[var(--right-section-width,20rem)]"));
     assert!(!panel_tag.contains("border-l"));
+}
+
+#[tokio::test]
+async fn headings_have_anchors_that_heading_links_point_to() {
+    let app = TestApp::spawn().await;
+
+    let fog = app.htmx_get("/posts/notes/fog").await.body;
+    let letters = app.htmx_get("/posts/notes/letters").await.body;
+
+    assert!(fog.contains(r#"<h1 id="the-fog">The fog</h1>"#));
+    assert!(letters.contains(r#"href="/posts/notes/fog#the-fog""#));
+}
+
+#[tokio::test]
+async fn hovering_a_link_previews_the_post() {
+    let app = TestApp::spawn().await;
+
+    let preview = app.get("/preview/notes/fog").await;
+
+    assert_eq!(preview.status, 200);
+    assert!(!preview.is_full_page());
+    assert!(
+        preview
+            .body
+            .contains(r#"<h1 data-preview-anchor="the-fog">The fog</h1>"#)
+    );
+    assert!(preview.body.contains("never lifts in Silent Hill"));
+    assert_eq!(app.get("/preview/draft").await.status, 404);
+    assert_eq!(app.get("/preview/missing").await.status, 404);
+
+    let layout = app.get("/").await.body;
+    assert!(layout.contains("/_static/preview.js"));
+    assert_eq!(app.get("/_static/preview.js").await.status, 200);
+}
+
+#[tokio::test]
+async fn metadata_tags_link_to_their_tag_page() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/metadata/welcome").await.body;
+
+    assert!(body.contains(r#"href="/tags/intro""#));
+    assert!(body.contains(r#"href="/tags/digital%20garden""#));
+}
+
+#[tokio::test]
+async fn tag_pages_list_published_posts_with_that_tag() {
+    let app = TestApp::spawn().await;
+
+    let intro = app.htmx_get("/tags/intro").await;
+    let spaced = app.htmx_get("/tags/digital%20garden").await;
+    let full = app.get("/tags/INTRO").await;
+
+    assert_eq!(intro.status, 200);
+    assert!(intro.body.contains("#intro"));
+    assert!(intro.body.contains("2 notes"));
+    let hello = intro.body.find(r#"href="/posts/hello""#).unwrap();
+    let welcome = intro.body.find(r#"href="/posts/welcome""#).unwrap();
+    assert!(hello < welcome, "newest first");
+    assert!(!intro.body.contains("/posts/draft"));
+    assert!(spaced.body.contains("1 note<"));
+    assert!(full.is_full_page() && full.body.contains("2 notes"));
+}
+
+#[tokio::test]
+async fn tags_only_used_by_drafts_or_unknown_are_404s() {
+    let app = TestApp::spawn().await;
+
+    assert_eq!(app.htmx_get("/tags/draft").await.status, 404);
+    assert_eq!(app.htmx_get("/tags/nothing-here").await.status, 404);
 }

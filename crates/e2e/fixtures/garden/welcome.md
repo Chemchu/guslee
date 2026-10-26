@@ -4,6 +4,7 @@ date: "2025-01-01"
 description: "Landing page used by the e2e tests"
 tags:
   - intro
+  - digital garden
 ---
 
 # Welcome

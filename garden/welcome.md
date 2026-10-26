@@ -4,11 +4,11 @@ date: "2025-09-15"
 description: "Brief introduction to my digital garden"
 topic: "Introduction"
 tags:
-  - digital garden
-  - website
-  - introduction
-  - rust
-  - htmx
+    - digital garden
+    - website
+    - introduction
+    - rust
+    - htmx
 ---
 
 # Welcome to my website

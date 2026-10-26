@@ -1,4 +1,4 @@
-use crate::controllers::AppState;
+use crate::controllers::{AppState, tags_controller::tag_url};
 use actix_web::{
     get,
     web::{self, Html},
@@ -41,7 +41,10 @@ async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>
                             p class="text-zinc-500 text-xs uppercase tracking-widest" { "Tags" }
                             div class="flex flex-wrap gap-1" {
                                 @for tag in &p.metadata.tags {
-                                    span class="px-3 py-1 text-xs font-medium bg-primary-color/10 text-primary-color rounded-full" { (tag) }
+                                    a
+                                    href=(tag_url(tag))
+                                    class="px-3 py-1 text-xs font-medium bg-primary-color/10 text-primary-color hover:bg-primary-color/25 rounded-full transition-colors"
+                                    { (tag) }
                                 }
                             }
                         }

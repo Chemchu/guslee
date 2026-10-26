@@ -6,7 +6,7 @@ use cached::cached;
 use markdown::{Constructs, Options, ParseOptions};
 use maud::{PreEscaped, html};
 use search_engine::{
-    links::{LinkIndex, WikiLink, find_wikilinks, markdown_link_target},
+    links::{LinkIndex, WikiLink, find_wikilinks, markdown_link_target, slugify},
     types::{DEFAULT_SEARCH_LIMIT, Params},
     utils::Post,
 };
@@ -21,7 +21,8 @@ use crate::controllers::{
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(landing)
         .service(search_post)
-        .service(get_post_page);
+        .service(get_post_page)
+        .service(post_preview);
 }
 
 #[get("/")]
@@ -73,6 +74,35 @@ async fn get_post_page(
         .respond_to(&req)
         .map_into_boxed_body(),
         Err(_err) => render_not_found(&app_state, &req),
+    }
+}
+
+/// The post body shown in the popover when hovering a link to it.
+#[get("/preview/{post:.*}")]
+async fn post_preview(app_state: web::Data<AppState>, route: web::Path<String>) -> HttpResponse {
+    let post = app_state
+        .post_search_engine
+        .get_post(&format!("{route}.md"))
+        .await;
+
+    match post {
+        Some(post) => HttpResponse::Ok()
+            .content_type("text/html; charset=utf-8")
+            .body(
+                post_preview_content(&post.content, app_state.post_search_engine.link_index())
+                    .into_string(),
+            ),
+        None => HttpResponse::NotFound().finish(),
+    }
+}
+
+fn post_preview_content(md: &str, link_index: &LinkIndex) -> PreEscaped<String> {
+    html! {
+        div class="prose prose-theme prose-sm max-w-none" {
+            // Ids would clash with the page's own headings, so the preview
+            // scrolls to its anchors through a data attribute instead
+            (PreEscaped(render_post_html(md, link_index, "data-preview-anchor")))
+        }
     }
 }
 
@@ -347,7 +377,62 @@ fn unescape_html(text: &str) -> String {
         .replace("&amp;", "&")
 }
 
-fn post_page_shell(md: String, post_path: String, link_index: &LinkIndex) -> PreEscaped<String> {
+/// Gives every heading an anchor named like its text, so `notes/fog#the-fog`
+/// and `[[fog#The fog]]` land on it. Repeated headings get `-1`, `-2`...
+fn add_heading_anchors(html: &str, attribute: &str) -> String {
+    let mut result = String::with_capacity(html.len());
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    let mut rest = html;
+
+    while let Some(start) = rest.find("<h") {
+        let level = rest.as_bytes().get(start + 2).copied();
+        let is_heading = level.is_some_and(|l| (b'1'..=b'6').contains(&l))
+            && rest.as_bytes().get(start + 3) == Some(&b'>');
+        if !is_heading {
+            result.push_str(&rest[..start + 2]);
+            rest = &rest[start + 2..];
+            continue;
+        }
+
+        let tag = &rest[start + 1..start + 3];
+        let content_start = start + 4;
+        let Some(content_len) = rest[content_start..].find(&format!("</{tag}>")) else {
+            break;
+        };
+        let text = unescape_html(&strip_tags(
+            &rest[content_start..content_start + content_len],
+        ));
+        let mut anchor = slugify(&text);
+        let count = seen.entry(anchor.clone()).or_default();
+        if *count > 0 {
+            anchor = format!("{anchor}-{count}");
+        }
+        *count += 1;
+
+        result.push_str(&rest[..start]);
+        result.push_str(&format!("<{tag} {attribute}=\"{anchor}\">"));
+        rest = &rest[content_start..];
+    }
+
+    result.push_str(rest);
+    result
+}
+
+fn strip_tags(html: &str) -> String {
+    let mut text = String::with_capacity(html.len());
+    let mut in_tag = false;
+    for c in html.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            c if !in_tag => text.push(c),
+            _ => {}
+        }
+    }
+    text
+}
+
+fn render_post_html(md: &str, link_index: &LinkIndex, anchor_attribute: &str) -> String {
     let frontmatter = Options {
         parse: ParseOptions {
             constructs: Constructs {
@@ -359,14 +444,17 @@ fn post_page_shell(md: String, post_path: String, link_index: &LinkIndex) -> Pre
         ..Default::default()
     };
 
+    let html = markdown::to_html_with_options(md, &frontmatter).unwrap();
+    let html = render_wikilinks(&absolutize_post_links(&html), link_index);
+    add_heading_anchors(&html, anchor_attribute)
+}
+
+fn post_page_shell(md: String, post_path: String, link_index: &LinkIndex) -> PreEscaped<String> {
     html! {
         div
         class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
             {
-               (PreEscaped(render_wikilinks(
-                   &absolutize_post_links(&markdown::to_html_with_options(&md, &frontmatter).unwrap()),
-                   link_index,
-               )))
+               (PreEscaped(render_post_html(&md, link_index, "id")))
             }
         div
         id="right-section-resizer"
@@ -545,7 +633,7 @@ mod tests {
 
         let html = post_page_shell(md, "notes/first".to_string(), &index()).into_string();
 
-        assert!(html.contains("<h1>Heading</h1>"));
+        assert!(html.contains(r#"<h1 id="heading">Heading</h1>"#));
         assert!(html.contains("<em>text</em>"));
         assert!(!html.contains("title: "));
         assert!(html.contains("hx-get=\"/graph/notes/first\""));
@@ -600,5 +688,46 @@ mod tests {
 
         assert!(html.contains(r#"<a href="/posts/notes/fog">fog</a>"#));
         assert!(html.contains("<code>[[fog]]</code>"));
+    }
+
+    #[test]
+    fn headings_get_anchors_named_after_their_text() {
+        let html = "<h1>The fog</h1><p>x</p><h2>Año <em>nuevo</em> &amp; more</h2><hr />";
+
+        assert_eq!(
+            add_heading_anchors(html, "id"),
+            r#"<h1 id="the-fog">The fog</h1><p>x</p><h2 id="año-nuevo-more">Año <em>nuevo</em> &amp; more</h2><hr />"#
+        );
+    }
+
+    #[test]
+    fn repeated_headings_get_numbered_anchors() {
+        let html = add_heading_anchors("<h2>Notes</h2><h3>Notes</h3><h2>Notes</h2>", "id");
+
+        assert_eq!(
+            html,
+            r#"<h2 id="notes">Notes</h2><h3 id="notes-1">Notes</h3><h2 id="notes-2">Notes</h2>"#
+        );
+    }
+
+    #[test]
+    fn heading_links_match_heading_anchors() {
+        let md = "# The fog\n\nSee [[#The fog]].".to_string();
+
+        let html = post_page_shell(md, "notes/fog".to_string(), &index()).into_string();
+
+        assert!(html.contains(r#"<h1 id="the-fog">"#));
+        assert!(html.contains(r##"<a href="#the-fog">The fog</a>"##));
+    }
+
+    #[test]
+    fn previews_use_data_anchors_instead_of_ids() {
+        let html = post_preview_content("---\ntitle: \"x\"\n---\n# The fog\n\n[[fog]]", &index())
+            .into_string();
+
+        assert!(html.contains(r#"<h1 data-preview-anchor="the-fog">The fog</h1>"#));
+        assert!(html.contains(r#"<a href="/posts/notes/fog">fog</a>"#));
+        assert!(!html.contains(" id="));
+        assert!(!html.contains("title:"));
     }
 }

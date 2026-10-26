@@ -217,6 +217,28 @@ impl PostsSearchEngine {
             .unwrap()
     }
 
+    /// Published posts tagged with `tag` (ignoring case), newest first.
+    pub async fn posts_with_tag(&self, tag: &str) -> Vec<Post> {
+        let mut posts: Vec<Post> = self
+            .raw_query::<Vec<Post>>("SELECT * FROM posts WHERE metadata.is_draft = false")
+            .await
+            .into_iter()
+            .filter(|post| {
+                post.metadata
+                    .tags
+                    .iter()
+                    .any(|t| t.eq_ignore_ascii_case(tag))
+            })
+            .collect();
+        posts.sort_by(|a, b| {
+            b.metadata
+                .date
+                .cmp(&a.metadata.date)
+                .then_with(|| a.metadata.title.cmp(&b.metadata.title))
+        });
+        posts
+    }
+
     pub async fn get_overall_graph_data(&self) -> GraphData {
         let mut posts_result = self
             .db
