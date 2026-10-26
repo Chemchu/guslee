@@ -10,6 +10,7 @@
     <script src="/_static/graph.js"></script>
     <script src="/_static/elo-chart.js"></script>
     <script src="/_static/mobile-search.js"></script>
+    <script src="/_static/resizable.js"></script>
 
     <link rel="stylesheet" href="/_static/compiled.css" />
     <link rel="stylesheet" href="/_static/animations.css" />
@@ -247,7 +248,7 @@
     >
       <div
         id="left-section"
-        class="hidden md:flex flex-col justify-between w-full md:w-72 lg:w-80 border-r border-shade-color pt-2 px-2 min-h-0 shrink-0"
+        class="hidden md:flex flex-col justify-between w-full md:w-[var(--sidebar-width,18rem)] pt-2 px-2 min-h-0 shrink-0"
       >
         <div
           class="flex justify-between border border-shade-color focus-within:border-primary-color"
@@ -299,6 +300,19 @@
           </div>
         </div>
       </div>
+
+      <div
+        id="sidebar-resizer"
+        data-resizer
+        data-resize-target="left-section"
+        data-resize-var="--sidebar-width"
+        data-resize-edge="right"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        title="Drag to resize, double-click to reset"
+        class="hidden md:block w-1 shrink-0 cursor-col-resize bg-shade-color hover:bg-primary-color transition-colors"
+      ></div>
 
       <div class="relative grow min-h-0">
         <div

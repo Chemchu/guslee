@@ -265,3 +265,35 @@ async fn vendored_htmx_is_version_4() {
 
     assert!(htmx.body.contains("\"4.0.0\""));
 }
+
+#[tokio::test]
+async fn sidebar_has_a_drag_handle_to_resize_it() {
+    let app = TestApp::spawn().await;
+
+    let body = app.get("/").await.body;
+    let sidebar_start = body.find("id=\"left-section\"").unwrap();
+    let sidebar_tag =
+        &body[sidebar_start..sidebar_start + body[sidebar_start..].find('>').unwrap()];
+
+    assert!(sidebar_tag.contains("md:w-[var(--sidebar-width,18rem)]"));
+    assert!(!sidebar_tag.contains("border-r"));
+    assert!(body.contains("id=\"sidebar-resizer\""));
+    assert!(body.contains("/_static/resizable.js"));
+    assert_eq!(app.get("/_static/resizable.js").await.status, 200);
+}
+
+#[tokio::test]
+async fn post_side_panel_has_a_drag_handle_to_resize_it() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/fog").await.body;
+    let panel_start = body.find("id=\"right-section\"").unwrap();
+    let panel_tag = &body[panel_start..panel_start + body[panel_start..].find('>').unwrap()];
+    let handle = body.find("id=\"right-section-resizer\"").unwrap();
+
+    assert!(handle < panel_start);
+    assert!(body[handle..panel_start].contains("data-resize-target=\"right-section\""));
+    assert!(body[handle..panel_start].contains("data-resize-edge=\"left\""));
+    assert!(panel_tag.contains("lg:w-[var(--right-section-width,20rem)]"));
+    assert!(!panel_tag.contains("border-l"));
+}
