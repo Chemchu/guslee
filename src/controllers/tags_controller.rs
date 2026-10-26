@@ -63,7 +63,7 @@ async fn render_tags_index(app_state: &AppState, req: &HttpRequest) -> HttpRespo
 
     let meta = PageMeta {
         description: Some(format!("All {} tags of the garden", tags.len())),
-        ..PageMeta::titled("Tags")
+        ..PageMeta::titled("TAGS")
     };
     render_page_with_meta(app_state, req, &template.into_string(), &meta)
         .respond_to(req)
