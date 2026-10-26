@@ -64,6 +64,8 @@ function renderGraph(targetContainerId) {
 
   // Clear any existing SVG (important for re-initialization)
   container.innerHTML = "";
+  container.style.position = "relative";
+  container.style.overflow = "hidden";
 
   const svg = d3
     .select("#" + targetContainerId)
@@ -71,7 +73,9 @@ function renderGraph(targetContainerId) {
     .attr("width", width)
     .attr("height", height)
     .attr("viewBox", `0 0 ${width} ${height}`)
-    .attr("preserveAspectRatio", "xMidYMid meet");
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .style("position", "absolute")
+    .style("inset", "0");
 
   const g = svg.append("g"); // Zoom functionality
 
@@ -156,7 +160,6 @@ function renderGraph(targetContainerId) {
     );
     if (shown.length < 2) return;
 
-    container.style.position = "relative";
     const legend = document.createElement("ul");
     legend.className =
       "absolute top-2 left-2 flex flex-col gap-1 p-2 text-xs bg-background-color/80 border border-shade-color pointer-events-none";

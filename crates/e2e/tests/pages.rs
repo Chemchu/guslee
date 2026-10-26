@@ -726,3 +726,25 @@ async fn sidebar_search_has_a_hidden_clear_button() {
     assert!(button.contains(r#"aria-label="Clear search""#));
     assert!(button.contains("hidden"), "hidden until something is typed");
 }
+
+#[tokio::test]
+async fn graph_panel_height_does_not_depend_on_the_graph() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/fog").await.body;
+    let section = body.find(r#"id="upper-right-section""#).unwrap();
+    let section_start = body[..section].rfind("<div").unwrap();
+    let panel_start = body[..section_start].rfind("<div").unwrap();
+    let panel = &body[panel_start..panel_start + body[panel_start..].find('>').unwrap()];
+    let section_tag = &body[section..section + body[section..].find('>').unwrap()];
+
+    assert!(panel.contains("h-[34vh] shrink-0"), "fixed height: {panel}");
+    assert!(
+        !panel.contains("grow"),
+        "a growing panel sizes itself from the graph"
+    );
+    assert!(
+        section_tag.contains("absolute inset-0"),
+        "swapped graphs can't resize it"
+    );
+}

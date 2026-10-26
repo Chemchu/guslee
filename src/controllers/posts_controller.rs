@@ -765,7 +765,7 @@ fn post_page_shell(md: String, post_path: String, garden: &Garden) -> PreEscaped
         class="hidden lg:flex flex-col lg:w-[var(--right-section-width,20rem)] shrink-0 h-full"
         {
             div
-            class="flex flex-col grow w-full min-h-10 max-h-[34vh] border-b border-shade-color"
+            class="relative w-full h-[34vh] shrink-0 border-b border-shade-color"
             {
                 div
                 id="upper-right-section"
@@ -774,7 +774,7 @@ fn post_page_shell(md: String, post_path: String, garden: &Garden) -> PreEscaped
                 hx-trigger="load"
                 hx-target="#upper-right-section"
                 hx-swap="innerHTML"
-                class="flex w-full grow cursor-grab active:cursor-grabbing h-full"
+                class="absolute inset-0 cursor-grab active:cursor-grabbing"
                 {}
             }
             div
