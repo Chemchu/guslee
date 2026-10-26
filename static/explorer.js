@@ -56,6 +56,25 @@
     }
   }
 
+  function syncClearButton() {
+    const input = document.getElementById("desktop-search-input");
+    const clear = document.getElementById("desktop-search-clear");
+    if (input && clear) clear.hidden = input.value === "";
+  }
+
+  document.addEventListener("input", (event) => {
+    if (event.target.id === "desktop-search-input") syncClearButton();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest?.("#desktop-search-clear")) return;
+    const input = document.getElementById("desktop-search-input");
+    input.value = "";
+    syncClearButton();
+    reloadList();
+    input.focus();
+  });
+
   document.addEventListener("click", (event) => {
     const tab = event.target.closest?.("[data-explorer-view]");
     if (!tab) return;
@@ -65,7 +84,11 @@
     reloadList();
   });
 
-  document.addEventListener("DOMContentLoaded", () => showView(savedView()));
+  document.addEventListener("DOMContentLoaded", () => {
+    showView(savedView());
+    syncClearButton();
+  });
+  window.addEventListener("pageshow", syncClearButton);
   document.addEventListener("htmx:after:settle", (event) => {
     if (event.target?.id === "list-section") openedFor = null;
     markCurrentPost();

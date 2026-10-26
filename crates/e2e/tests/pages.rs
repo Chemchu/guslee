@@ -387,13 +387,13 @@ async fn tag_pages_list_published_posts_with_that_tag() {
 
     assert_eq!(intro.status, 200);
     assert!(intro.body.contains("#intro"));
-    assert!(intro.body.contains("2 notes"));
+    assert!(intro.body.contains("2 posts"));
     let hello = intro.body.find(r#"href="/posts/hello""#).unwrap();
     let welcome = intro.body.find(r#"href="/posts/welcome""#).unwrap();
     assert!(hello < welcome, "newest first");
     assert!(!intro.body.contains("/posts/draft"));
-    assert!(spaced.body.contains("1 note<"));
-    assert!(full.is_full_page() && full.body.contains("2 notes"));
+    assert!(spaced.body.contains("1 post<"));
+    assert!(full.is_full_page() && full.body.contains("2 posts"));
 }
 
 #[tokio::test]
@@ -706,4 +706,23 @@ async fn local_graph_depth_can_be_chosen() {
 
     let post = app.htmx_get("/posts/notes/fog").await.body;
     assert!(post.contains("window.graphDepth"));
+}
+
+#[tokio::test]
+async fn sidebar_search_has_a_hidden_clear_button() {
+    let app = TestApp::spawn().await;
+
+    let layout = app.get("/").await.body;
+    let input = layout.find(r#"id="desktop-search-input""#).unwrap();
+    let clear = layout.find(r#"id="desktop-search-clear""#).unwrap();
+    let icon = layout.find(r#"id="desktop-search-icon""#).unwrap();
+    let button = &layout[clear..clear + layout[clear..].find('>').unwrap()];
+
+    assert!(
+        input < clear && clear < icon,
+        "between the input and the search icon"
+    );
+    assert!(button.contains(r#"type="button""#));
+    assert!(button.contains(r#"aria-label="Clear search""#));
+    assert!(button.contains("hidden"), "hidden until something is typed");
 }
