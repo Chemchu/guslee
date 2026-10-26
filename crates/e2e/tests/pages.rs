@@ -483,7 +483,7 @@ async fn tag_index_lists_every_tag_with_its_count() {
 
     assert_eq!(index.status, 200);
     assert_eq!(slash.body, index.body);
-    assert!(body.contains("<title>Tags · "));
+    assert!(body.contains("<title>TAGS · "));
     let games = body.find(r#"href="/tags/games""#).unwrap();
     let nested = body.find(r#"href="/tags/games/survival-horror""#).unwrap();
     let intro = body.find(r#"href="/tags/intro""#).unwrap();

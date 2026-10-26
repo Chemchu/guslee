@@ -33,7 +33,7 @@ async fn render_tags_index(app_state: &AppState, req: &HttpRequest) -> HttpRespo
                 div
                 class="mb-8"
                 {
-                    h1 class="text-4xl md:text-5xl font-bold text-primary-color mb-2" { "Tags" }
+                    h1 class="text-5xl md:text-6xl font-bold mb-2" { "TAGS" }
                     p class="text-zinc-500" { (tags.len()) " tags" }
                 }
                 ul

@@ -183,11 +183,10 @@ fn render_chess_page(
 
     html! {
         div class="flex flex-col w-full gap-6 md:p-6 lg:p-8 overflow-y-auto h-full" {
-            h1 class="text-4xl font-bold pb-4" { "Chess Journey" }
             div id="chess-stats" {
                 div class="text-bright-color w-full" {
-                    div class="container mx-auto max-w-6xl h-full" {
-
+                    div class="container mx-auto max-w-4xl h-full" {
+                        h1 class="text-5xl md:text-6xl font-bold pb-8" { "Chess Journey" }
                         div class="grid grid-cols-2 md:grid-cols-4 mb-6" {
                             div class="p-5 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Current Rating" }
