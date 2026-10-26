@@ -37,6 +37,9 @@ pub struct MdMetadata {
     pub is_draft: bool,
     pub post_source_url: String,
     pub reading_time: u8,
+    /// Date of the last commit touching the post, when there's git history.
+    #[serde(default)]
+    pub last_updated: Option<String>,
 }
 
 pub fn extract_full_metadata(repo_source: &str, post_path: &str) -> Option<MdMetadata> {
@@ -62,6 +65,7 @@ pub fn extract_full_metadata(repo_source: &str, post_path: &str) -> Option<MdMet
         is_draft: post_metadata.is_draft,
         post_source_url: source_url(repo_source, post_path),
         reading_time: calc_reading_time(post_path),
+        last_updated: None,
     })
 }
 

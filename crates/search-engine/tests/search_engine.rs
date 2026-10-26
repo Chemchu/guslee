@@ -346,3 +346,98 @@ async fn in_memory_engines_are_isolated_from_each_other() {
     assert_eq!(posts_a.len(), 4);
     assert_eq!(posts_b.len(), 1);
 }
+
+#[tokio::test]
+async fn tag_counts_include_parents_of_nested_tags() {
+    let garden = garden();
+    write_post(
+        garden.path(),
+        "nested.md",
+        "title: \"Nested\"\ndate: \"2025-06-01\"\ndescription: \"x\"\ntags: [Gaming/horror, gaming-news]",
+        "Inline #gaming/horror/fog tag.",
+    );
+    let engine = engine(&garden).await;
+
+    let counts = engine.tag_counts().await;
+
+    assert_eq!(
+        counts,
+        vec![
+            ("Gaming".to_string(), 3),
+            ("Gaming/horror".to_string(), 1),
+            ("gaming/horror/fog".to_string(), 1),
+            ("gaming-news".to_string(), 1),
+            ("intro".to_string(), 1),
+        ],
+        "draft-only tags are left out, parents count nested posts and the newest post's casing wins"
+    );
+}
+
+#[tokio::test]
+async fn published_posts_are_newest_first() {
+    let garden = garden();
+    let engine = engine(&garden).await;
+
+    let posts: Vec<String> = engine
+        .published_posts()
+        .await
+        .into_iter()
+        .map(|p| p.file_path)
+        .collect();
+
+    assert_eq!(
+        posts,
+        vec!["notes/second_note.md", "notes/first_note.md", "welcome.md"]
+    );
+}
+
+#[tokio::test]
+async fn last_updated_comes_from_the_git_history() {
+    let garden = garden();
+    let git = |args: &[&str], date: &str| {
+        let status = std::process::Command::new("git")
+            .args([
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "-c",
+                "commit.gpgsign=false",
+            ])
+            .args(args)
+            .current_dir(garden.path())
+            .env("GIT_AUTHOR_DATE", date)
+            .env("GIT_COMMITTER_DATE", date)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    };
+    git(&["init", "-q"], "2025-01-01T00:00:00Z");
+    git(&["add", "."], "2025-01-01T00:00:00Z");
+    git(&["commit", "-qm", "first"], "2025-03-04T12:00:00Z");
+    fs::write(
+        garden.path().join("welcome.md"),
+        "---\ntitle: \"Welcome\"\ndate: \"2025-01-01\"\ndescription: \"x\"\ntags: []\n---\nEdited",
+    )
+    .unwrap();
+    git(&["commit", "-qam", "edit"], "2025-07-08T12:00:00Z");
+    write_post(
+        garden.path(),
+        "notes/uncommitted.md",
+        "title: \"New\"\ndate: \"2025-08-01\"\ndescription: \"x\"\ntags: []",
+        "",
+    );
+    let engine = engine(&garden).await;
+
+    let updated = |path: &'static str| {
+        let engine = &engine;
+        async move { engine.get_post(path).await.unwrap().metadata.last_updated }
+    };
+
+    assert_eq!(updated("welcome.md").await.as_deref(), Some("2025-07-08"));
+    assert_eq!(
+        updated("notes/first_note.md").await.as_deref(),
+        Some("2025-03-04")
+    );
+    assert_eq!(updated("notes/uncommitted.md").await, None);
+}

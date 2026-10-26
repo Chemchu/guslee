@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{APPNAME}}</title>
+    {{HEAD}}
     <meta name="htmx-config" content='{"includeIndicatorCSS": false}' />
     <script src="/_static/htmx.min.js"></script>
     <script src="/_static/d3-v7.min.js"></script>
@@ -12,16 +12,12 @@
     <script src="/_static/mobile-search.js"></script>
     <script src="/_static/resizable.js"></script>
     <script src="/_static/preview.js"></script>
+    <script src="/_static/outline.js"></script>
 
     <link rel="stylesheet" href="/_static/compiled.css" />
     <link rel="stylesheet" href="/_static/animations.css" />
     <link rel="icon" type="image/x-icon" href="/_static/favicon.ico" />
     <link rel="manifest" href="/_static/manifest.json" />
-
-    <meta
-      name="description"
-      content="My personal digital garden, built with Rust + HTMX"
-    />
   </head>
   <body
     class="flex flex-col w-full h-dvh max-h-dvh bg-background-color text-bright-color"
@@ -123,6 +119,17 @@
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
+          id="tags-section"
+          class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+          href="/tags"
+          hx-trigger="click"
+          hx-target="#main-section"
+          hx-swap="innerHTML transition:true"
+        >
+          TAGS
+        </a>
+        <span class="text-primary-color">&#8226;</span>
+        <a
           id="chess-link-desktop"
           class="cursor-pointer hover:text-primary-color whitespace-nowrap"
           href="/chess/stats/rapid"
@@ -208,6 +215,15 @@
         hx-target="#main-section"
         hx-swap="innerHTML transition:true"
         >GARDEN</a
+      >
+      <a
+        id="tags-section-mobile"
+        class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        href="/tags"
+        hx-trigger="click"
+        hx-target="#main-section"
+        hx-swap="innerHTML transition:true"
+        >TAGS</a
       >
       <a
         id="chess-link-mobile"

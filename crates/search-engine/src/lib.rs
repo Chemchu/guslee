@@ -15,6 +15,7 @@ use crate::types::Params;
 use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode};
 use crate::utils::{Post, extract_full_metadata};
 
+pub mod git_dates;
 pub mod links;
 pub mod tags;
 pub mod types;
@@ -47,10 +48,19 @@ impl PostsSearchEngine {
         documents_path: &str,
     ) -> PostsSearchEngine {
         let mut posts: Vec<Post> = Vec::new();
-        for entry in WalkDir::new(documents_path) {
+        let last_updated = git_dates::last_updated_dates(documents_path);
+        // Hidden entries (`.git`, `.obsidian`...) and non-markdown files aren't posts
+        let is_hidden = |entry: &walkdir::DirEntry| {
+            entry.depth() > 0 && entry.file_name().to_string_lossy().starts_with('.')
+        };
+        for entry in WalkDir::new(documents_path)
+            .into_iter()
+            .filter_entry(|entry| !is_hidden(entry))
+        {
             let entry = entry.expect("Error while accessing the WalkDir entry");
             let path = entry.path();
             if path.is_file()
+                && path.extension().is_some_and(|ext| ext == "md")
                 && let Ok(relative_path) = path.strip_prefix(documents_path)
             {
                 let file_path = relative_path.to_string_lossy().to_string();
@@ -65,6 +75,7 @@ impl PostsSearchEngine {
                     Ok(content) => {
                         let mut metadata =
                             extract_full_metadata(repo_path, full_path.as_str()).unwrap();
+                        metadata.last_updated = last_updated.get(&file_path).cloned();
                         for tag in markdown_inline_tags(&content) {
                             if !metadata.tags.iter().any(|t| t.eq_ignore_ascii_case(&tag)) {
                                 metadata.tags.push(tag);
@@ -111,6 +122,7 @@ impl PostsSearchEngine {
             DEFINE FIELD metadata.post_source_url ON posts TYPE string;
             DEFINE FIELD metadata.is_draft ON posts TYPE bool DEFAULT false;
             DEFINE FIELD metadata.reading_time ON posts TYPE int;
+            DEFINE FIELD metadata.last_updated ON posts TYPE option<string>;
             DEFINE FIELD content ON posts TYPE string;
             DEFINE INDEX file_path_index ON TABLE posts COLUMNS file_path UNIQUE;
 
@@ -229,12 +241,18 @@ impl PostsSearchEngine {
     /// Published posts tagged with `tag` or one of its nested tags (ignoring
     /// case), newest first. Tags written inline in a post count too.
     pub async fn posts_with_tag(&self, tag: &str) -> Vec<Post> {
-        let mut posts: Vec<Post> = self
-            .raw_query::<Vec<Post>>("SELECT * FROM posts WHERE metadata.is_draft = false")
+        self.published_posts()
             .await
             .into_iter()
             .filter(|post| post.metadata.tags.iter().any(|t| tag_matches(t, tag)))
-            .collect();
+            .collect()
+    }
+
+    /// Every published post, newest first.
+    pub async fn published_posts(&self) -> Vec<Post> {
+        let mut posts: Vec<Post> = self
+            .raw_query::<Vec<Post>>("SELECT * FROM posts WHERE metadata.is_draft = false")
+            .await;
         posts.sort_by(|a, b| {
             b.metadata
                 .date
@@ -242,6 +260,38 @@ impl PostsSearchEngine {
                 .then_with(|| a.metadata.title.cmp(&b.metadata.title))
         });
         posts
+    }
+
+    /// Every tag of the published posts with how many posts it has, sorted so
+    /// nested tags follow their parent. Parents count their nested tags' posts,
+    /// like the tag pages do, and exist even if no post uses them directly.
+    pub async fn tag_counts(&self) -> Vec<(String, usize)> {
+        let posts = self.published_posts().await;
+        let mut tags: Vec<String> = Vec::new();
+        for tag in posts.iter().flat_map(|post| &post.metadata.tags) {
+            let segments: Vec<&str> = tag.split('/').collect();
+            for depth in 1..=segments.len() {
+                let path = segments[..depth].join("/");
+                if !tags.iter().any(|t| t.eq_ignore_ascii_case(&path)) {
+                    tags.push(path);
+                }
+            }
+        }
+        tags.sort_by_key(|tag| {
+            tag.split('/')
+                .map(str::to_lowercase)
+                .collect::<Vec<String>>()
+        });
+
+        tags.into_iter()
+            .map(|tag| {
+                let count = posts
+                    .iter()
+                    .filter(|post| post.metadata.tags.iter().any(|t| tag_matches(t, &tag)))
+                    .count();
+                (tag, count)
+            })
+            .collect()
     }
 
     pub async fn get_overall_graph_data(&self) -> GraphData {
@@ -427,6 +477,7 @@ mod tests {
                 is_draft: false,
                 post_source_url: String::new(),
                 reading_time: 0,
+                last_updated: None,
             },
             content: content.to_string(),
         }

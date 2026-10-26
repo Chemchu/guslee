@@ -1,25 +1,76 @@
 use actix_web::{HttpRequest, HttpResponse, Responder, get, web};
 use maud::html;
 
-use crate::controllers::{AppState, render_not_found, render_page};
+use crate::controllers::{
+    AppState, PageMeta, encode_path, render_not_found, render_page_with_meta,
+};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
-    cfg.service(tag_page);
+    cfg.service(tags_index).service(tag_page);
 }
 
 /// Link to the page listing every post with `tag`.
+/// Nested tags read as paths: `/tags/gaming/horror`.
 pub fn tag_url(tag: &str) -> String {
-    let mut url = String::from("/tags/");
-    for byte in tag.bytes() {
-        match byte {
-            // `/` stays as is so nested tags read as paths: /tags/gaming/horror
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => {
-                url.push(byte as char)
+    format!("/tags/{}", encode_path(tag))
+}
+
+/// Indentation of nested tags in the index, by depth.
+const TAG_INDENT: [&str; 5] = ["pl-0", "pl-4", "pl-8", "pl-12", "pl-16"];
+
+#[get("/tags")]
+async fn tags_index(app_state: web::Data<AppState>, req: HttpRequest) -> HttpResponse {
+    render_tags_index(&app_state, &req).await
+}
+
+async fn render_tags_index(app_state: &AppState, req: &HttpRequest) -> HttpResponse {
+    let tags = app_state.post_search_engine.tag_counts().await;
+
+    let template = html! {
+        div
+        class="p-4 md:p-6 lg:p-8 overflow-auto w-full"
+        {
+            div
+            class="max-w-3xl mx-auto"
+            {
+                div
+                class="mb-8"
+                {
+                    h1 class="text-4xl md:text-5xl font-bold text-primary-color mb-2" { "Tags" }
+                    p class="text-zinc-500" { (tags.len()) " tags" }
+                }
+                ul
+                id="tag-index"
+                class="flex flex-col border-t border-shade-color"
+                {
+                    @for (tag, count) in &tags {
+                        @let depth = tag.matches('/').count();
+                        li
+                        class={
+                            "flex items-baseline justify-between gap-4 py-2 border-b border-shade-color "
+                            (TAG_INDENT[depth.min(TAG_INDENT.len() - 1)])
+                        }
+                        {
+                            a
+                            href=(tag_url(tag))
+                            title={ "#" (tag) }
+                            class="truncate font-medium hover:text-primary-color"
+                            { "#" (tag.rsplit('/').next().unwrap_or(tag)) }
+                            span class="text-zinc-500 text-sm shrink-0" { (count) }
+                        }
+                    }
+                }
             }
-            _ => url.push_str(&format!("%{byte:02X}")),
         }
-    }
-    url
+    };
+
+    let meta = PageMeta {
+        description: Some(format!("All {} tags of the garden", tags.len())),
+        ..PageMeta::titled("Tags")
+    };
+    render_page_with_meta(app_state, req, &template.into_string(), &meta)
+        .respond_to(req)
+        .map_into_boxed_body()
 }
 
 #[get("/tags/{tag:.*}")]
@@ -28,6 +79,10 @@ async fn tag_page(
     req: HttpRequest,
     tag: web::Path<String>,
 ) -> HttpResponse {
+    if tag.is_empty() {
+        return render_tags_index(&app_state, &req).await;
+    }
+
     let posts = app_state.post_search_engine.posts_with_tag(&tag).await;
     if posts.is_empty() {
         return render_not_found(&app_state, &req);
@@ -43,6 +98,10 @@ async fn tag_page(
                 div
                 class="mb-8"
                 {
+                    a
+                    href="/tags"
+                    class="text-sm text-zinc-500 hover:text-primary-color"
+                    { "← All tags" }
                     h1
                     class="text-4xl md:text-5xl font-bold text-primary-color mb-2 break-words"
                     { "#" (tag.as_str()) }
@@ -90,7 +149,11 @@ async fn tag_page(
         }
     };
 
-    render_page(&app_state, &req, &template.into_string())
+    let meta = PageMeta {
+        description: Some(format!("Notes tagged #{}", tag.as_str())),
+        ..PageMeta::titled(format!("#{}", tag.as_str()))
+    };
+    render_page_with_meta(&app_state, &req, &template.into_string(), &meta)
         .respond_to(&req)
         .map_into_boxed_body()
 }

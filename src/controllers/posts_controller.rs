@@ -15,9 +15,10 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Component, Path};
 
+use crate::controllers::obsidian_markdown::{render_callouts, render_highlights};
 use crate::controllers::{
-    AppState, is_partial_request, render_not_found, render_page, tags_controller::tag_url,
-    wrap_content_into_full_page,
+    AppState, PageMeta, base_url, is_partial_request, render_not_found, render_page_with_meta,
+    tags_controller::tag_url, wrap_content_into_full_page, wrap_content_with_meta,
 };
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
@@ -28,7 +29,7 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 }
 
 #[get("/")]
-async fn landing(app_state: web::Data<AppState>) -> impl Responder {
+async fn landing(app_state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
     let content = match std::fs::read_to_string(format!("{}/welcome.md", app_state.garden_path)) {
         Ok(content) => content,
         Err(e) => {
@@ -40,7 +41,13 @@ async fn landing(app_state: web::Data<AppState>) -> impl Responder {
         }
     };
 
-    Html::new(wrap_content_into_full_page(
+    // The landing page is the site itself, so it keeps the site's title
+    let meta = PageMeta {
+        title: None,
+        ..post_meta(&app_state, "welcome").await
+    };
+    let url = format!("{}/", base_url(&req));
+    Html::new(wrap_content_with_meta(
         &app_state.app_name,
         post_page_shell(
             content,
@@ -49,7 +56,25 @@ async fn landing(app_state: web::Data<AppState>) -> impl Responder {
         )
         .into_string()
         .as_str(),
+        &meta,
+        Some(&url),
     ))
+}
+
+/// Title and description of a published post, for its `<head>`.
+async fn post_meta(app_state: &AppState, route: &str) -> PageMeta {
+    match app_state
+        .post_search_engine
+        .get_post(&format!("{route}.md"))
+        .await
+    {
+        Some(post) => PageMeta {
+            title: Some(post.metadata.title),
+            description: Some(post.metadata.description).filter(|d| !d.is_empty()),
+            is_article: true,
+        },
+        None => PageMeta::default(),
+    }
 }
 
 #[get("/posts/{post:.*}")]
@@ -63,7 +88,7 @@ async fn get_post_page(
     }
 
     match fs::read_to_string(format!("{}/{}.md", app_state.garden_path, route)) {
-        Ok(md) => render_page(
+        Ok(md) => render_page_with_meta(
             &app_state,
             &req,
             &post_page_shell(
@@ -72,6 +97,7 @@ async fn get_post_page(
                 app_state.post_search_engine.link_index(),
             )
             .into_string(),
+            &post_meta(&app_state, &route).await,
         )
         .respond_to(&req)
         .map_into_boxed_body(),
@@ -103,7 +129,7 @@ fn post_preview_content(md: &str, link_index: &LinkIndex) -> PreEscaped<String> 
         div class="prose prose-theme prose-sm max-w-none" {
             // Ids would clash with the page's own headings, so the preview
             // scrolls to its anchors through a data attribute instead
-            (PreEscaped(render_post_html(md, link_index, "data-preview-anchor")))
+            (PreEscaped(render_post_html(md, link_index, "data-preview-anchor").0))
         }
     }
 }
@@ -434,7 +460,8 @@ fn unescape_html(text: &str) -> String {
 
 /// Gives every heading an anchor named like its text, so `notes/fog#the-fog`
 /// and `[[fog#The fog]]` land on it. Repeated headings get `-1`, `-2`...
-fn add_heading_anchors(html: &str, attribute: &str) -> String {
+fn add_heading_anchors(html: &str, attribute: &str) -> (String, Vec<Heading>) {
+    let mut headings = Vec::new();
     let mut result = String::with_capacity(html.len());
     let mut seen: HashMap<String, usize> = HashMap::new();
     let mut rest = html;
@@ -464,13 +491,26 @@ fn add_heading_anchors(html: &str, attribute: &str) -> String {
         }
         *count += 1;
 
+        headings.push(Heading {
+            level: level.map_or(1, |l| l - b'0'),
+            anchor: anchor.clone(),
+            text: text.trim().to_string(),
+        });
         result.push_str(&rest[..start]);
         result.push_str(&format!("<{tag} {attribute}=\"{anchor}\">"));
         rest = &rest[content_start..];
     }
 
     result.push_str(rest);
-    result
+    (result, headings)
+}
+
+/// A heading of a post, for its outline.
+#[derive(Debug, PartialEq, Eq)]
+struct Heading {
+    level: u8,
+    anchor: String,
+    text: String,
 }
 
 fn strip_tags(html: &str) -> String {
@@ -487,7 +527,11 @@ fn strip_tags(html: &str) -> String {
     text
 }
 
-fn render_post_html(md: &str, link_index: &LinkIndex, anchor_attribute: &str) -> String {
+fn render_post_html(
+    md: &str,
+    link_index: &LinkIndex,
+    anchor_attribute: &str,
+) -> (String, Vec<Heading>) {
     let frontmatter = Options {
         parse: ParseOptions {
             constructs: Constructs {
@@ -500,16 +544,45 @@ fn render_post_html(md: &str, link_index: &LinkIndex, anchor_attribute: &str) ->
     };
 
     let html = markdown::to_html_with_options(md, &frontmatter).unwrap();
-    let html = render_inline_tags(&render_wikilinks(&absolutize_post_links(&html), link_index));
+    let html = render_callouts(&absolutize_post_links(&html));
+    let html = render_inline_tags(&render_highlights(&render_wikilinks(&html, link_index)));
     add_heading_anchors(&html, anchor_attribute)
 }
 
+/// Indentation of outline entries, by depth below the post's top heading level.
+const OUTLINE_INDENT: [&str; 6] = ["pl-0", "pl-3", "pl-6", "pl-9", "pl-12", "pl-15"];
+
+fn outline(headings: &[Heading]) -> PreEscaped<String> {
+    let top_level = headings.iter().map(|h| h.level).min().unwrap_or(1);
+
+    html! {
+        @if headings.is_empty() {
+            p class="text-zinc-500 text-sm" { "No headings in this note." }
+        } @else {
+            ul class="flex flex-col gap-1 text-sm" {
+                @for heading in headings {
+                    li class=(OUTLINE_INDENT[usize::from(heading.level - top_level)]) {
+                        a
+                        href=(format!("#{}", heading.anchor))
+                        title=(heading.text)
+                        class="block truncate text-zinc-300 hover:text-primary-color aria-[current=true]:text-primary-color transition-colors"
+                        { (heading.text) }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn post_page_shell(md: String, post_path: String, link_index: &LinkIndex) -> PreEscaped<String> {
+    let (post_html, headings) = render_post_html(&md, link_index, "id");
+    let tab_class = "pb-1 border-b-2 border-transparent text-zinc-500 hover:text-bright-color aria-selected:text-primary-color aria-selected:border-primary-color uppercase tracking-wider transition-colors";
+
     html! {
         div
         class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
             {
-               (PreEscaped(render_post_html(&md, link_index, "id")))
+               (PreEscaped(post_html))
             }
         div
         id="right-section-resizer"
@@ -540,17 +613,55 @@ fn post_page_shell(md: String, post_path: String, link_index: &LinkIndex) -> Pre
                 {}
             }
             div
-            class="flex flex-col grow w-full min-h-0 overflow-y-auto"
+            class="flex flex-col grow w-full min-h-0"
             {
                 div
-                id="bottom-right-section"
-                hx-get=(format!("/metadata/{}", post_path))
-                hx-trigger="load"
-                hx-target="#bottom-right-section"
-                hx-swap="innerHTML"
-                class="flex w-full grow p-2"
+                role="tablist"
+                aria-label="Side panel"
+                class="flex gap-4 px-2 pt-2 text-sm font-semibold border-b border-shade-color"
                 {
-                    "Loading..."
+                    button
+                    type="button"
+                    role="tab"
+                    data-panel-tab="metadata"
+                    aria-controls="bottom-right-section"
+                    aria-selected="true"
+                    class=(tab_class)
+                    { "Metadata" }
+                    button
+                    type="button"
+                    role="tab"
+                    data-panel-tab="outline"
+                    aria-controls="outline-section"
+                    aria-selected="false"
+                    class=(tab_class)
+                    { "Outline" }
+                }
+                div
+                class="flex flex-col grow min-h-0 overflow-y-auto"
+                {
+                    div
+                    id="bottom-right-section"
+                    role="tabpanel"
+                    data-panel="metadata"
+                    hx-get=(format!("/metadata/{}", post_path))
+                    hx-trigger="load"
+                    hx-target="#bottom-right-section"
+                    hx-swap="innerHTML"
+                    class="flex w-full grow p-2"
+                    {
+                        "Loading..."
+                    }
+                    nav
+                    id="outline-section"
+                    role="tabpanel"
+                    data-panel="outline"
+                    aria-label="Outline"
+                    hidden
+                    class="w-full p-2"
+                    {
+                        (outline(&headings))
+                    }
                 }
             }
         }
@@ -579,6 +690,7 @@ mod tests {
                 is_draft: false,
                 post_source_url: String::new(),
                 reading_time: 1,
+                last_updated: None,
             },
             content: String::new(),
         }
@@ -750,14 +862,14 @@ mod tests {
         let html = "<h1>The fog</h1><p>x</p><h2>Año <em>nuevo</em> &amp; more</h2><hr />";
 
         assert_eq!(
-            add_heading_anchors(html, "id"),
+            add_heading_anchors(html, "id").0,
             r#"<h1 id="the-fog">The fog</h1><p>x</p><h2 id="año-nuevo-more">Año <em>nuevo</em> &amp; more</h2><hr />"#
         );
     }
 
     #[test]
     fn repeated_headings_get_numbered_anchors() {
-        let html = add_heading_anchors("<h2>Notes</h2><h3>Notes</h3><h2>Notes</h2>", "id");
+        let (html, _) = add_heading_anchors("<h2>Notes</h2><h3>Notes</h3><h2>Notes</h2>", "id");
 
         assert_eq!(
             html,
@@ -814,5 +926,58 @@ mod tests {
 
         assert!(html.contains(r#"<h1 id="title">Title</h1>"#));
         assert!(html.contains(r#"href="/tags/intro""#));
+    }
+
+    #[test]
+    fn headings_are_collected_for_the_outline() {
+        let (_, headings) = add_heading_anchors("<h2>A <em>b</em></h2><h3>A b</h3>", "id");
+
+        assert_eq!(
+            headings,
+            vec![
+                Heading {
+                    level: 2,
+                    anchor: "a-b".to_string(),
+                    text: "A b".to_string()
+                },
+                Heading {
+                    level: 3,
+                    anchor: "a-b-1".to_string(),
+                    text: "A b".to_string()
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn outline_indents_from_the_top_heading_level() {
+        let md = "## Top\n\n### Child\n\n## Next".to_string();
+
+        let html = post_page_shell(md, "welcome".to_string(), &index()).into_string();
+        let outline = &html[html.find("id=\"outline-section\"").unwrap()..];
+
+        assert!(outline.contains(r##"<li class="pl-0"><a href="#top""##));
+        assert!(outline.contains(r##"<li class="pl-3"><a href="#child""##));
+        assert!(outline.contains(r##"<li class="pl-0"><a href="#next""##));
+    }
+
+    #[test]
+    fn notes_without_headings_say_so_in_the_outline() {
+        let html = post_page_shell("Just text.".to_string(), "welcome".to_string(), &index())
+            .into_string();
+
+        assert!(html.contains("No headings in this note."));
+    }
+
+    #[test]
+    fn post_shell_renders_callouts_and_highlights() {
+        let md = "> [!tip] Hint\n> Read ==this== and [[fog]].".to_string();
+
+        let html = post_page_shell(md, "welcome".to_string(), &index()).into_string();
+
+        assert!(html.contains(
+            r#"<div class="callout" data-callout="tip"><div class="callout-title">Hint</div>"#
+        ));
+        assert!(html.contains(r#"Read <mark>this</mark> and <a href="/posts/notes/fog">fog</a>."#));
     }
 }

@@ -420,3 +420,146 @@ async fn inline_tags_link_to_tag_pages_that_include_them() {
     assert!(parent.body.contains("Notes about the fog"));
     assert_eq!(app.htmx_get("/tags/not-a-tag").await.status, 404);
 }
+
+#[tokio::test]
+async fn callouts_and_highlights_render() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/fog").await.body;
+
+    assert!(body.contains(
+        r#"<div class="callout" data-callout="tip"><div class="callout-title">Bring a radio</div>"#
+    ));
+    assert!(body.contains("It crackles when <mark>something</mark> is near."));
+}
+
+#[tokio::test]
+async fn side_panel_has_metadata_and_outline_tabs() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/notes/fog").await.body;
+    let outline = &body[body.find("id=\"outline-section\"").unwrap()..];
+
+    assert!(body.contains(r#"data-panel-tab="metadata""#));
+    assert!(body.contains(r#"data-panel-tab="outline""#));
+    assert!(outline.contains(r##"<li class="pl-0"><a href="#the-fog""##));
+    assert!(outline.contains(r##"<li class="pl-3"><a href="#getting-around""##));
+    let layout = app.get("/").await.body;
+    assert!(layout.contains("/_static/outline.js"));
+    assert_eq!(app.get("/_static/outline.js").await.status, 200);
+}
+
+#[tokio::test]
+async fn metadata_shows_the_last_commit_date() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/metadata/welcome").await.body;
+
+    // The fixtures are committed, so they always have a date
+    let needle = "<time id=\"last-updated\" datetime=\"";
+    let start = body.find(needle).unwrap() + needle.len();
+    let date = &body[start..start + 10];
+    let is_date = date.char_indices().all(|(i, c)| {
+        if i == 4 || i == 7 {
+            c == '-'
+        } else {
+            c.is_ascii_digit()
+        }
+    });
+    assert!(is_date, "{date}");
+    assert!(body.contains("Last updated"));
+}
+
+#[tokio::test]
+async fn tag_index_lists_every_tag_with_its_count() {
+    let app = TestApp::spawn().await;
+
+    let index = app.htmx_get("/tags").await;
+    let slash = app.htmx_get("/tags/").await;
+    let body = &index.body;
+
+    assert_eq!(index.status, 200);
+    assert_eq!(slash.body, index.body);
+    assert!(body.contains("<title>Tags · "));
+    let games = body.find(r#"href="/tags/games""#).unwrap();
+    let nested = body.find(r#"href="/tags/games/survival-horror""#).unwrap();
+    let intro = body.find(r#"href="/tags/intro""#).unwrap();
+    assert!(
+        games < nested && nested < intro,
+        "sorted, nested tags under their parent"
+    );
+    assert!(body[nested - 80..nested].contains("pl-4"));
+    assert!(
+        body[nested..]
+            .starts_with(r##"href="/tags/games/survival-horror" title="#games/survival-horror""##)
+    );
+    assert!(
+        body[intro..]
+            .contains(">#intro</a><span class=\"text-zinc-500 text-sm shrink-0\">2</span>")
+    );
+    assert!(
+        !body.contains("/tags/draft"),
+        "tags only used by drafts are left out"
+    );
+    assert!(
+        app.get("/").await.body.contains(r#"href="/tags""#),
+        "linked from the nav"
+    );
+}
+
+#[tokio::test]
+async fn post_pages_describe_themselves_for_link_previews() {
+    let app = TestApp::spawn().await;
+
+    let full = app.get("/posts/notes/fog").await.body;
+    let partial = app.htmx_get("/posts/notes/fog").await.body;
+    let landing = app.get("/").await.body;
+
+    assert!(full.contains(&format!("<title>Notes about the fog · {APP_NAME}</title>")));
+    assert!(full.contains(r#"<meta name="description" content="Everything about the fog">"#));
+    assert!(full.contains(r#"<meta property="og:type" content="article">"#));
+    assert!(full.contains(&format!(
+        r#"<meta property="og:url" content="{}/posts/notes/fog">"#,
+        app.address
+    )));
+    assert!(partial.starts_with(&format!("<title>Notes about the fog · {APP_NAME}</title>")));
+    assert!(landing.contains(&format!("<title>{APP_NAME}</title>")));
+    assert!(
+        landing
+            .contains(r#"<meta name="description" content="Landing page used by the e2e tests">"#)
+    );
+    assert!(landing.contains(r#"<link rel="alternate" type="application/rss+xml""#));
+}
+
+#[tokio::test]
+async fn rss_feed_lists_published_posts() {
+    let app = TestApp::spawn().await;
+
+    let feed = app.get("/rss.xml").await;
+
+    assert_eq!(feed.status, 200);
+    assert_eq!(
+        feed.header("content-type"),
+        Some("application/rss+xml; charset=utf-8")
+    );
+    assert_eq!(
+        feed.body.matches("<item>").count(),
+        4,
+        "drafts are left out"
+    );
+    assert!(
+        feed.body
+            .contains(&format!("<link>{}/posts/notes/fog</link>", app.address))
+    );
+    assert!(
+        feed.body
+            .contains("<title>Letters &lt;and&gt; escaping</title>")
+    );
+    assert!(!feed.body.contains("Secret silent draft"));
+    let letters = feed.body.find("Letters &lt;and&gt;").unwrap();
+    let welcome = feed
+        .body
+        .find("<title>Welcome to the fixture garden")
+        .unwrap();
+    assert!(letters < welcome, "newest first");
+}
