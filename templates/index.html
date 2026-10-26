@@ -13,6 +13,8 @@
     <script src="/_static/resizable.js"></script>
     <script src="/_static/preview.js"></script>
     <script src="/_static/outline.js"></script>
+    <script src="/_static/explorer.js"></script>
+    <script src="/_static/switcher.js"></script>
 
     <link rel="stylesheet" href="/_static/compiled.css" />
     <link rel="stylesheet" href="/_static/animations.css" />
@@ -276,8 +278,10 @@
             type="text"
             name="query"
             placeholder="Search any post..."
+            title="Ctrl+K opens the quick switcher"
             hx-get="/search"
             hx-vals='{"limit": 100}'
+            hx-include="#explorer-view"
             hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
             hx-target="#list-section"
             hx-swap="innerHTML"
@@ -291,7 +295,7 @@
             stroke="currentColor"
             class="cursor-pointer w-6 h-6 md:w-8 md:h-8 px-1 opacity-30 hover:opacity-80 shrink-0"
             hx-get="/search"
-            hx-vals="js:{limit: 100, query: document.querySelector('#desktop-search-input').value}"
+            hx-vals="js:{limit: 100, query: document.querySelector('#desktop-search-input').value, view: document.querySelector('#explorer-view').value}"
             hx-trigger="click"
             hx-target="#list-section"
             hx-swap="innerHTML"
@@ -305,11 +309,38 @@
         </div>
 
         <div
+          role="tablist"
+          aria-label="Browse posts by"
+          class="flex gap-3 pt-2 text-xs font-semibold uppercase tracking-wider"
+        >
+          <button
+            type="button"
+            role="tab"
+            data-explorer-view="folders"
+            aria-selected="false"
+            class="text-zinc-500 hover:text-bright-color aria-selected:text-primary-color transition-colors"
+          >
+            Folders
+          </button>
+          <button
+            type="button"
+            role="tab"
+            data-explorer-view="topics"
+            aria-selected="true"
+            class="text-zinc-500 hover:text-bright-color aria-selected:text-primary-color transition-colors"
+          >
+            Topics
+          </button>
+          <input type="hidden" id="explorer-view" name="view" value="topics" />
+        </div>
+
+        <div
           id="list-section"
           class="grow pt-2 overflow-auto"
         >
           <div
-            hx-get="/search?query=*&limit=100"
+            hx-get="/search"
+            hx-vals="js:{limit: 100, view: window.explorerView ? window.explorerView() : 'topics'}"
             hx-trigger="load"
             hx-target="#list-section"
           >

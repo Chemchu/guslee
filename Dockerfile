@@ -10,8 +10,6 @@ COPY --from=planner /usr/src/app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json --bin guslee
 COPY . .
 RUN cargo build --release --bin guslee
-# "Last updated" dates come from git, which the runtime image doesn't have.
-# Same arguments as search_engine::git_dates::GIT_LOG_ARGS
 RUN cd garden && git log --format=%x00%cs --name-only --relative -- . > ../garden-dates.txt || true
 
 # Runtime image - same base as builder

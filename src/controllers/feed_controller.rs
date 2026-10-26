@@ -8,7 +8,6 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(rss_feed);
 }
 
-/// RSS 2.0 feed of every published post, newest first.
 #[get("/rss.xml")]
 async fn rss_feed(app_state: web::Data<AppState>, req: HttpRequest) -> HttpResponse {
     let posts = app_state.post_search_engine.published_posts().await;
@@ -66,7 +65,6 @@ fn rss(app_name: &str, base_url: &str, posts: &[Post]) -> String {
     xml
 }
 
-/// Post dates are `YYYY-MM-DD`; RSS wants RFC 2822 at midnight UTC.
 fn rfc2822_date(date: &str) -> Option<String> {
     let date = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
     Some(date.and_hms_opt(0, 0, 0)?.and_utc().to_rfc2822())

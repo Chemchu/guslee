@@ -31,14 +31,10 @@ pub struct AppState {
 
 pub const SITE_DESCRIPTION: &str = "My personal digital garden, built with Rust + HTMX";
 
-/// What a page tells browsers, feed readers and link previews about itself.
 #[derive(Default)]
 pub struct PageMeta {
-    /// Shown before the site name. `None` for pages that are the site itself.
     pub title: Option<String>,
-    /// Defaults to [`SITE_DESCRIPTION`].
     pub description: Option<String>,
-    /// Posts are articles, everything else is a website.
     pub is_article: bool,
 }
 
@@ -57,7 +53,6 @@ impl PageMeta {
         }
     }
 
-    /// `<head>` tags: title, description, Open Graph and the RSS feed.
     fn head(&self, app_name: &str, url: Option<&str>) -> String {
         let description = self.description.as_deref().unwrap_or(SITE_DESCRIPTION);
         let og_type = if self.is_article {
@@ -84,14 +79,11 @@ impl PageMeta {
     }
 }
 
-/// Scheme and host the request came in through, proxies included.
 pub fn base_url(req: &HttpRequest) -> String {
     let info = req.connection_info();
     format!("{}://{}", info.scheme(), info.host())
 }
 
-/// Percent-encodes anything but unreserved characters, keeping `/` so the
-/// result still reads as a path.
 pub fn encode_path(path: &str) -> String {
     let mut encoded = String::with_capacity(path.len());
     for byte in path.bytes() {
@@ -141,8 +133,6 @@ pub fn render_page(app_state: &AppState, req: &HttpRequest, content: &str) -> Ht
     render_page_with_meta(app_state, req, content, &PageMeta::default())
 }
 
-/// Like [`render_page`], with the page's own title and description. Partial
-/// responses carry a `<title>` too, which htmx moves into the browser tab.
 pub fn render_page_with_meta(
     app_state: &AppState,
     req: &HttpRequest,

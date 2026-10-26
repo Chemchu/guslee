@@ -29,8 +29,6 @@ in {
 
   env.SURREALDB_PATH = surrealdb3 + "/bin/surreal";
 
-  # Installed into .git/hooks when entering the shell. Options live in
-  # .prettierrc.json so editors format markdown the same way.
   git-hooks.hooks.prettier = {
     enable = true;
     types_or = ["markdown"];

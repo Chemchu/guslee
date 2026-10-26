@@ -9,13 +9,10 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(tags_index).service(tag_page);
 }
 
-/// Link to the page listing every post with `tag`.
-/// Nested tags read as paths: `/tags/gaming/horror`.
 pub fn tag_url(tag: &str) -> String {
     format!("/tags/{}", encode_path(tag))
 }
 
-/// Indentation of nested tags in the index, by depth.
 const TAG_INDENT: [&str; 5] = ["pl-0", "pl-4", "pl-8", "pl-12", "pl-16"];
 
 #[get("/tags")]

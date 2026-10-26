@@ -43,10 +43,12 @@ async fn finds_posts_by_title_and_content() {
     assert_eq!(
         fog,
         vec![
+            "Hello fixture",
             "Letters &lt;and&gt; escaping",
             "Notes about the fog",
             "Welcome to the fixture garden"
-        ]
+        ],
+        "hello embeds a fog section"
     );
 }
 

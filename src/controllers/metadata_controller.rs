@@ -14,6 +14,10 @@ async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>
     match post {
         Some(p) => {
             let backlinks = app_state.post_search_engine.get_backlinks(&file_path).await;
+            let mentions = app_state
+                .post_search_engine
+                .get_unlinked_mentions(&file_path)
+                .await;
             let html = html! {
                 div class="flex flex-col gap-2 w-full" {
                     div class="flex flex-col gap-px border-t border-shade-color" {
@@ -68,6 +72,35 @@ async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>
                                             class="block text-zinc-100 hover:text-primary-color text-sm truncate"
                                             title=(backlink.title)
                                             { (backlink.title) }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        @if !mentions.is_empty() {
+                            div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
+                                p
+                                class="text-zinc-500 text-xs uppercase tracking-widest"
+                                title="Notes that mention this one's title without linking to it"
+                                { "Unlinked mentions" }
+                                ul id="unlinked-mentions" class="flex flex-col gap-2" {
+                                    @for mention in &mentions {
+                                        li class="flex flex-col" {
+                                            a href=(format!(
+                                                "/posts/{}",
+                                                mention
+                                                    .file_path
+                                                    .strip_suffix(".md")
+                                                    .unwrap_or(&mention.file_path)
+                                            ))
+                                            class="block text-zinc-100 hover:text-primary-color text-sm truncate"
+                                            title=(mention.title)
+                                            { (mention.title) }
+                                            p class="text-zinc-500 text-xs line-clamp-2" {
+                                                (mention.before)
+                                                mark class="bg-primary-color/25 text-zinc-200 rounded-sm px-0.5" { (mention.matched) }
+                                                (mention.after)
+                                            }
                                         }
                                     }
                                 }

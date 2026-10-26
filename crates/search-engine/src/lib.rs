@@ -1,6 +1,6 @@
 use regex::Regex;
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use surrealdb::Surreal;
 use surrealdb::engine::any::Any;
@@ -13,7 +13,7 @@ use crate::tags::{markdown_inline_tags, tag_matches};
 use crate::types::EdgeFilePath;
 use crate::types::Params;
 use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode};
-use crate::utils::{Post, extract_full_metadata};
+use crate::utils::{Post, extract_full_metadata, strip_frontmatter};
 
 pub mod git_dates;
 pub mod links;
@@ -24,6 +24,15 @@ pub mod utils;
 pub struct PostsSearchEngine {
     db: Surreal<Any>,
     link_index: LinkIndex,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Mention {
+    pub file_path: String,
+    pub title: String,
+    pub before: String,
+    pub matched: String,
+    pub after: String,
 }
 
 #[derive(SurrealValue, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -49,7 +58,6 @@ impl PostsSearchEngine {
     ) -> PostsSearchEngine {
         let mut posts: Vec<Post> = Vec::new();
         let last_updated = git_dates::last_updated_dates(documents_path);
-        // Hidden entries (`.git`, `.obsidian`...) and non-markdown files aren't posts
         let is_hidden = |entry: &walkdir::DirEntry| {
             entry.depth() > 0 && entry.file_name().to_string_lossy().starts_with('.')
         };
@@ -168,7 +176,6 @@ impl PostsSearchEngine {
         &self.link_index
     }
 
-    /// Published posts that link to `file_path`, sorted by title.
     pub async fn get_backlinks(&self, file_path: &str) -> Vec<Backlink> {
         let response = self
             .db
@@ -238,8 +245,6 @@ impl PostsSearchEngine {
             .unwrap()
     }
 
-    /// Published posts tagged with `tag` or one of its nested tags (ignoring
-    /// case), newest first. Tags written inline in a post count too.
     pub async fn posts_with_tag(&self, tag: &str) -> Vec<Post> {
         self.published_posts()
             .await
@@ -248,7 +253,6 @@ impl PostsSearchEngine {
             .collect()
     }
 
-    /// Every published post, newest first.
     pub async fn published_posts(&self) -> Vec<Post> {
         let mut posts: Vec<Post> = self
             .raw_query::<Vec<Post>>("SELECT * FROM posts WHERE metadata.is_draft = false")
@@ -262,9 +266,6 @@ impl PostsSearchEngine {
         posts
     }
 
-    /// Every tag of the published posts with how many posts it has, sorted so
-    /// nested tags follow their parent. Parents count their nested tags' posts,
-    /// like the tag pages do, and exist even if no post uses them directly.
     pub async fn tag_counts(&self) -> Vec<(String, usize)> {
         let posts = self.published_posts().await;
         let mut tags: Vec<String> = Vec::new();
@@ -340,72 +341,124 @@ impl PostsSearchEngine {
         GraphData { nodes, edges }
     }
 
-    pub async fn get_graph_from_related_posts(&self, main_node_file_path: &str) -> GraphData {
-        let curr_post = self.get_post(main_node_file_path).await;
-
-        if curr_post.is_none() {
+    pub async fn get_graph_from_related_posts(
+        &self,
+        main_node_file_path: &str,
+        depth: usize,
+    ) -> GraphData {
+        if self.get_post(main_node_file_path).await.is_none() {
             return GraphData::empty();
         }
 
-        let query = "SELECT ->points_to->posts.* as related_posts FROM posts WHERE file_path = $file_path AND metadata.is_draft = false";
-
-        let mut result = self
-            .db
-            .query(query)
-            .bind(("file_path", main_node_file_path.to_string()))
+        let titles: HashMap<String, String> = self
+            .published_posts()
             .await
-            .unwrap();
+            .into_iter()
+            .map(|post| (post.file_path, post.metadata.title))
+            .collect();
+        let edges = self.published_edges().await;
 
-        let linked_posts: Vec<(String, String)> = result
-            .take::<Option<QueryRelatedPostResult>>(0)
-            .unwrap()
-            .map(|r| r.related_posts)
-            .unwrap_or_default()
-            .iter()
-            .filter(|p| !p.metadata.is_draft)
-            .map(|p| (p.metadata.title.clone(), p.file_path.clone()))
-            .collect::<Vec<(String, String)>>();
-        let backlinks = self.get_backlinks(main_node_file_path).await;
-
-        let main_node = GraphNode {
-            id: 1,
-            label: curr_post.as_ref().unwrap().metadata.title.to_string(),
-            file_path: curr_post.unwrap().file_path.to_string(),
-        };
-
-        let mut nodes: Vec<GraphNode> = vec![main_node];
-        let mut edges: Vec<GraphEdge> = Vec::new();
-        let node_id = |nodes: &mut Vec<GraphNode>, title: &str, file_path: &str| match nodes
-            .iter()
-            .find(|n| n.file_path == file_path)
-        {
-            Some(node) => node.id,
-            None => {
-                let id = nodes.len() + 1;
-                nodes.push(GraphNode {
-                    id,
-                    label: title.to_string(),
-                    file_path: file_path.to_string(),
-                });
-                id
+        let mut paths = vec![main_node_file_path.to_string()];
+        let mut frontier = paths.clone();
+        for _ in 0..depth {
+            let mut next = Vec::new();
+            for path in &frontier {
+                let outgoing = edges
+                    .iter()
+                    .filter(|e| &e.source == path)
+                    .map(|e| &e.target);
+                let incoming = edges
+                    .iter()
+                    .filter(|e| &e.target == path)
+                    .map(|e| &e.source);
+                for neighbour in outgoing.chain(incoming) {
+                    if !paths.contains(neighbour) {
+                        paths.push(neighbour.clone());
+                        next.push(neighbour.clone());
+                    }
+                }
             }
-        };
-        for (title, file_path) in &linked_posts {
-            let id = node_id(&mut nodes, title, file_path);
-            edges.push(GraphEdge {
-                source: 1,
-                target: id,
-            });
-        }
-        for backlink in &backlinks {
-            let id = node_id(&mut nodes, &backlink.title, &backlink.file_path);
-            edges.push(GraphEdge {
-                source: id,
-                target: 1,
-            });
+            frontier = next;
         }
 
-        GraphData { nodes, edges }
+        let id_of = |path: &str| paths.iter().position(|p| p == path).map(|i| i + 1);
+        let nodes = paths
+            .iter()
+            .enumerate()
+            .map(|(index, path)| GraphNode {
+                id: index + 1,
+                label: titles.get(path).cloned().unwrap_or_default(),
+                file_path: path.clone(),
+            })
+            .collect();
+        let mut graph_edges: Vec<GraphEdge> = edges
+            .iter()
+            .filter_map(|edge| {
+                Some(GraphEdge {
+                    source: id_of(&edge.source)?,
+                    target: id_of(&edge.target)?,
+                })
+            })
+            .collect();
+        graph_edges.sort_by_key(|e| (e.source, e.target));
+
+        GraphData {
+            nodes,
+            edges: graph_edges,
+        }
+    }
+
+    async fn published_edges(&self) -> Vec<EdgeFilePath> {
+        let mut edges: Vec<EdgeFilePath> = self
+            .raw_query(
+                "SELECT in.file_path AS source, out.file_path AS target
+                FROM points_to
+                WHERE in.metadata.is_draft = false AND out.metadata.is_draft = false",
+            )
+            .await;
+        edges.sort_by(|a, b| (&a.source, &a.target).cmp(&(&b.source, &b.target)));
+        edges.dedup_by(|a, b| a.source == b.source && a.target == b.target);
+        edges
+    }
+
+    pub async fn get_unlinked_mentions(&self, file_path: &str) -> Vec<Mention> {
+        let Some(target) = self.get_post(file_path).await else {
+            return Vec::new();
+        };
+        let title = target.metadata.title.trim();
+        if title.chars().count() < 3 {
+            return Vec::new();
+        }
+        let Ok(pattern) = Regex::new(&format!(r"(?i)(?:^|\W)({})(?:\W|$)", regex::escape(title)))
+        else {
+            return Vec::new();
+        };
+        let linked: HashSet<String> = self
+            .get_backlinks(file_path)
+            .await
+            .into_iter()
+            .map(|b| b.file_path)
+            .collect();
+
+        let mut mentions: Vec<Mention> = self
+            .published_posts()
+            .await
+            .into_iter()
+            .filter(|post| post.file_path != file_path && !linked.contains(&post.file_path))
+            .filter_map(|post| {
+                let body = strip_frontmatter(&post.content);
+                let found = pattern.captures(body)?.get(1)?;
+                Some(Mention {
+                    file_path: post.file_path,
+                    title: post.metadata.title,
+                    before: snippet_before(&body[..found.start()]),
+                    matched: found.as_str().to_string(),
+                    after: snippet_after(&body[found.end()..]),
+                })
+            })
+            .collect();
+        mentions.sort_by(|a, b| a.title.cmp(&b.title));
+        mentions
     }
 
     /* pub async fn raw_query<T>(&self, query: &str) -> T
@@ -431,13 +484,43 @@ impl PostsSearchEngine {
     }
 }
 
-#[derive(SurrealValue, Deserialize)]
-struct QueryRelatedPostResult {
-    related_posts: Vec<Post>,
+const SNIPPET_CHARS: usize = 40;
+
+fn snippet_before(text: &str) -> String {
+    let text = collapse_whitespace(text);
+    let chars: Vec<char> = text.chars().collect();
+    if chars.len() <= SNIPPET_CHARS {
+        return text;
+    }
+    let tail: String = chars[chars.len() - SNIPPET_CHARS..].iter().collect();
+    let tail = tail.split_once(' ').map_or(tail.as_str(), |(_, rest)| rest);
+    format!("…{tail}")
 }
 
-/// Garden file paths (with `.md`) of the published posts that `post` links to,
-/// through markdown links or `[[wikilinks]]`.
+fn snippet_after(text: &str) -> String {
+    let text = collapse_whitespace(text);
+    let chars: Vec<char> = text.chars().collect();
+    if chars.len() <= SNIPPET_CHARS {
+        return text;
+    }
+    let head: String = chars[..SNIPPET_CHARS].iter().collect();
+    let head = head
+        .rsplit_once(' ')
+        .map_or(head.as_str(), |(start, _)| start);
+    format!("{head}…")
+}
+
+fn collapse_whitespace(text: &str) -> String {
+    let mut collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if text.starts_with(char::is_whitespace) && !collapsed.is_empty() {
+        collapsed.insert(0, ' ');
+    }
+    if text.ends_with(char::is_whitespace) && !collapsed.is_empty() {
+        collapsed.push(' ');
+    }
+    collapsed
+}
+
 fn get_mentioned_posts_in_post_content(post: &Post, link_index: &LinkIndex) -> Vec<String> {
     let regex_pattern = Regex::new(r"\[([^\]]+)\]\(([^\)]+)\)").unwrap();
 
@@ -448,7 +531,6 @@ fn get_mentioned_posts_in_post_content(post: &Post, link_index: &LinkIndex) -> V
         .map(|target| target.file_path());
     let wikilinks = find_wikilinks(&post.content)
         .into_iter()
-        .filter(|m| !m.is_embed)
         .filter_map(|m| link_index.wikilink_target(&WikiLink::parse(m.inner)))
         .map(|target| target.file_path());
 
@@ -523,10 +605,33 @@ mod tests {
     }
 
     #[test]
-    fn embeds_self_links_and_missing_posts_are_not_links() {
-        let post = post_with_content("![[fog]] [[post]] [me](post) [gone](gone) ![img](pic.png)");
+    fn self_links_and_missing_posts_are_not_links() {
+        let post = post_with_content("[[post]] [me](post) [gone](gone) ![img](pic.png)");
 
         assert!(get_mentioned_posts_in_post_content(&post, &index()).is_empty());
+    }
+
+    #[test]
+    fn embeds_count_as_links() {
+        let post = post_with_content("![[fog#The fog]]");
+
+        assert_eq!(
+            get_mentioned_posts_in_post_content(&post, &index()),
+            vec!["notes/fog.md"]
+        );
+    }
+
+    #[test]
+    fn snippets_are_cut_at_words_around_the_mention() {
+        assert_eq!(snippet_before("short\n text "), "short text ");
+        assert_eq!(
+            snippet_before("one two three four five six seven eight nine ten "),
+            "…four five six seven eight nine ten "
+        );
+        assert_eq!(
+            snippet_after(" one two three four five six seven eight nine ten"),
+            " one two three four five six seven…"
+        );
     }
 
     #[test]

@@ -10,3 +10,5 @@ tags:
 # Hello
 
 Say hi and go back to the [welcome page](welcome).
+
+![[fog#Getting around]]

@@ -1,8 +1,5 @@
-// Side panel tabs (Metadata / Outline) and the outline's current heading.
-// The chosen tab is remembered, so it stays open from one post to the next.
 (function () {
   const STORAGE_KEY = "side-panel-tab";
-  // How far below the top of the post a heading still counts as current
   const CURRENT_OFFSET_PX = 24;
 
   function savedTab() {
@@ -16,9 +13,7 @@
   function saveTab(name) {
     try {
       localStorage.setItem(STORAGE_KEY, name);
-    } catch {
-      // Storage can be blocked; the tab still switches for this page
-    }
+    } catch {}
   }
 
   function selectTab(name) {
@@ -45,8 +40,6 @@
       const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
       if (heading && heading.getBoundingClientRect().top <= top) current = link;
     }
-    // The last headings of a short section may never reach the top, and
-    // before the first heading the post is still in its first section
     if (atBottom && post.scrollTop > 0) current = links[links.length - 1];
     current ??= links[0];
 

@@ -168,7 +168,11 @@ async fn garden_view_dispatcher_lazy_loads_the_graph() {
 fn data_attribute(body: &str, name: &str) -> serde_json::Value {
     let start = body.find(&format!("{name}=\"")).unwrap() + name.len() + 2;
     let end = start + body[start..].find('"').unwrap();
-    let json = body[start..end].replace("&quot;", "\"");
+    let json = body[start..end]
+        .replace("&quot;", "\"")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&");
     serde_json::from_str(&json).unwrap()
 }
 
@@ -191,7 +195,7 @@ async fn garden_graph_contains_published_posts_and_their_links() {
         paths,
         vec!["hello.md", "notes/fog.md", "notes/letters.md", "welcome.md"]
     );
-    assert_eq!(edges.as_array().unwrap().len(), 3);
+    assert_eq!(edges.as_array().unwrap().len(), 4, "embeds count as links");
 }
 
 #[tokio::test]
@@ -455,7 +459,6 @@ async fn metadata_shows_the_last_commit_date() {
 
     let body = app.htmx_get("/metadata/welcome").await.body;
 
-    // The fixtures are committed, so they always have a date
     let needle = "<time id=\"last-updated\" datetime=\"";
     let start = body.find(needle).unwrap() + needle.len();
     let date = &body[start..start + 10];
@@ -562,4 +565,145 @@ async fn rss_feed_lists_published_posts() {
         .find("<title>Welcome to the fixture garden")
         .unwrap();
     assert!(letters < welcome, "newest first");
+}
+
+#[tokio::test]
+async fn embeds_show_the_embedded_section() {
+    let app = TestApp::spawn().await;
+
+    let body = app.htmx_get("/posts/hello").await.body;
+
+    assert!(body.contains(
+        r#"<div class="embed"><a class="embed-link" href="/posts/notes/fog#getting-around">"#
+    ));
+    assert!(body.contains("Bring a radio"));
+    assert!(
+        !body.contains("never lifts in Silent Hill"),
+        "only the section is embedded"
+    );
+    assert!(
+        !body.contains(r#"id="getting-around""#),
+        "embedded headings don't get ids"
+    );
+}
+
+#[tokio::test]
+async fn metadata_lists_unlinked_mentions_with_context() {
+    let app = TestApp::spawn().await;
+
+    let welcome = app.htmx_get("/metadata/welcome").await.body;
+    let hello = app.htmx_get("/metadata/hello").await.body;
+
+    let mentions = &welcome[welcome.find("id=\"unlinked-mentions\"").unwrap()..];
+    assert!(mentions.contains(r#"href="/posts/notes/letters""#));
+    assert!(mentions.contains(">welcome to the fixture garden</mark>, though."));
+    assert!(
+        !mentions.contains(r#"href="/posts/hello""#),
+        "hello links to welcome, so it's a linked mention"
+    );
+    assert!(
+        !hello.contains("Unlinked mentions"),
+        "the section is hidden when empty"
+    );
+}
+
+#[tokio::test]
+async fn sidebar_lists_posts_by_folder_or_by_topic() {
+    let app = TestApp::spawn().await;
+
+    let folders = app.htmx_get("/search?limit=100&view=folders").await.body;
+    let topics = app.htmx_get("/search?limit=100&view=topics").await.body;
+    let searched = app
+        .htmx_get("/search?limit=100&view=folders&query=fog")
+        .await
+        .body;
+
+    assert!(folders.starts_with(r#"<ul id="file-tree""#));
+    assert!(folders.contains(r#"<details data-folder="notes">"#));
+    assert!(folders.contains(r#"href="/posts/notes/fog""#));
+    assert!(!folders.contains("/posts/draft"));
+    assert!(!topics.contains("file-tree") && topics.contains(">Notes</summary>"));
+    assert!(
+        !searched.contains("file-tree"),
+        "searching lists results, not folders"
+    );
+    assert!(searched.contains(r#"href="/posts/notes/fog""#));
+
+    let layout = app.get("/").await.body;
+    let selected = |view: &str| {
+        let tab = &layout[layout
+            .find(&format!("data-explorer-view=\"{view}\""))
+            .unwrap()..];
+        tab[..tab.find('>').unwrap()].contains("aria-selected=\"true\"")
+    };
+    assert!(
+        selected("topics") && !selected("folders"),
+        "topics is the default"
+    );
+    assert!(
+        layout.contains(r#"<input type="hidden" id="explorer-view" name="view" value="topics" />"#)
+    );
+    assert!(layout.contains(r##"hx-include="#explorer-view""##));
+    assert!(layout.contains("/_static/explorer.js"));
+}
+
+#[tokio::test]
+async fn quick_switcher_gets_every_published_post() {
+    let app = TestApp::spawn().await;
+
+    let response = app.get("/switcher.json").await;
+    let posts: serde_json::Value = serde_json::from_str(&response.body).unwrap();
+
+    assert_eq!(response.status, 200);
+    assert_eq!(
+        posts[0],
+        serde_json::json!({"title": "Letters <and> escaping", "path": "notes/letters"}),
+        "newest first"
+    );
+    assert_eq!(posts.as_array().unwrap().len(), 4, "no drafts");
+    assert!(app.get("/").await.body.contains("/_static/switcher.js"));
+    assert_eq!(app.get("/_static/switcher.js").await.status, 200);
+}
+
+#[tokio::test]
+async fn local_graph_depth_can_be_chosen() {
+    let app = TestApp::spawn().await;
+
+    let labels = |body: &str| -> Vec<String> {
+        data_attribute(body, "data-nodes")
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| n["label"].as_str().unwrap().to_string())
+            .collect()
+    };
+    let one = app.htmx_get("/graph/notes/letters").await.body;
+    let two = app.htmx_get("/graph/notes/letters?depth=2").await.body;
+    let too_deep = app.htmx_get("/graph/notes/letters?depth=9").await.body;
+
+    assert_eq!(
+        labels(&one),
+        vec!["Letters <and> escaping", "Notes about the fog"]
+    );
+    assert_eq!(
+        labels(&two),
+        vec![
+            "Letters <and> escaping",
+            "Notes about the fog",
+            "Hello fixture",
+            "Welcome to the fixture garden"
+        ]
+    );
+    assert!(one.contains(r#"data-depth="1""#));
+    assert!(one.contains(r#"<button type="button" data-graph-depth="1" aria-pressed="true""#));
+    assert!(too_deep.contains(r#"data-depth="3""#), "depth is capped");
+    assert_eq!(
+        data_attribute(&one, "data-folders"),
+        serde_json::json!(["notes"])
+    );
+    let garden = app.htmx_get("/garden-view").await.body;
+    assert!(garden.contains(r#"data-root-label="garden entry""#));
+
+    let post = app.htmx_get("/posts/notes/fog").await.body;
+    assert!(post.contains("window.graphDepth"));
 }

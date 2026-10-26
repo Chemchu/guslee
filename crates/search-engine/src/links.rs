@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-/// A link to a post in the garden, relative to the garden root.
 #[derive(Debug, PartialEq, Eq)]
 pub struct LinkTarget {
-    /// Garden-relative path without the `.md` extension.
     pub path: String,
-    /// Anchor inside the post, without the leading `#`.
     pub fragment: Option<String>,
 }
 
@@ -22,8 +19,6 @@ impl LinkTarget {
     }
 }
 
-/// Resolves the `href` of a markdown link. External, absolute and anchor-only
-/// links are not posts and yield `None`.
 pub fn markdown_link_target(href: &str) -> Option<LinkTarget> {
     let has_scheme = href
         .split_once(':')
@@ -45,10 +40,8 @@ pub fn markdown_link_target(href: &str) -> Option<LinkTarget> {
     })
 }
 
-/// An Obsidian `[[target#heading|alias]]` link.
 #[derive(Debug, PartialEq, Eq)]
 pub struct WikiLink<'a> {
-    /// Note name or path as written. Empty for `[[#heading]]` links to the same note.
     pub target: &'a str,
     pub heading: Option<&'a str>,
     pub alias: Option<&'a str>,
@@ -57,7 +50,6 @@ pub struct WikiLink<'a> {
 impl WikiLink<'_> {
     pub fn parse(inner: &str) -> WikiLink<'_> {
         let (link, alias) = match inner.split_once('|') {
-            // `\|` is how Obsidian escapes the pipe inside tables
             Some((link, alias)) => (link.strip_suffix('\\').unwrap_or(link), Some(alias.trim())),
             None => (inner, None),
         };
@@ -73,7 +65,6 @@ impl WikiLink<'_> {
         }
     }
 
-    /// The text Obsidian shows for the link: the alias, or `note > heading`.
     pub fn display_text(&self) -> String {
         if let Some(alias) = self.alias {
             return alias.to_string();
@@ -90,14 +81,11 @@ impl WikiLink<'_> {
     }
 }
 
-/// A `[[...]]` occurrence in some text.
 #[derive(Debug, PartialEq, Eq)]
 pub struct WikiLinkMatch<'a> {
-    /// Byte range of the whole `[[...]]`, including a leading `!` for embeds.
     pub start: usize,
     pub end: usize,
     pub inner: &'a str,
-    /// `![[...]]` embeds a note instead of linking to it.
     pub is_embed: bool,
 }
 
@@ -130,7 +118,6 @@ pub fn find_wikilinks(text: &str) -> Vec<WikiLinkMatch<'_>> {
     matches
 }
 
-/// Lowercase, alphanumerics kept, runs of anything else collapsed into `-`.
 pub fn slugify(text: &str) -> String {
     let mut slug = String::with_capacity(text.len());
     for c in text.trim().chars().flat_map(char::to_lowercase) {
@@ -143,8 +130,6 @@ pub fn slugify(text: &str) -> String {
     slug.trim_end_matches('-').to_string()
 }
 
-/// The published posts, looked up the way Obsidian resolves `[[links]]`:
-/// by full path, by partial path, or by bare note name, ignoring case.
 #[derive(Default)]
 pub struct LinkIndex {
     by_path: HashMap<String, String>,
@@ -152,7 +137,6 @@ pub struct LinkIndex {
 }
 
 impl LinkIndex {
-    /// `file_paths` are garden-relative, with the `.md` extension.
     pub fn new<I, S>(file_paths: I) -> LinkIndex
     where
         I: IntoIterator<Item = S>,
@@ -172,20 +156,17 @@ impl LinkIndex {
                 .push(path.to_string());
         }
         for paths in index.by_name.values_mut() {
-            // Shortest path wins when several notes share a name, like in Obsidian
             paths.sort_by(|a, b| a.len().cmp(&b.len()).then_with(|| a.cmp(b)));
         }
         index
     }
 
-    /// Whether `path` (without `.md`) is exactly a published post.
     pub fn contains(&self, path: &str) -> bool {
         self.by_path
             .get(&path.to_lowercase())
             .is_some_and(|found| found == path)
     }
 
-    /// Garden-relative path (without `.md`) that a wikilink target points to.
     pub fn resolve(&self, target: &str) -> Option<&str> {
         let target = target
             .trim()
@@ -214,7 +195,6 @@ impl LinkIndex {
             .map(String::as_str)
     }
 
-    /// Where a wikilink leads, if its note exists.
     pub fn wikilink_target(&self, link: &WikiLink) -> Option<LinkTarget> {
         Some(LinkTarget {
             path: self.resolve(link.target)?.to_string(),

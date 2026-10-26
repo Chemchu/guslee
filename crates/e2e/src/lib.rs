@@ -18,6 +18,7 @@ pub const STEAM_API_KEY: &str = "steam-key";
 pub const STEAM_ID: &str = "76561190000000000";
 
 pub const GARDEN_PATH: &str = "crates/e2e/fixtures/garden";
+pub const REAL_GARDEN_PATH: &str = "garden";
 
 pub struct TestApp {
     pub address: String,
@@ -56,6 +57,10 @@ fn enter_workspace_root() {
 
 impl TestApp {
     pub async fn spawn() -> TestApp {
+        TestApp::spawn_with_garden(GARDEN_PATH).await
+    }
+
+    pub async fn spawn_with_garden(garden_path: &str) -> TestApp {
         enter_workspace_root();
 
         let lichess = MockServer::start().await;
@@ -63,11 +68,11 @@ impl TestApp {
         let steam = MockServer::start().await;
 
         let search_engine =
-            PostsSearchEngine::new_with_endpoint("mem://", REPO_SOURCE, GARDEN_PATH).await;
+            PostsSearchEngine::new_with_endpoint("mem://", REPO_SOURCE, garden_path).await;
 
         let app_state = web::Data::new(AppState {
             app_name: APP_NAME.to_string(),
-            garden_path: GARDEN_PATH.to_string(),
+            garden_path: garden_path.to_string(),
             lichess_state: chess_module::LichessState::new(
                 LICHESS_TOKEN.to_string(),
                 LICHESS_USERNAME.to_string(),

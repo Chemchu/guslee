@@ -1,3 +1,28 @@
+const GRAPH_ROOT_COLOR = "#F58A07";
+const GRAPH_FOLDER_COLORS = [
+  "#4c9aff",
+  "#2ebfa5",
+  "#a77bdb",
+  "#e5534b",
+  "#e0b43a",
+  "#4fbf67",
+  "#22c3d6",
+  "#d16ba5",
+];
+const GRAPH_DEPTH_KEY = "graph-depth";
+const GRAPH_DIMMED = 0.12;
+
+window.graphDepth = function () {
+  try {
+    const depth = Number(localStorage.getItem(GRAPH_DEPTH_KEY));
+    return depth >= 1 && depth <= 3 ? depth : 1;
+  } catch {
+    return 1;
+  }
+};
+
+const graphResizeObservers = new Map();
+
 function renderGraph(targetContainerId) {
   const container = document.getElementById(targetContainerId);
   if (!container) {
@@ -8,6 +33,24 @@ function renderGraph(targetContainerId) {
   // Use getAttribute instead of dataset for large JSON strings
   const nodes = JSON.parse(container.getAttribute("data-nodes") || "[]");
   const links = JSON.parse(container.getAttribute("data-edges") || "[]");
+  const folders = JSON.parse(container.getAttribute("data-folders") || "[]");
+  const isLocalGraph = targetContainerId === "graph-container";
+
+  const topFolder = (d) => (d.file_path?.includes("/") ? d.file_path.split("/")[0] : null);
+  const colorOf = (d) => {
+    const folder = topFolder(d);
+    if (!folder) return GRAPH_ROOT_COLOR;
+    const index = Math.max(folders.indexOf(folder), 0);
+    return GRAPH_FOLDER_COLORS[index % GRAPH_FOLDER_COLORS.length];
+  };
+  const isCurrent = (d) => isLocalGraph && d.id === 1;
+  const radiusOf = (d) => (isCurrent(d) ? 11 : 8);
+
+  const neighbours = new Map(nodes.map((n) => [n.id, new Set([n.id])]));
+  for (const { source, target } of links) {
+    neighbours.get(source)?.add(target);
+    neighbours.get(target)?.add(source);
+  }
 
   // Function to get current dimensions
   function getDimensions() {
@@ -69,17 +112,15 @@ function renderGraph(targetContainerId) {
     .selectAll("circle")
     .data(nodes)
     .join("circle")
-    .attr("r", 8)
-    .attr("fill", "#F58A07")
+    .attr("r", radiusOf)
+    .attr("fill", colorOf)
+    .attr("stroke", (d) => (isCurrent(d) ? "#DBDFE5" : null))
+    .attr("stroke-width", (d) => (isCurrent(d) ? 2 : null))
     .style("cursor", "pointer")
     .call(drag(simulation))
     .on("click", handleNodeClickNavigation)
-    .on("mouseover", function () {
-      d3.select(this).attr("r", 10).attr("fill", "#bc6c25");
-    })
-    .on("mouseout", function () {
-      d3.select(this).attr("r", 8).attr("fill", "#F58A07");
-    });
+    .on("mouseover", (event, d) => focusNode(d))
+    .on("mouseout", () => focusNode(null));
 
   const label = g
     .append("g")
@@ -93,6 +134,43 @@ function renderGraph(targetContainerId) {
     .style("fill", "#DBDFE5")
     .style("pointer-events", "none")
     .style("user-select", "none");
+
+  function focusNode(focused) {
+    const isNear = (d) => !focused || neighbours.get(focused.id)?.has(d.id);
+    const touches = (l) => focused && (l.source.id === focused.id || l.target.id === focused.id);
+
+    node
+      .attr("opacity", (d) => (isNear(d) ? 1 : GRAPH_DIMMED))
+      .attr("r", (d) => (focused && d.id === focused.id ? radiusOf(d) + 2 : radiusOf(d)));
+    label.style("opacity", (d) => (isNear(d) ? 1 : GRAPH_DIMMED));
+    link
+      .attr("stroke", (l) => (touches(l) ? colorOf(focused) : "#999"))
+      .attr("stroke-opacity", (l) => (!focused ? 0.6 : touches(l) ? 1 : GRAPH_DIMMED));
+  }
+
+  if (!isLocalGraph) addLegend();
+
+  function addLegend() {
+    const shown = [...new Set(nodes.map(topFolder))].sort((a, b) =>
+      a === null ? -1 : b === null ? 1 : a.localeCompare(b),
+    );
+    if (shown.length < 2) return;
+
+    container.style.position = "relative";
+    const legend = document.createElement("ul");
+    legend.className =
+      "absolute top-2 left-2 flex flex-col gap-1 p-2 text-xs bg-background-color/80 border border-shade-color pointer-events-none";
+    for (const folder of shown) {
+      const item = document.createElement("li");
+      item.className = "flex items-center gap-2";
+      const dot = document.createElement("span");
+      dot.className = "inline-block w-2.5 h-2.5 rounded-full";
+      dot.style.background = colorOf({ file_path: folder ? folder + "/" : "" });
+      item.append(dot, folder ?? (container.dataset.rootLabel || "garden entry"));
+      legend.append(item);
+    }
+    container.append(legend);
+  }
 
   simulation.on("tick", () => {
     link
@@ -109,6 +187,7 @@ function renderGraph(targetContainerId) {
   // Resize handler
   function handleResize() {
     const { width: newWidth, height: newHeight } = getDimensions();
+    if (!newWidth || !newHeight) return;
 
     // Update SVG dimensions
     svg
@@ -121,14 +200,17 @@ function renderGraph(targetContainerId) {
     simulation.alpha(0.3).restart();
   }
 
-  setTimeout(handleResize, 10);
-
-  // Debounce resize to avoid excessive recalculations
-  let resizeTimer;
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(handleResize, 250);
+  graphResizeObservers.get(targetContainerId)?.disconnect();
+  let resizeFrame = null;
+  const observer = new ResizeObserver(() => {
+    if (resizeFrame) return;
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = null;
+      handleResize();
+    });
   });
+  observer.observe(container);
+  graphResizeObservers.set(targetContainerId, observer);
 
   function drag(simulation) {
     function dragStarted(event) {
@@ -174,6 +256,21 @@ function renderGraph(targetContainerId) {
     }
   }
 }
+
+document.addEventListener("click", function (event) {
+  const button = event.target.closest?.("[data-graph-depth]");
+  const container = document.getElementById("graph-container");
+  if (!button || !container) return;
+
+  try {
+    localStorage.setItem(GRAPH_DEPTH_KEY, button.dataset.graphDepth);
+  } catch {}
+  htmx.ajax(
+    "GET",
+    `/graph/${encodeURI(container.dataset.postPath)}?depth=${button.dataset.graphDepth}`,
+    { target: "#upper-right-section", swap: "innerHTML" },
+  );
+});
 
 document.addEventListener("htmx:after:settle", function (evt) {
   // Once the graph container loads, we can init the actual graph

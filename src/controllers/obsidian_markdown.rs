@@ -1,9 +1,3 @@
-//! Obsidian markdown extensions applied to the HTML that the `markdown` crate
-//! renders: callouts (`> [!note] Title`) and highlights (`==text==`).
-
-/// Turns blockquotes starting with `[!type]` into callouts. `[!type]-` and
-/// `[!type]+` make them foldable, collapsed or expanded. Text after the type
-/// is the title, which defaults to the type itself.
 pub fn render_callouts(html: &str) -> String {
     const OPEN: &str = "<blockquote>";
     let mut result = String::with_capacity(html.len());
@@ -34,7 +28,6 @@ pub fn render_callouts(html: &str) -> String {
     result
 }
 
-/// Length of a blockquote's content, up to its own closing tag.
 fn matching_blockquote_end(html: &str) -> Option<usize> {
     let mut depth = 0;
     let mut offset = 0;
@@ -113,7 +106,6 @@ impl Callout<'_> {
             false => format!("<div class=\"callout-content\">{}</div>", self.body),
         };
 
-        // `kind` is only alphanumerics and dashes, and `title` is already escaped HTML
         match self.fold {
             None => format!(
                 "<div class=\"callout\" data-callout=\"{}\"><div class=\"callout-title\">{title}</div>{content}</div>",
@@ -128,8 +120,6 @@ impl Callout<'_> {
     }
 }
 
-/// Wraps `==text==` in `<mark>`. Both markers must be on the same line, and
-/// code and the inside of HTML tags are left alone.
 pub fn render_highlights(html: &str) -> String {
     let bytes = html.as_bytes();
     let mut markers = Vec::new();
@@ -137,7 +127,7 @@ pub fn render_highlights(html: &str) -> String {
     let mut i = 0;
 
     while i < bytes.len() {
-        let rest = &html[i..];
+        let rest = if bytes[i] == b'<' { &html[i..] } else { "" };
         if !in_tag && (rest.starts_with("<code") || rest.starts_with("<pre")) {
             let closing = if rest.starts_with("<code") {
                 "</code>"
@@ -185,7 +175,6 @@ pub fn render_highlights(html: &str) -> String {
         result.push_str(text);
         result.push_str("</mark>");
         last = close + 2;
-        // The closing marker can't open the next highlight
         pair.next();
     }
 

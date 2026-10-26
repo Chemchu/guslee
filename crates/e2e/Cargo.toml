@@ -15,3 +15,7 @@ tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "io-
 reqwest = { workspace = true, features = ["query"] }
 wiremock = "0.6.5"
 serde_json.workspace = true
+
+[dev-dependencies]
+walkdir = "2.5.0"
+tempfile.workspace = true

@@ -37,7 +37,6 @@
   --tw-prose-td-borders: #cad2c5;
 }
 
-/* Obsidian callouts: `> [!type] Title`. Types share colours like in Obsidian */
 .callout {
   --callout-color: #4c9aff;
   margin: 1.5em 0;
@@ -103,7 +102,29 @@ details.callout > summary {
   --callout-color: #9aa5b4;
 }
 
-/* Obsidian highlights: `==text==` */
+.embed {
+  margin: 1.5em 0;
+  padding: 0.5em 1em 0.75em;
+  border-left: 2px solid var(--color-primary-color);
+  background: color-mix(in srgb, var(--color-shade-color) 45%, transparent);
+}
+
+.prose .embed-link {
+  display: block;
+  font-size: 0.8em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.embed-content > :first-child {
+  margin-top: 0.5em;
+}
+
+.embed-content > :last-child {
+  margin-bottom: 0;
+}
+
 .prose mark {
   color: inherit;
   padding: 0 0.15em;

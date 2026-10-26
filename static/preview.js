@@ -1,6 +1,3 @@
-// Obsidian-style page previews: hovering a link to another post shows that
-// post in a popover. The popover lives inside #main-section so its links swap
-// the main section like any other content link, and it goes away with it.
 (function () {
   const LINKS = "#main-section .prose a[href], #backlinks a[href]";
   const SHOW_DELAY_MS = 400;
@@ -67,7 +64,6 @@
 
     const box = getPopover();
     box.innerHTML = html;
-    // `#heading` links in the preview belong to the previewed post, not this page
     for (const anchor of box.querySelectorAll('a[href^="#"]')) {
       anchor.setAttribute("href", target.page + anchor.getAttribute("href"));
     }

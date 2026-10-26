@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::process::Command;
 
-/// Arguments for `git log` that list every commit as `\0<date>` followed by
-/// the files it touched, relative to the directory git runs in.
 pub const GIT_LOG_ARGS: [&str; 6] = [
     "log",
     "--format=%x00%cs",
@@ -12,13 +10,8 @@ pub const GIT_LOG_ARGS: [&str; 6] = [
     ".",
 ];
 
-/// Environment variable naming a file with the output of `git log` run with
-/// [`GIT_LOG_ARGS`] in the garden. Used where the garden isn't a git checkout,
-/// like the production image, which runs that command at build time.
 pub const DATES_FILE_VAR: &str = "GARDEN_DATES_FILE";
 
-/// Date (`YYYY-MM-DD`) of the last commit touching each garden file, keyed by
-/// its garden-relative path. Empty when there's no history to read.
 pub fn last_updated_dates(documents_path: &str) -> HashMap<String, String> {
     let from_git = Command::new("git")
         .arg("-C")
@@ -37,7 +30,6 @@ pub fn last_updated_dates(documents_path: &str) -> HashMap<String, String> {
     log.map(|log| parse_git_log(&log)).unwrap_or_default()
 }
 
-/// Commits come newest first, so the first date seen for a file is its last update.
 fn parse_git_log(log: &str) -> HashMap<String, String> {
     let mut dates = HashMap::new();
 
