@@ -3,6 +3,7 @@ use actix_web::{
     web::{self, Html},
 };
 use maud::html;
+use search_engine::utils::DEFAULT_LANG;
 use serde::Deserialize;
 
 use crate::controllers::{AppState, render_page};
@@ -112,7 +113,7 @@ async fn garden_view(app_state: web::Data<AppState>) -> Html {
 async fn top_folders_json(app_state: &AppState) -> String {
     let mut folders: Vec<String> = app_state
         .post_search_engine
-        .published_posts()
+        .published_posts(DEFAULT_LANG)
         .await
         .into_iter()
         .filter_map(|post| Some(post.file_path.split_once('/')?.0.to_string()))

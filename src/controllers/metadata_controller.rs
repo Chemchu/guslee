@@ -1,4 +1,5 @@
 use crate::controllers::{AppState, tags_controller::tag_url};
+use crate::i18n::Locale;
 use actix_web::{
     get,
     web::{self, Html},
@@ -8,9 +9,16 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(render_metadata);
 }
 #[get("/metadata/{post:.*}")]
-async fn render_metadata(app_state: web::Data<AppState>, path: web::Path<String>) -> Html {
+async fn render_metadata(
+    app_state: web::Data<AppState>,
+    path: web::Path<String>,
+    locale: Locale,
+) -> Html {
     let file_path = format!("{}.md", path.as_str());
-    let post = app_state.post_search_engine.get_post(&file_path).await;
+    let post = app_state
+        .post_search_engine
+        .get_post(&file_path, locale.as_str())
+        .await;
     match post {
         Some(p) => {
             let backlinks = app_state.post_search_engine.get_backlinks(&file_path).await;

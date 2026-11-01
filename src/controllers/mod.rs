@@ -2,8 +2,10 @@ use actix_web::{HttpRequest, HttpResponse, http::header::ContentType, web::Html}
 use chess_module::LichessState;
 use games_module::SteamState;
 use music_module::SpotifyState;
-use search_engine::PostsSearchEngine;
+use search_engine::{PostsSearchEngine, utils::DEFAULT_LANG};
 use std::sync::{Arc, OnceLock};
+
+use crate::i18n::LANG_PARAM;
 
 pub mod chess_controller;
 pub mod fallback_controller;
@@ -36,6 +38,8 @@ pub struct PageMeta {
     pub title: Option<String>,
     pub description: Option<String>,
     pub is_article: bool,
+    pub lang: Option<String>,
+    pub translations: Vec<String>,
 }
 
 impl PageMeta {
@@ -60,6 +64,15 @@ impl PageMeta {
         } else {
             "website"
         };
+        let lang_url = |url: &str, lang: &str| format!("{url}?{LANG_PARAM}={lang}");
+        let page_url = url.map(|url| match (&self.lang, self.translations.len() > 1) {
+            (Some(lang), true) => lang_url(url, lang),
+            _ => url.to_string(),
+        });
+        let feed_url = match self.lang.as_deref() {
+            Some(lang) if lang != DEFAULT_LANG => lang_url("/rss.xml", lang),
+            _ => "/rss.xml".to_string(),
+        };
 
         maud::html! {
             title { (self.full_title(app_name)) }
@@ -68,12 +81,18 @@ impl PageMeta {
             meta property="og:type" content=(og_type);
             meta property="og:title" content=(self.title.as_deref().unwrap_or(app_name));
             meta property="og:description" content=(description);
-            @if let Some(url) = url {
-                meta property="og:url" content=(url);
-                link rel="canonical" href=(url);
+            @if let Some(page_url) = &page_url {
+                meta property="og:url" content=(page_url);
+                link rel="canonical" href=(page_url);
+            }
+            @if let (Some(url), true) = (url, self.translations.len() > 1) {
+                @for lang in &self.translations {
+                    link rel="alternate" hreflang=(lang) href=(lang_url(url, lang));
+                }
+                link rel="alternate" hreflang="x-default" href=(url);
             }
             meta name="twitter:card" content="summary";
-            link rel="alternate" type="application/rss+xml" title=(app_name) href="/rss.xml";
+            link rel="alternate" type="application/rss+xml" title=(app_name) href=(feed_url);
         }
         .into_string()
     }
@@ -240,6 +259,7 @@ mod tests {
             title: Some("Fog <notes>".to_string()),
             description: Some("About \"fog\"".to_string()),
             is_article: true,
+            ..PageMeta::default()
         };
 
         let page = wrap_content_with_meta("Garden", "", &meta, Some("https://g.dev/posts/fog"));
@@ -250,6 +270,47 @@ mod tests {
         assert!(page.contains(r#"<meta property="og:type" content="article">"#));
         assert!(page.contains(r#"<meta property="og:url" content="https://g.dev/posts/fog">"#));
         assert!(page.contains(r#"<link rel="alternate" type="application/rss+xml""#));
+    }
+
+    #[test]
+    fn translated_pages_link_every_language_version() {
+        let meta = PageMeta {
+            lang: Some("es".to_string()),
+            translations: vec!["en".to_string(), "es".to_string()],
+            ..PageMeta::titled("Niebla")
+        };
+
+        let page = wrap_content_with_meta("Garden", "", &meta, Some("https://g.dev/posts/fog"));
+
+        assert!(page.contains(r#"<link rel="canonical" href="https://g.dev/posts/fog?lang=es">"#));
+        assert!(
+            page.contains(r#"<meta property="og:url" content="https://g.dev/posts/fog?lang=es">"#)
+        );
+        assert!(page.contains(
+            r#"<link rel="alternate" hreflang="en" href="https://g.dev/posts/fog?lang=en">"#
+        ));
+        assert!(page.contains(
+            r#"<link rel="alternate" hreflang="es" href="https://g.dev/posts/fog?lang=es">"#
+        ));
+        assert!(page.contains(
+            r#"<link rel="alternate" hreflang="x-default" href="https://g.dev/posts/fog">"#
+        ));
+        assert!(page.contains(r#"href="/rss.xml?lang=es""#));
+    }
+
+    #[test]
+    fn untranslated_pages_keep_a_plain_canonical_and_no_hreflang() {
+        let meta = PageMeta {
+            lang: Some("en".to_string()),
+            translations: vec!["en".to_string()],
+            ..PageMeta::titled("Fog")
+        };
+
+        let page = wrap_content_with_meta("Garden", "", &meta, Some("https://g.dev/posts/fog"));
+
+        assert!(page.contains(r#"<link rel="canonical" href="https://g.dev/posts/fog">"#));
+        assert!(!page.contains("hreflang"));
+        assert!(page.contains(r#"href="/rss.xml""#));
     }
 
     #[test]

@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use search_engine::types::{Limit, Params};
-use search_engine::utils::Post;
+use search_engine::utils::{DEFAULT_LANG, Post};
 use search_engine::{Backlink, Mention, PostsSearchEngine};
 use tempfile::TempDir;
 
@@ -69,7 +69,9 @@ async fn finds_posts_by_title() {
     let garden = garden();
     let engine = engine(&garden).await;
 
-    let results = engine.query_posts(&search("silent", None)).await;
+    let results = engine
+        .query_posts(&search("silent", None), DEFAULT_LANG)
+        .await;
 
     assert_eq!(paths(&results), vec!["notes/first_note.md"]);
 }
@@ -79,7 +81,7 @@ async fn finds_posts_by_content() {
     let garden = garden();
     let engine = engine(&garden).await;
 
-    let results = engine.query_posts(&search("fog", None)).await;
+    let results = engine.query_posts(&search("fog", None), DEFAULT_LANG).await;
 
     assert_eq!(
         paths(&results),
@@ -92,7 +94,9 @@ async fn search_is_case_insensitive() {
     let garden = garden();
     let engine = engine(&garden).await;
 
-    let results = engine.query_posts(&search("SILENT", None)).await;
+    let results = engine
+        .query_posts(&search("SILENT", None), DEFAULT_LANG)
+        .await;
 
     assert_eq!(paths(&results), vec!["notes/first_note.md"]);
 }
@@ -103,7 +107,7 @@ async fn drafts_never_appear_in_search_results() {
     let engine = engine(&garden).await;
 
     for query in ["secret", "greenhouse", "fog", "silent"] {
-        let results = engine.query_posts(&search(query, None)).await;
+        let results = engine.query_posts(&search(query, None), DEFAULT_LANG).await;
         assert!(
             !paths(&results).contains(&"secret.md"),
             "draft returned for {query:?}"
@@ -116,7 +120,9 @@ async fn search_respects_the_limit() {
     let garden = garden();
     let engine = engine(&garden).await;
 
-    let results = engine.query_posts(&search("fog", Some(1))).await;
+    let results = engine
+        .query_posts(&search("fog", Some(1)), DEFAULT_LANG)
+        .await;
 
     assert_eq!(results.len(), 1);
 }
@@ -126,8 +132,12 @@ async fn quotes_in_the_query_are_treated_as_text() {
     let garden = garden();
     let engine = engine(&garden).await;
 
-    let results = engine.query_posts(&search("james's", None)).await;
-    let injection = engine.query_posts(&search("x' OR true OR '", None)).await;
+    let results = engine
+        .query_posts(&search("james's", None), DEFAULT_LANG)
+        .await;
+    let injection = engine
+        .query_posts(&search("x' OR true OR '", None), DEFAULT_LANG)
+        .await;
 
     assert!(results.len() <= 1);
     assert!(injection.is_empty());
@@ -138,13 +148,16 @@ async fn get_post_returns_published_posts_only() {
     let garden = garden();
     let engine = engine(&garden).await;
 
-    let post = engine.get_post("notes/first_note.md").await.unwrap();
+    let post = engine
+        .get_post("notes/first_note.md", DEFAULT_LANG)
+        .await
+        .unwrap();
 
     assert_eq!(post.metadata.title, "First note about Silent Hill");
     assert_eq!(post.metadata.topic.as_deref(), Some("Notes"));
     assert_eq!(post.file_name, "first_note.md");
-    assert!(engine.get_post("secret.md").await.is_none());
-    assert!(engine.get_post("missing.md").await.is_none());
+    assert!(engine.get_post("secret.md", DEFAULT_LANG).await.is_none());
+    assert!(engine.get_post("missing.md", DEFAULT_LANG).await.is_none());
 }
 
 #[tokio::test]
@@ -359,7 +372,7 @@ async fn tag_counts_include_parents_of_nested_tags() {
     );
     let engine = engine(&garden).await;
 
-    let counts = engine.tag_counts().await;
+    let counts = engine.tag_counts(DEFAULT_LANG).await;
 
     assert_eq!(
         counts,
@@ -380,7 +393,7 @@ async fn published_posts_are_newest_first() {
     let engine = engine(&garden).await;
 
     let posts: Vec<String> = engine
-        .published_posts()
+        .published_posts(DEFAULT_LANG)
         .await
         .into_iter()
         .map(|p| p.file_path)
@@ -432,7 +445,14 @@ async fn last_updated_comes_from_the_git_history() {
 
     let updated = |path: &'static str| {
         let engine = &engine;
-        async move { engine.get_post(path).await.unwrap().metadata.last_updated }
+        async move {
+            engine
+                .get_post(path, DEFAULT_LANG)
+                .await
+                .unwrap()
+                .metadata
+                .last_updated
+        }
     };
 
     assert_eq!(updated("welcome.md").await.as_deref(), Some("2025-07-08"));
@@ -523,4 +543,189 @@ async fn unlinked_mentions_find_the_title_in_other_posts() {
         "linked posts, partial words, drafts and the post itself are left out"
     );
     assert!(engine.get_unlinked_mentions("missing.md").await.is_empty());
+}
+
+fn translated_garden() -> TempDir {
+    let garden = garden();
+    write_post(
+        garden.path(),
+        "notes/first_note.es.md",
+        "title: \"Primera nota sobre Silent Hill\"\ndate: \"2025-02-01\"\ndescription: \"Niebla\"\ntopic: \"Notas\"\ntags: [gaming]",
+        "La niebla nunca se levanta. Vuelve a [[welcome]] y a [[second_note]].",
+    );
+    write_post(
+        garden.path(),
+        "notes/solo.es.md",
+        "title: \"Solo en español\"\ndate: \"2025-05-01\"\ndescription: \"x\"\ntags: [solo]",
+        "Sin traducción inglesa. Ver [[first_note]].",
+    );
+    write_post(
+        garden.path(),
+        "welcome.es.md",
+        "title: \"Borrador\"\ndate: \"2025-01-01\"\ndescription: \"x\"\ntags: []\nis_draft: true",
+        "",
+    );
+    garden
+}
+
+#[tokio::test]
+async fn translations_share_the_path_of_the_original_post() {
+    let garden = translated_garden();
+    let engine = engine(&garden).await;
+
+    let spanish = engine.get_post("notes/first_note.md", "es").await.unwrap();
+    let english = engine.get_post("notes/first_note.md", "en").await.unwrap();
+
+    assert_eq!(spanish.lang, "es");
+    assert_eq!(spanish.file_name, "first_note.md");
+    assert_eq!(spanish.metadata.title, "Primera nota sobre Silent Hill");
+    assert!(
+        spanish
+            .metadata
+            .post_source_url
+            .ends_with("/notes/first_note.es.md")
+    );
+    assert_eq!(english.lang, "en");
+    assert_eq!(english.metadata.title, "First note about Silent Hill");
+}
+
+#[tokio::test]
+async fn missing_translations_fall_back_to_another_language() {
+    let garden = translated_garden();
+    let engine = engine(&garden).await;
+
+    let lang_of = |path: &'static str, lang: &'static str| {
+        let engine = &engine;
+        async move { engine.get_post(path, lang).await.map(|p| p.lang) }
+    };
+
+    assert_eq!(
+        lang_of("notes/second_note.md", "es").await.as_deref(),
+        Some("en")
+    );
+    assert_eq!(
+        lang_of("notes/first_note.md", "fr").await.as_deref(),
+        Some("en")
+    );
+    assert_eq!(lang_of("notes/solo.md", "en").await.as_deref(), Some("es"));
+    assert_eq!(
+        lang_of("welcome.md", "es").await.as_deref(),
+        Some("en"),
+        "draft translations are skipped"
+    );
+}
+
+#[tokio::test]
+async fn listings_show_each_post_once_in_the_requested_language() {
+    let garden = translated_garden();
+    let engine = engine(&garden).await;
+
+    let listed = |posts: Vec<Post>| -> Vec<(String, String)> {
+        posts.into_iter().map(|p| (p.file_path, p.lang)).collect()
+    };
+    let pair = |path: &str, lang: &str| (path.to_string(), lang.to_string());
+
+    assert_eq!(
+        listed(engine.published_posts("es").await),
+        vec![
+            pair("notes/solo.md", "es"),
+            pair("notes/second_note.md", "en"),
+            pair("notes/first_note.md", "es"),
+            pair("welcome.md", "en"),
+        ]
+    );
+    assert_eq!(
+        listed(engine.published_posts("en").await),
+        vec![
+            pair("notes/solo.md", "es"),
+            pair("notes/second_note.md", "en"),
+            pair("notes/first_note.md", "en"),
+            pair("welcome.md", "en"),
+        ]
+    );
+    assert_eq!(engine.posts_with_tag("gaming", "es").await.len(), 2);
+    assert!(
+        engine
+            .tag_counts("es")
+            .await
+            .contains(&("gaming".to_string(), 2))
+    );
+}
+
+#[tokio::test]
+async fn search_matches_any_language_but_answers_in_the_requested_one() {
+    let garden = translated_garden();
+    let engine = engine(&garden).await;
+
+    let found = |query: &'static str, lang: &'static str| {
+        let engine = &engine;
+        async move {
+            engine
+                .query_posts(&search(query, None), lang)
+                .await
+                .into_iter()
+                .map(|p| (p.file_path, p.lang))
+                .collect::<Vec<_>>()
+        }
+    };
+
+    assert_eq!(
+        found("niebla", "en").await,
+        vec![("notes/first_note.md".to_string(), "en".to_string())]
+    );
+    assert_eq!(
+        found("silent hill", "es").await,
+        vec![("notes/first_note.md".to_string(), "es".to_string())]
+    );
+    assert_eq!(
+        found("silent hill", "en").await,
+        vec![("notes/first_note.md".to_string(), "en".to_string())]
+    );
+    assert_eq!(
+        found("español", "en").await,
+        vec![("notes/solo.md".to_string(), "es".to_string())]
+    );
+}
+
+#[tokio::test]
+async fn graph_and_backlinks_only_use_one_version_per_post() {
+    let garden = translated_garden();
+    let engine = engine(&garden).await;
+
+    let graph = engine.get_overall_graph_data().await;
+    let mut nodes: Vec<&str> = graph.nodes.iter().map(|n| n.file_path.as_str()).collect();
+    nodes.sort();
+    assert_eq!(
+        nodes,
+        vec![
+            "notes/first_note.md",
+            "notes/second_note.md",
+            "notes/solo.md",
+            "welcome.md"
+        ]
+    );
+
+    let welcome_backlinks: Vec<String> = engine
+        .get_backlinks("welcome.md")
+        .await
+        .into_iter()
+        .map(|b| b.file_path)
+        .collect();
+    assert_eq!(
+        welcome_backlinks,
+        vec!["notes/second_note.md"],
+        "links inside translations are not counted"
+    );
+
+    let first_note_backlinks: Vec<String> = engine
+        .get_backlinks("notes/first_note.md")
+        .await
+        .into_iter()
+        .map(|b| b.file_path)
+        .collect();
+    assert_eq!(
+        first_note_backlinks,
+        vec!["notes/solo.md", "welcome.md"],
+        "posts that only exist as a translation still link"
+    );
 }

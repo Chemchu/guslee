@@ -1,5 +1,6 @@
 use actix_web::{
     HttpRequest, HttpResponse, Responder, get,
+    http::header::CONTENT_LANGUAGE,
     web::{self, Data, Html},
 };
 use cached::cached;
@@ -9,7 +10,7 @@ use search_engine::{
     links::{LinkIndex, WikiLink, find_wikilinks, markdown_link_target, slugify},
     tags::find_inline_tags,
     types::{DEFAULT_SEARCH_LIMIT, Params},
-    utils::Post,
+    utils::{DEFAULT_LANG, Post},
 };
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -21,6 +22,7 @@ use crate::controllers::{
     AppState, PageMeta, base_url, is_partial_request, render_not_found, render_page_with_meta,
     tags_controller::tag_url, wrap_content_into_full_page, wrap_content_with_meta,
 };
+use crate::i18n::Locale;
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(landing)
@@ -31,45 +33,79 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 }
 
 #[get("/")]
-async fn landing(app_state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
-    let content = match std::fs::read_to_string(format!("{}/welcome.md", app_state.garden_path)) {
-        Ok(content) => content,
-        Err(e) => {
-            log::error!("Failed to read welcome.md: {}", e);
-            return Html::new(wrap_content_into_full_page(
+async fn landing(app_state: web::Data<AppState>, req: HttpRequest, locale: Locale) -> HttpResponse {
+    let Some(post) = load_post(&app_state, "welcome", locale).await else {
+        log::error!("Failed to read welcome.md");
+        return HttpResponse::Ok()
+            .content_type("text/html; charset=utf-8")
+            .body(wrap_content_into_full_page(
                 &app_state.app_name,
                 "<p>Error loading welcome page</p>",
             ));
-        }
     };
 
     let meta = PageMeta {
         title: None,
-        ..post_meta(&app_state, "welcome").await
+        ..post.meta
     };
     let url = format!("{}/", base_url(&req));
     Html::new(wrap_content_with_meta(
         &app_state.app_name,
-        post_page_shell(content, "welcome".to_string(), &Garden::of(&app_state))
-            .into_string()
-            .as_str(),
+        post_page_shell(
+            post.md,
+            "welcome".to_string(),
+            &post.lang,
+            &Garden::of(&app_state),
+        )
+        .into_string()
+        .as_str(),
         &meta,
         Some(&url),
     ))
+    .customize()
+    .insert_header((CONTENT_LANGUAGE, post.lang))
+    .respond_to(&req)
+    .map_into_boxed_body()
 }
 
-async fn post_meta(app_state: &AppState, route: &str) -> PageMeta {
-    match app_state
+struct LocalizedPost {
+    md: String,
+    lang: String,
+    meta: PageMeta,
+}
+
+async fn load_post(app_state: &AppState, route: &str, locale: Locale) -> Option<LocalizedPost> {
+    let post = app_state
         .post_search_engine
-        .get_post(&format!("{route}.md"))
-        .await
-    {
+        .get_post(&format!("{route}.md"), locale.as_str())
+        .await;
+    let lang = post
+        .as_ref()
+        .map_or(DEFAULT_LANG, |post| post.lang.as_str())
+        .to_string();
+    let md = fs::read_to_string(localized_file_path(&app_state.garden_path, route, &lang)).ok()?;
+    let meta = match post {
         Some(post) => PageMeta {
             title: Some(post.metadata.title),
             description: Some(post.metadata.description).filter(|d| !d.is_empty()),
             is_article: true,
+            lang: Some(lang.clone()),
+            translations: app_state
+                .post_search_engine
+                .translations(&post.file_path)
+                .await,
         },
         None => PageMeta::default(),
+    };
+
+    Some(LocalizedPost { md, lang, meta })
+}
+
+fn localized_file_path(garden_path: &str, route: &str, lang: &str) -> String {
+    if lang == DEFAULT_LANG {
+        format!("{garden_path}/{route}.md")
+    } else {
+        format!("{garden_path}/{route}.{lang}.md")
     }
 }
 
@@ -78,42 +114,59 @@ async fn get_post_page(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     route: web::Path<String>,
+    locale: Locale,
 ) -> HttpResponse {
     if !is_safe_post_route(&route) {
         return render_not_found(&app_state, &req);
     }
 
-    match fs::read_to_string(format!("{}/{}.md", app_state.garden_path, route)) {
-        Ok(md) => render_page_with_meta(
+    match load_post(&app_state, &route, locale).await {
+        Some(post) => render_page_with_meta(
             &app_state,
             &req,
-            &post_page_shell(md, route.to_string(), &Garden::of(&app_state)).into_string(),
-            &post_meta(&app_state, &route).await,
+            &post_page_shell(
+                post.md,
+                route.to_string(),
+                &post.lang,
+                &Garden::of(&app_state),
+            )
+            .into_string(),
+            &post.meta,
         )
+        .customize()
+        .insert_header((CONTENT_LANGUAGE, post.lang))
         .respond_to(&req)
         .map_into_boxed_body(),
-        Err(_err) => render_not_found(&app_state, &req),
+        None => render_not_found(&app_state, &req),
     }
 }
 
 #[get("/preview/{post:.*}")]
-async fn post_preview(app_state: web::Data<AppState>, route: web::Path<String>) -> HttpResponse {
+async fn post_preview(
+    app_state: web::Data<AppState>,
+    route: web::Path<String>,
+    locale: Locale,
+) -> HttpResponse {
     let post = app_state
         .post_search_engine
-        .get_post(&format!("{route}.md"))
+        .get_post(&format!("{route}.md"), locale.as_str())
         .await;
 
     match post {
         Some(post) => HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(post_preview_content(&post.content, &Garden::of(&app_state)).into_string()),
+            .insert_header((CONTENT_LANGUAGE, post.lang.as_str()))
+            .body(
+                post_preview_content(&post.content, &post.lang, &Garden::of(&app_state))
+                    .into_string(),
+            ),
         None => HttpResponse::NotFound().finish(),
     }
 }
 
-fn post_preview_content(md: &str, garden: &Garden) -> PreEscaped<String> {
+fn post_preview_content(md: &str, lang: &str, garden: &Garden) -> PreEscaped<String> {
     html! {
-        div class="prose prose-theme prose-sm max-w-none" {
+        div lang=(lang) class="prose prose-theme prose-sm max-w-none" {
             (PreEscaped(render_post_html(md, garden, "data-preview-anchor").0))
         }
     }
@@ -126,10 +179,10 @@ struct SwitcherPost {
 }
 
 #[get("/switcher.json")]
-async fn switcher_posts(app_state: web::Data<AppState>) -> HttpResponse {
+async fn switcher_posts(app_state: web::Data<AppState>, locale: Locale) -> HttpResponse {
     let posts: Vec<SwitcherPost> = app_state
         .post_search_engine
-        .published_posts()
+        .published_posts(locale.as_str())
         .await
         .into_iter()
         .map(|post| SwitcherPost {
@@ -157,40 +210,56 @@ async fn search_post(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     params: web::Query<Params>,
+    locale: Locale,
 ) -> Html {
     if !is_partial_request(&req) {
         return Html::new(String::from("Only HTMX requests for search engine"));
     }
 
-    Html::new(search_results_content(app_state, params.into_inner()).await)
+    Html::new(search_results_content(app_state, params.into_inner(), locale).await)
 }
 
 #[cached(
     key = "String",
     convert = r#"{
         format!(
-            "{}:{}:{}",
+            "{}:{}:{}:{}",
+            locale.as_str(),
             params.query.clone().unwrap_or("empty".to_string()),
             params.limit.clone().unwrap_or(DEFAULT_SEARCH_LIMIT).value(),
             params.view.clone().unwrap_or_default()
         )
     }"#
 )]
-async fn search_results_content(app_state: web::Data<AppState>, params: Params) -> String {
+async fn search_results_content(
+    app_state: web::Data<AppState>,
+    params: Params,
+    locale: Locale,
+) -> String {
     let is_empty_query = params.query.as_ref().is_none_or(|query| query.len() < 3);
     if is_empty_query && params.view.as_deref() == Some("folders") {
-        return build_folder_tree(&app_state.post_search_engine.published_posts().await);
+        return build_folder_tree(
+            &app_state
+                .post_search_engine
+                .published_posts(locale.as_str())
+                .await,
+        );
     }
 
     let matching_posts = match is_empty_query {
-        true => get_default_posts(app_state).await,
-        false => app_state.post_search_engine.query_posts(&params).await,
+        true => get_default_posts(app_state, locale).await,
+        false => {
+            app_state
+                .post_search_engine
+                .query_posts(&params, locale.as_str())
+                .await
+        }
     };
 
     build_posts_list(matching_posts)
 }
 
-async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
+async fn get_default_posts(app_state: Data<AppState>, locale: Locale) -> Vec<Post> {
     let posts_to_search = [
         "welcome.md",
         "hello.md",
@@ -199,45 +268,24 @@ async fn get_default_posts(app_state: Data<AppState>) -> Vec<Post> {
         "first_job_in_ireland.md",
         "rathmines.md",
     ];
-    let default_posts_string = posts_to_search
-        .iter()
-        .map(|file_name| format!("'{}'", file_name))
-        .collect::<Vec<String>>()
-        .join(", ");
-
-    let default_posts = app_state
+    let (default_posts, other_posts): (Vec<Post>, Vec<Post>) = app_state
         .post_search_engine
-        .raw_query::<Vec<Post>>(
-            format!(
-                "SELECT * FROM posts WHERE file_name IN [{}] AND metadata.is_draft = false",
-                default_posts_string,
-            )
-            .as_str(),
-        )
-        .await;
+        .published_posts(locale.as_str())
+        .await
+        .into_iter()
+        .partition(|post| posts_to_search.contains(&post.file_name.as_str()));
 
-    let posts_map: HashMap<String, Post> = default_posts
+    let mut posts_map: HashMap<String, Post> = default_posts
         .into_iter()
         .map(|f| (f.file_name.to_string(), f))
         .collect();
 
     let ordered_files: Vec<Post> = posts_to_search
         .iter()
-        .filter_map(|default_doc| posts_map.get(*default_doc).cloned())
+        .filter_map(|default_doc| posts_map.remove(*default_doc))
         .collect();
 
-    let all_missing_posts: Vec<Post> = app_state
-        .post_search_engine
-        .raw_query::<Vec<Post>>(
-            format!(
-                "SELECT * FROM posts WHERE file_name NOT IN [{}] AND metadata.is_draft = false",
-                default_posts_string,
-            )
-            .as_str(),
-        )
-        .await;
-
-    [ordered_files, all_missing_posts].concat()
+    [ordered_files, other_posts].concat()
 }
 
 #[derive(Default)]
@@ -738,12 +786,18 @@ fn outline(headings: &[Heading]) -> PreEscaped<String> {
     }
 }
 
-fn post_page_shell(md: String, post_path: String, garden: &Garden) -> PreEscaped<String> {
+fn post_page_shell(
+    md: String,
+    post_path: String,
+    lang: &str,
+    garden: &Garden,
+) -> PreEscaped<String> {
     let (post_html, headings) = render_post_html(&md, garden, "id");
     let tab_class = "pb-1 border-b-2 border-transparent text-zinc-500 hover:text-bright-color aria-selected:text-primary-color aria-selected:border-primary-color uppercase tracking-wider transition-colors";
 
     html! {
         div
+        lang=(lang)
         class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
             {
                (PreEscaped(post_html))
@@ -854,6 +908,7 @@ mod tests {
         Post {
             file_name: file_path.rsplit('/').next().unwrap().to_string(),
             file_path: file_path.to_string(),
+            lang: DEFAULT_LANG.to_string(),
             metadata: MdMetadata {
                 title: title.to_string(),
                 topic: topic.map(str::to_string),
@@ -960,8 +1015,13 @@ mod tests {
     fn post_shell_links_resolve_from_the_garden_root() {
         let md = "See [the fog](notes/fog) and [Rust](https://rust-lang.org/).".to_string();
 
-        let html =
-            post_page_shell(md, "journal/2025/deep_post".to_string(), &garden()).into_string();
+        let html = post_page_shell(
+            md,
+            "journal/2025/deep_post".to_string(),
+            DEFAULT_LANG,
+            &garden(),
+        )
+        .into_string();
 
         assert!(html.contains(r#"<a href="/posts/notes/fog">the fog</a>"#));
         assert!(html.contains(r#"<a href="https://rust-lang.org/">Rust</a>"#));
@@ -971,7 +1031,8 @@ mod tests {
     fn post_shell_renders_markdown_without_the_frontmatter() {
         let md = "---\ntitle: \"Hidden\"\n---\n# Heading\n\nSome *text*.".to_string();
 
-        let html = post_page_shell(md, "notes/first".to_string(), &garden()).into_string();
+        let html =
+            post_page_shell(md, "notes/first".to_string(), DEFAULT_LANG, &garden()).into_string();
 
         assert!(html.contains(r#"<h1 id="heading">Heading</h1>"#));
         assert!(html.contains("<em>text</em>"));
@@ -1087,7 +1148,8 @@ mod tests {
     fn post_shell_renders_wikilinks() {
         let md = "Read [[fog]] and `[[fog]]`.".to_string();
 
-        let html = post_page_shell(md, "welcome".to_string(), &garden()).into_string();
+        let html =
+            post_page_shell(md, "welcome".to_string(), DEFAULT_LANG, &garden()).into_string();
 
         assert!(html.contains(r#"<a href="/posts/notes/fog">fog</a>"#));
         assert!(html.contains("<code>[[fog]]</code>"));
@@ -1117,7 +1179,8 @@ mod tests {
     fn heading_links_match_heading_anchors() {
         let md = "# The fog\n\nSee [[#The fog]].".to_string();
 
-        let html = post_page_shell(md, "notes/fog".to_string(), &garden()).into_string();
+        let html =
+            post_page_shell(md, "notes/fog".to_string(), DEFAULT_LANG, &garden()).into_string();
 
         assert!(html.contains(r#"<h1 id="the-fog">"#));
         assert!(html.contains(r##"<a href="#the-fog">The fog</a>"##));
@@ -1125,8 +1188,12 @@ mod tests {
 
     #[test]
     fn previews_use_data_anchors_instead_of_ids() {
-        let html = post_preview_content("---\ntitle: \"x\"\n---\n# The fog\n\n[[fog]]", &garden())
-            .into_string();
+        let html = post_preview_content(
+            "---\ntitle: \"x\"\n---\n# The fog\n\n[[fog]]",
+            DEFAULT_LANG,
+            &garden(),
+        )
+        .into_string();
 
         assert!(html.contains(r#"<h1 data-preview-anchor="the-fog">The fog</h1>"#));
         assert!(html.contains(r#"<a href="/posts/notes/fog">fog</a>"#));
@@ -1158,7 +1225,8 @@ mod tests {
     fn post_shell_renders_inline_tags_but_not_headings() {
         let md = "# Title\n\nText #intro.".to_string();
 
-        let html = post_page_shell(md, "welcome".to_string(), &garden()).into_string();
+        let html =
+            post_page_shell(md, "welcome".to_string(), DEFAULT_LANG, &garden()).into_string();
 
         assert!(html.contains(r#"<h1 id="title">Title</h1>"#));
         assert!(html.contains(r#"href="/tags/intro""#));
@@ -1189,7 +1257,8 @@ mod tests {
     fn outline_indents_from_the_top_heading_level() {
         let md = "## Top\n\n### Child\n\n## Next".to_string();
 
-        let html = post_page_shell(md, "welcome".to_string(), &garden()).into_string();
+        let html =
+            post_page_shell(md, "welcome".to_string(), DEFAULT_LANG, &garden()).into_string();
         let outline = &html[html.find("id=\"outline-section\"").unwrap()..];
 
         assert!(outline.contains(r##"<li class="pl-0"><a href="#top""##));
@@ -1199,8 +1268,13 @@ mod tests {
 
     #[test]
     fn notes_without_headings_say_so_in_the_outline() {
-        let html = post_page_shell("Just text.".to_string(), "welcome".to_string(), &garden())
-            .into_string();
+        let html = post_page_shell(
+            "Just text.".to_string(),
+            "welcome".to_string(),
+            DEFAULT_LANG,
+            &garden(),
+        )
+        .into_string();
 
         assert!(html.contains("No headings in this note."));
     }
@@ -1209,7 +1283,8 @@ mod tests {
     fn post_shell_renders_callouts_and_highlights() {
         let md = "> [!tip] Hint\n> Read ==this== and [[fog]].".to_string();
 
-        let html = post_page_shell(md, "welcome".to_string(), &garden()).into_string();
+        let html =
+            post_page_shell(md, "welcome".to_string(), DEFAULT_LANG, &garden()).into_string();
 
         assert!(html.contains(
             r#"<div class="callout" data-callout="tip"><div class="callout-title">Hint</div>"#

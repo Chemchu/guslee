@@ -4,6 +4,7 @@ use maud::html;
 use crate::controllers::{
     AppState, PageMeta, encode_path, render_not_found, render_page_with_meta,
 };
+use crate::i18n::Locale;
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(tags_index).service(tag_page);
@@ -21,7 +22,10 @@ async fn tags_index(app_state: web::Data<AppState>, req: HttpRequest) -> HttpRes
 }
 
 async fn render_tags_index(app_state: &AppState, req: &HttpRequest) -> HttpResponse {
-    let tags = app_state.post_search_engine.tag_counts().await;
+    let tags = app_state
+        .post_search_engine
+        .tag_counts(Locale::negotiate(req).as_str())
+        .await;
 
     let template = html! {
         div
@@ -75,12 +79,16 @@ async fn tag_page(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     tag: web::Path<String>,
+    locale: Locale,
 ) -> HttpResponse {
     if tag.is_empty() {
         return render_tags_index(&app_state, &req).await;
     }
 
-    let posts = app_state.post_search_engine.posts_with_tag(&tag).await;
+    let posts = app_state
+        .post_search_engine
+        .posts_with_tag(&tag, locale.as_str())
+        .await;
     if posts.is_empty() {
         return render_not_found(&app_state, &req);
     }
