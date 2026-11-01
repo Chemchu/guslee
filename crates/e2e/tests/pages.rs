@@ -523,7 +523,7 @@ async fn post_pages_describe_themselves_for_link_previews() {
     assert!(full.contains(r#"<meta name="description" content="Everything about the fog">"#));
     assert!(full.contains(r#"<meta property="og:type" content="article">"#));
     assert!(full.contains(&format!(
-        r#"<meta property="og:url" content="{}/posts/notes/fog">"#,
+        r#"<meta property="og:url" content="{}/posts/notes/fog?lang=en">"#,
         app.address
     )));
     assert!(partial.starts_with(&format!("<title>Notes about the fog · {APP_NAME}</title>")));

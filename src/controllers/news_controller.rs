@@ -1,51 +1,23 @@
 use crate::controllers::{AppState, render_page};
+use crate::i18n::Locale;
 use actix_web::{HttpRequest, Responder, get, web};
 use maud::html;
-use serde::{Deserialize, Serialize};
-use surrealdb::types::SurrealValue;
-
-#[derive(SurrealValue, Serialize, Deserialize)]
-struct News {
-    title: String,
-    file_path: String,
-    date: String,
-    description: String,
-    tags: Vec<String>,
-}
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(news_page);
 }
 
 #[get("/news")]
-async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
-    let query = "SELECT 
-        file_path,
-        metadata.date AS date,
-        metadata.description AS description,
-        metadata.title AS title,
-        metadata.tags AS tags
-    FROM posts
-    WHERE metadata.is_draft = false
-    ORDER BY date DESC";
-
-    let news: Vec<News> = app_state
+async fn news_page(
+    app_state: web::Data<AppState>,
+    req: HttpRequest,
+    locale: Locale,
+) -> impl Responder {
+    let t = locale.texts();
+    let news = app_state
         .post_search_engine
-        .raw_query::<Vec<News>>(query)
-        .await
-        .iter()
-        .map(|n| {
-            let path = format!("/{}", n.file_path.replace(".md", ""));
-            News {
-                title: n.title.clone(),
-                file_path: path,
-                date: n.date.clone(),
-                description: n.description.clone(),
-                tags: n.tags.clone(),
-            }
-        })
-        .clone()
-        .collect();
+        .published_posts(locale.as_str())
+        .await;
 
     let is_empty = news.is_empty();
 
@@ -62,12 +34,12 @@ async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Res
                     h1
                     class="text-5xl md:text-6xl font-bold bg-clip-text mb-4"
                     {
-                        "Latest Updates"
+                        (t.news_title)
                     }
                     p
                     class="text-lg text-slate-600 dark:text-slate-400"
                     {
-                        "Discover my silly little adventures"
+                        (t.news_subtitle)
                     }
                 }
 
@@ -95,25 +67,26 @@ async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Res
                         h3
                         class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2"
                         {
-                            "No posts yet"
+                            (t.news_empty_title)
                         }
                         p
                         class="text-slate-600 dark:text-slate-400"
                         {
-                            "Check back soon for new content!"
+                            (t.news_empty_body)
                         }
                     }
                 } @else {
                     div
                     class="space-y-6"
                     {
-                        @for n in news {
+                        @for post in news {
+                        @let n = &post.metadata;
                         article
                         class="group relative shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-shade-color"
                         {
                             a
                             class="block p-6 md:p-8"
-                            href=(format!("/posts{}", n.file_path))
+                            href=(format!("/posts/{}", post.file_path.replace(".md", "")))
                             hx-target="#main-section"
                             hx-trigger="click"
                             hx-swap="innerHTML transition:true"
@@ -185,7 +158,7 @@ async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Res
                                     span
                                     class="text-sm"
                                     {
-                                        "Read more"
+                                        (t.news_read_more)
                                     }
                                     svg
                                     class="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-200"

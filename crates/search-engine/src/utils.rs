@@ -1,8 +1,11 @@
+use std::collections::HashMap;
 use std::fs;
 
 use gray_matter::Matter;
 use serde::{Deserialize, Serialize};
 use surrealdb::types::SurrealValue;
+
+pub const DEFAULT_LANG: &str = "en";
 
 pub struct TitleField;
 pub struct TagsField;
@@ -22,6 +25,7 @@ pub struct PostMetadata {
 pub struct Post {
     pub file_name: String,
     pub file_path: String,
+    pub lang: String,
     pub metadata: MdMetadata,
     pub content: String,
 }
@@ -74,6 +78,50 @@ fn source_url(repo_source: &str, post_path: &str) -> String {
         repo_source.trim_end_matches('/'),
         post_path.trim_start_matches("./")
     )
+}
+
+pub fn split_translation(file_path: &str) -> (String, &str) {
+    let translation = file_path
+        .strip_suffix(".md")
+        .and_then(|stem| stem.rsplit_once('.'))
+        .filter(|(name, lang)| {
+            !name.is_empty()
+                && !name.ends_with('/')
+                && lang.len() == 2
+                && lang.bytes().all(|b| b.is_ascii_lowercase())
+        });
+
+    match translation {
+        Some((name, lang)) => (format!("{name}.md"), lang),
+        None => (file_path.to_string(), DEFAULT_LANG),
+    }
+}
+
+fn lang_rank<'a>(post: &'a Post, lang: &str) -> (bool, bool, &'a str) {
+    (post.lang != lang, post.lang != DEFAULT_LANG, &post.lang)
+}
+
+pub fn localize(posts: Vec<Post>, lang: &str) -> Vec<Post> {
+    let mut order: Vec<String> = Vec::new();
+    let mut best: HashMap<String, Post> = HashMap::new();
+
+    for post in posts {
+        match best.get(&post.file_path) {
+            None => {
+                order.push(post.file_path.clone());
+                best.insert(post.file_path.clone(), post);
+            }
+            Some(current) if lang_rank(&post, lang) < lang_rank(current, lang) => {
+                best.insert(post.file_path.clone(), post);
+            }
+            Some(_) => {}
+        }
+    }
+
+    order
+        .into_iter()
+        .filter_map(|file_path| best.remove(&file_path))
+        .collect()
 }
 
 pub fn strip_frontmatter(content: &str) -> &str {
@@ -146,6 +194,96 @@ mod tests {
         assert_eq!(strip_frontmatter("---\ntitle: x\n---\n# Body"), "# Body");
         assert_eq!(strip_frontmatter("# No frontmatter"), "# No frontmatter");
         assert_eq!(strip_frontmatter("---\nunclosed"), "---\nunclosed");
+    }
+
+    fn post(file_path: &str, lang: &str) -> Post {
+        Post {
+            file_name: file_path.rsplit('/').next().unwrap().to_string(),
+            file_path: file_path.to_string(),
+            lang: lang.to_string(),
+            metadata: MdMetadata {
+                title: format!("{file_path} ({lang})"),
+                topic: None,
+                description: String::new(),
+                tags: vec![],
+                date: String::new(),
+                is_draft: false,
+                post_source_url: String::new(),
+                reading_time: 0,
+                last_updated: None,
+            },
+            content: String::new(),
+        }
+    }
+
+    fn picked(posts: &[Post]) -> Vec<(&str, &str)> {
+        posts
+            .iter()
+            .map(|p| (p.file_path.as_str(), p.lang.as_str()))
+            .collect()
+    }
+
+    #[test]
+    fn translation_suffixes_are_split_from_the_path() {
+        assert_eq!(
+            split_translation("gaming/peak/mesa_update.es.md"),
+            ("gaming/peak/mesa_update.md".to_string(), "es")
+        );
+        assert_eq!(
+            split_translation("gaming/peak/mesa_update.md"),
+            ("gaming/peak/mesa_update.md".to_string(), DEFAULT_LANG)
+        );
+        assert_eq!(
+            split_translation("welcome.fr.md"),
+            ("welcome.md".to_string(), "fr")
+        );
+    }
+
+    #[test]
+    fn dotted_names_that_are_not_languages_stay_untouched() {
+        for path in [
+            "v1.2.md",
+            "notes.ES.md",
+            "notes.eng.md",
+            "dir.es/post.md",
+            "notes/.es.md",
+        ] {
+            assert_eq!(split_translation(path), (path.to_string(), DEFAULT_LANG));
+        }
+    }
+
+    #[test]
+    fn localize_prefers_the_requested_language_then_the_default() {
+        let posts = vec![
+            post("a.md", "en"),
+            post("a.md", "es"),
+            post("b.md", "en"),
+            post("c.md", "fr"),
+            post("c.md", "es"),
+        ];
+
+        assert_eq!(
+            picked(&localize(posts.clone(), "es")),
+            vec![("a.md", "es"), ("b.md", "en"), ("c.md", "es")]
+        );
+        assert_eq!(
+            picked(&localize(posts.clone(), "en")),
+            vec![("a.md", "en"), ("b.md", "en"), ("c.md", "es")]
+        );
+        assert_eq!(
+            picked(&localize(posts, "de")),
+            vec![("a.md", "en"), ("b.md", "en"), ("c.md", "es")]
+        );
+    }
+
+    #[test]
+    fn localize_keeps_the_order_of_first_appearance() {
+        let posts = vec![post("b.md", "es"), post("a.md", "en"), post("b.md", "en")];
+
+        assert_eq!(
+            picked(&localize(posts, "en")),
+            vec![("b.md", "en"), ("a.md", "en")]
+        );
     }
 
     #[test]

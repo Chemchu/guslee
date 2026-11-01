@@ -4,6 +4,7 @@ use maud::html;
 use crate::controllers::{
     AppState, PageMeta, encode_path, render_not_found, render_page_with_meta,
 };
+use crate::i18n::{Locale, fill};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(tags_index).service(tag_page);
@@ -21,7 +22,12 @@ async fn tags_index(app_state: web::Data<AppState>, req: HttpRequest) -> HttpRes
 }
 
 async fn render_tags_index(app_state: &AppState, req: &HttpRequest) -> HttpResponse {
-    let tags = app_state.post_search_engine.tag_counts().await;
+    let locale = Locale::negotiate(req);
+    let t = locale.texts();
+    let tags = app_state
+        .post_search_engine
+        .tag_counts(locale.as_str())
+        .await;
 
     let template = html! {
         div
@@ -33,8 +39,8 @@ async fn render_tags_index(app_state: &AppState, req: &HttpRequest) -> HttpRespo
                 div
                 class="mb-8"
                 {
-                    h1 class="text-5xl md:text-6xl font-bold mb-2" { "TAGS" }
-                    p class="text-zinc-500" { (tags.len()) " tags" }
+                    h1 class="text-5xl md:text-6xl font-bold mb-2" { (t.tags_title) }
+                    p class="text-zinc-500" { (fill(t.tags_count, tags.len())) }
                 }
                 ul
                 id="tag-index"
@@ -62,8 +68,8 @@ async fn render_tags_index(app_state: &AppState, req: &HttpRequest) -> HttpRespo
     };
 
     let meta = PageMeta {
-        description: Some(format!("All {} tags of the garden", tags.len())),
-        ..PageMeta::titled("TAGS")
+        description: Some(fill(t.tags_description, tags.len())),
+        ..PageMeta::titled(t.tags_title)
     };
     render_page_with_meta(app_state, req, &template.into_string(), &meta)
         .respond_to(req)
@@ -75,12 +81,17 @@ async fn tag_page(
     app_state: web::Data<AppState>,
     req: HttpRequest,
     tag: web::Path<String>,
+    locale: Locale,
 ) -> HttpResponse {
     if tag.is_empty() {
         return render_tags_index(&app_state, &req).await;
     }
 
-    let posts = app_state.post_search_engine.posts_with_tag(&tag).await;
+    let t = locale.texts();
+    let posts = app_state
+        .post_search_engine
+        .posts_with_tag(&tag, locale.as_str())
+        .await;
     if posts.is_empty() {
         return render_not_found(&app_state, &req);
     }
@@ -98,14 +109,14 @@ async fn tag_page(
                     a
                     href="/tags"
                     class="text-sm text-zinc-500 hover:text-primary-color"
-                    { "← All tags" }
+                    { (t.tag_back) }
                     h1
                     class="pt-4 text-4xl md:text-5xl font-bold text-primary-color mb-2 break-words"
                     { "#" (tag.as_str()) }
                     p
                     class="text-zinc-500"
                     {
-                        (posts.len()) @if posts.len() == 1 { " post" } @else { " posts" }
+                        (fill(if posts.len() == 1 { t.tag_post_one } else { t.tag_post_other }, posts.len()))
                     }
                 }
                 ul
@@ -147,7 +158,7 @@ async fn tag_page(
     };
 
     let meta = PageMeta {
-        description: Some(format!("Notes tagged #{}", tag.as_str())),
+        description: Some(fill(t.tag_description, tag.as_str())),
         ..PageMeta::titled(format!("#{}", tag.as_str()))
     };
     render_page_with_meta(&app_state, &req, &template.into_string(), &meta)

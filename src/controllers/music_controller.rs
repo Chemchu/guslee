@@ -7,6 +7,7 @@ use maud::{PreEscaped, html};
 use music_module::{SpotifyUser, TopArtistsResponse, TopTracksResponse};
 
 use crate::controllers::{AppState, render_page};
+use crate::i18n::{Locale, Texts, fill};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(get_user_profile)
@@ -15,7 +16,12 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 }
 
 #[get("/music/profile")]
-async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
+async fn get_user_profile(
+    app_state: web::Data<AppState>,
+    req: HttpRequest,
+    locale: Locale,
+) -> Html {
+    let t = locale.texts();
     let mut spotify_state = app_state.spotify_state.lock().await;
     let user_profile = spotify_state.fetch_user_profile().await;
 
@@ -23,17 +29,17 @@ async fn get_user_profile(app_state: web::Data<AppState>, req: HttpRequest) -> H
         true => {
             html! {
                 div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
-                    "Error loading spotify"
+                    (t.music_error)
                 }
             }
         }
-        false => render_spotify_profile(user_profile.unwrap()),
+        false => render_spotify_profile(user_profile.unwrap(), t),
     };
 
     render_page(&app_state, &req, &html_to_render.0)
 }
 
-fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
+fn render_spotify_profile(user: SpotifyUser, t: &Texts) -> PreEscaped<String> {
     html! {
         div class="flex flex-col w-full gap-4 p-6 lg:p-8 overflow-auto" {
             div class="bg-background-color p-6 border border-shade-color border-l-[3px] border-l-primary-color" {
@@ -51,12 +57,12 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                             }
                         }
                         p class="text-gray-300 text-lg" {
-                            (title_case(&format!("{} subscriber", user.product)))
+                            (title_case(&fill(t.music_subscriber, &user.product)))
                         }
                         div class="flex gap-6 text-sm text-gray-400" {
                             div class="flex items-center gap-2" {
                                 span class="font-bold" { (user.followers.total) }
-                                span { "Followers" }
+                                span { (t.music_followers) }
                             }
                         }
                     }
@@ -69,7 +75,7 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                         div class="w-[3px] h-8 bg-primary-color" {}
                         div class="flex flex-col gap-1 w-full" {
                             h2 class="text-2xl font-bold text-bright-color" {
-                                "Top Songs"
+                                (t.music_top_songs)
                             }
                             h3 id="tracks-time-range"
                                 class="text-lg font-bold text-bright-color cursor-pointer hover:text-primary-color transition-colors select-none" {
@@ -78,7 +84,7 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                                     hx-get="/music/time-range/tracks/long_term/next"
                                     hx-target="this"
                                     hx-swap="outerHTML" {
-                                        "Last year"
+                                        (t.music_last_year)
                                         span class="text-sm opacity-90 transition-all duration-300 inline-block group-hover:opacity-100 group-hover:rotate-180" { "⟳" }
                                 }
                             }
@@ -89,7 +95,7 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                         hx-target="this"
                         hx-trigger="load"
                         hx-swap="innerHTML" {
-                        "Loading..."
+                        (t.loading)
                     }
                 }
                 div class="flex flex-col gap-4 min-w-0 bg-background-color p-6" {
@@ -97,7 +103,7 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                         div class="w-[3px] h-8 bg-primary-color" {}
                         div class="flex flex-col gap-1 w-full" {
                             h2 class="text-2xl font-bold text-bright-color" {
-                                "Top Artists"
+                                (t.music_top_artists)
                             }
                             h3 id="artists-time-range"
                                 class="text-lg font-bold text-bright-color cursor-pointer hover:text-primary-color transition-colors select-none" {
@@ -106,7 +112,7 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                                     hx-get="/music/time-range/artists/long_term/next"
                                     hx-target="this"
                                     hx-swap="outerHTML" {
-                                        "Last year"
+                                        (t.music_last_year)
                                         span class="text-sm opacity-90 transition-all duration-300 inline-block group-hover:opacity-100 group-hover:rotate-180" { "⟳" }
                                 }
                             }
@@ -117,7 +123,7 @@ fn render_spotify_profile(user: SpotifyUser) -> PreEscaped<String> {
                         hx-target="this"
                         hx-trigger="load"
                         hx-swap="innerHTML" {
-                        "Loading..."
+                        (t.loading)
                     }
                 }
             }
@@ -134,10 +140,11 @@ pub enum TopItems {
 async fn get_user_top_item(
     app_state: web::Data<AppState>,
     args: web::Path<(String, String)>,
+    locale: Locale,
 ) -> Html {
     let (item, time_range) = args.into_inner();
     Html::new(
-        user_top_item_content(app_state, item, time_range)
+        user_top_item_content(app_state, item, time_range, locale)
             .await
             .unwrap_or_else(|error_html| error_html),
     )
@@ -147,10 +154,11 @@ async fn get_user_top_item(
 async fn cycle_time_range(
     app_state: web::Data<AppState>,
     args: web::Path<(String, String)>,
+    locale: Locale,
 ) -> Html {
     let (content_type, current_term) = args.into_inner();
     Html::new(
-        cycle_time_range_content(app_state, content_type, current_term)
+        cycle_time_range_content(app_state, content_type, current_term, locale)
             .await
             .unwrap_or_else(|error_html| error_html),
     )
@@ -159,13 +167,15 @@ async fn cycle_time_range(
 #[cached(
     ttl_secs = 86400,
     key = "String",
-    convert = r#"{ format!("top_item-{}-time_range-{}", item, time_range) }"#
+    convert = r#"{ format!("top_item-{}-time_range-{}-{}", item, time_range, locale.as_str()) }"#
 )]
 async fn user_top_item_content(
     app_state: web::Data<AppState>,
     item: String,
     time_range: String,
+    locale: Locale,
 ) -> Result<String, String> {
+    let t = locale.texts();
     let error_html = |message: String| {
         html! {
             div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
@@ -185,40 +195,44 @@ async fn user_top_item_content(
             .fetch_top_items::<TopTracksResponse>(&item, &time_range)
             .await
             .map(TopItems::Tracks),
-        _ => return Err(error_html("Error loading Spotify item".to_string())),
+        _ => return Err(error_html(t.music_item_error.to_string())),
     };
 
     match top_items {
-        Ok(TopItems::Artists(top_artists)) => Ok(render_artists_list(&top_artists).into_string()),
+        Ok(TopItems::Artists(top_artists)) => {
+            Ok(render_artists_list(&top_artists, t).into_string())
+        }
         Ok(TopItems::Tracks(top_tracks)) => Ok(render_tracks_list(&top_tracks).into_string()),
-        Err(e) => Err(error_html(format!("Error loading Spotify item: {}", e))),
+        Err(e) => Err(error_html(format!("{}: {}", t.music_item_error, e))),
     }
 }
 
 #[cached(
     ttl_secs = 86400,
     key = "String",
-    convert = r#"{ format!("type-{}-term-{}", content_type, current_term) }"#
+    convert = r#"{ format!("type-{}-term-{}-{}", content_type, current_term, locale.as_str()) }"#
 )]
 async fn cycle_time_range_content(
     app_state: web::Data<AppState>,
     content_type: String,
     current_term: String,
+    locale: Locale,
 ) -> Result<String, String> {
-    let (next_term, label) = next_time_range(&current_term);
+    let t = locale.texts();
+    let (next_term, label) = next_time_range(&current_term, t);
 
     let mut spotify_state = app_state.spotify_state.lock().await;
     let top_items_html = match content_type.as_str() {
         "artists" => spotify_state
             .fetch_top_items::<TopArtistsResponse>(&content_type, next_term)
             .await
-            .map(|top_artists| render_artists_list(&top_artists))
-            .map_err(|e| html! { div { "Error loading artists: " (e) } }),
+            .map(|top_artists| render_artists_list(&top_artists, t))
+            .map_err(|e| html! { div { (t.music_artists_error) ": " (e) } }),
         "tracks" => spotify_state
             .fetch_top_items::<TopTracksResponse>(&content_type, next_term)
             .await
             .map(|top_tracks| render_tracks_list(&top_tracks))
-            .map_err(|e| html! { div { "Error loading tracks: " (e) } }),
+            .map_err(|e| html! { div { (t.music_tracks_error) ": " (e) } }),
         _ => Err(html! { div { "Invalid content type" } }),
     };
 
@@ -242,7 +256,7 @@ async fn cycle_time_range_content(
     top_items_html.map(render).map_err(render)
 }
 
-fn render_artists_list(top_artists: &TopArtistsResponse) -> PreEscaped<String> {
+fn render_artists_list(top_artists: &TopArtistsResponse, t: &Texts) -> PreEscaped<String> {
     html! {
         div class="flex flex-col gap-2" {
             @for artist in top_artists.items.iter() {
@@ -261,7 +275,7 @@ fn render_artists_list(top_artists: &TopArtistsResponse) -> PreEscaped<String> {
                             @if let Some(genre) = artist.genres.first() {
                                 (genre)
                             } @else {
-                                "Artist"
+                                (t.music_artist)
                             }
                         }
                     }
@@ -303,12 +317,12 @@ fn render_tracks_list(top_tracks: &TopTracksResponse) -> PreEscaped<String> {
     }
 }
 
-fn next_time_range(current_term: &str) -> (&'static str, &'static str) {
+fn next_time_range(current_term: &str, t: &Texts) -> (&'static str, &'static str) {
     match current_term {
-        "long_term" => ("medium_term", "Last 6 months"),
-        "medium_term" => ("short_term", "Last 4 weeks"),
-        "short_term" => ("long_term", "Last year"),
-        _ => ("long_term", "Last year"),
+        "long_term" => ("medium_term", t.music_last_6_months),
+        "medium_term" => ("short_term", t.music_last_4_weeks),
+        "short_term" => ("long_term", t.music_last_year),
+        _ => ("long_term", t.music_last_year),
     }
 }
 
@@ -331,20 +345,32 @@ mod tests {
 
     #[test]
     fn time_ranges_cycle_long_medium_short() {
+        let t = Locale::En.texts();
         assert_eq!(
-            next_time_range("long_term"),
+            next_time_range("long_term", t),
             ("medium_term", "Last 6 months")
         );
         assert_eq!(
-            next_time_range("medium_term"),
+            next_time_range("medium_term", t),
             ("short_term", "Last 4 weeks")
         );
-        assert_eq!(next_time_range("short_term"), ("long_term", "Last year"));
+        assert_eq!(next_time_range("short_term", t), ("long_term", "Last year"));
+    }
+
+    #[test]
+    fn time_range_labels_follow_the_language() {
+        assert_eq!(
+            next_time_range("long_term", Locale::Es.texts()),
+            ("medium_term", "Últimos 6 meses")
+        );
     }
 
     #[test]
     fn unknown_time_ranges_restart_the_cycle() {
-        assert_eq!(next_time_range("forever"), ("long_term", "Last year"));
+        assert_eq!(
+            next_time_range("forever", Locale::En.texts()),
+            ("long_term", "Last year")
+        );
     }
 
     #[test]

@@ -2,7 +2,7 @@ use actix_web::{
     App, Error,
     body::MessageBody,
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
-    middleware::{Compress, Logger},
+    middleware::{Compress, Logger, from_fn},
     web,
 };
 
@@ -10,6 +10,7 @@ use crate::controllers::AppState;
 
 pub mod controllers;
 pub mod helpers;
+pub mod i18n;
 
 pub fn create_app(
     app_state: web::Data<AppState>,
@@ -23,6 +24,7 @@ pub fn create_app(
     >,
 > {
     App::new()
+        .wrap(from_fn(i18n::locale_headers))
         .wrap(Compress::default())
         .wrap(Logger::new("%s %r - %Dms"))
         .service(actix_files::Files::new("/_static", "./static"))

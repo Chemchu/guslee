@@ -13,7 +13,9 @@ use crate::tags::{markdown_inline_tags, tag_matches};
 use crate::types::EdgeFilePath;
 use crate::types::Params;
 use crate::types::{DEFAULT_SEARCH_LIMIT, GraphData, GraphEdge, GraphNode};
-use crate::utils::{Post, extract_full_metadata, strip_frontmatter};
+use crate::utils::{
+    DEFAULT_LANG, Post, extract_full_metadata, localize, split_translation, strip_frontmatter,
+};
 
 pub mod git_dates;
 pub mod links;
@@ -71,19 +73,17 @@ impl PostsSearchEngine {
                 && path.extension().is_some_and(|ext| ext == "md")
                 && let Ok(relative_path) = path.strip_prefix(documents_path)
             {
-                let file_path = relative_path.to_string_lossy().to_string();
-                let file_name = relative_path
-                    .file_name()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string();
-                let full_path = format!("{}/{}", documents_path, file_path);
+                let source_path = relative_path.to_string_lossy().to_string();
+                let (file_path, lang) = split_translation(&source_path);
+                let lang = lang.to_string();
+                let file_name = file_path.rsplit('/').next().unwrap().to_string();
+                let full_path = format!("{}/{}", documents_path, source_path);
 
                 match fs::read_to_string(path) {
                     Ok(content) => {
                         let mut metadata =
                             extract_full_metadata(repo_path, full_path.as_str()).unwrap();
-                        metadata.last_updated = last_updated.get(&file_path).cloned();
+                        metadata.last_updated = last_updated.get(&source_path).cloned();
                         for tag in markdown_inline_tags(&content) {
                             if !metadata.tags.iter().any(|t| t.eq_ignore_ascii_case(&tag)) {
                                 metadata.tags.push(tag);
@@ -92,6 +92,7 @@ impl PostsSearchEngine {
                         let post = Post {
                             file_name,
                             file_path,
+                            lang,
                             metadata,
                             content,
                         };
@@ -104,8 +105,13 @@ impl PostsSearchEngine {
             }
         }
 
+        let canonical_posts = localize(posts.clone(), DEFAULT_LANG);
+        let canonical_langs: HashMap<String, String> = canonical_posts
+            .iter()
+            .map(|post| (post.file_path.clone(), post.lang.clone()))
+            .collect();
         let link_index = LinkIndex::new(
-            posts
+            canonical_posts
                 .iter()
                 .filter(|post| !post.metadata.is_draft)
                 .map(|post| &post.file_path),
@@ -121,6 +127,7 @@ impl PostsSearchEngine {
             DEFINE TABLE posts SCHEMAFULL;
             DEFINE FIELD file_name ON posts TYPE string;
             DEFINE FIELD file_path ON posts TYPE string;
+            DEFINE FIELD lang ON posts TYPE string;
             DEFINE FIELD metadata ON posts TYPE object;
             DEFINE FIELD metadata.title ON posts TYPE string;
             DEFINE FIELD metadata.description ON posts TYPE string;
@@ -132,7 +139,7 @@ impl PostsSearchEngine {
             DEFINE FIELD metadata.reading_time ON posts TYPE int;
             DEFINE FIELD metadata.last_updated ON posts TYPE option<string>;
             DEFINE FIELD content ON posts TYPE string;
-            DEFINE INDEX file_path_index ON TABLE posts COLUMNS file_path UNIQUE;
+            DEFINE INDEX file_path_index ON TABLE posts COLUMNS file_path, lang UNIQUE;
 
             -- Define a custom analyzer
             DEFINE ANALYZER OVERWRITE full_text_analyzer TOKENIZERS class FILTERS lowercase, ascii, edgengram(2, 15);
@@ -144,26 +151,25 @@ impl PostsSearchEngine {
         .await
         .and_then(|response| response.check())
         .expect("Failed to define the posts schema");
-        let inserted_posts = db
-            .insert::<Vec<Post>>("posts")
+        db.insert::<Vec<Post>>("posts")
             .content(posts)
             .await
             .unwrap();
 
-        for inserted_post in inserted_posts.iter() {
-            let mentioned_posts = get_mentioned_posts_in_post_content(inserted_post, &link_index);
-            if mentioned_posts.is_empty() {
-                continue;
-            }
-
-            let source_path = inserted_post.file_path.clone();
+        for canonical_post in canonical_posts.iter() {
+            let mentioned_posts = get_mentioned_posts_in_post_content(canonical_post, &link_index);
 
             for mentioned_path in mentioned_posts {
-                let query_string = "RELATE (SELECT id FROM posts WHERE file_path = $source)->points_to->(SELECT id FROM posts WHERE file_path = $target)";
+                let Some(target_lang) = canonical_langs.get(&mentioned_path) else {
+                    continue;
+                };
+                let query_string = "RELATE (SELECT id FROM posts WHERE file_path = $source AND lang = $source_lang)->points_to->(SELECT id FROM posts WHERE file_path = $target AND lang = $target_lang)";
                 let _ = db
                     .query(query_string)
-                    .bind(("source", source_path.clone()))
+                    .bind(("source", canonical_post.file_path.clone()))
+                    .bind(("source_lang", canonical_post.lang.clone()))
                     .bind(("target", mentioned_path))
+                    .bind(("target_lang", target_lang.clone()))
                     .await
                     .unwrap();
             }
@@ -198,7 +204,7 @@ impl PostsSearchEngine {
         backlinks
     }
 
-    pub async fn query_posts(&self, params: &Params) -> Vec<Post> {
+    pub async fn query_posts(&self, params: &Params, lang: &str) -> Vec<Post> {
         let limit = match &params.limit {
             Some(l) => l.value(),
             None => DEFAULT_SEARCH_LIMIT.value(),
@@ -219,15 +225,24 @@ impl PostsSearchEngine {
                 FROM posts
                 WHERE (metadata.title @0@ $query OR content @1@ $query)
                    AND metadata.is_draft = false
-                ORDER BY combined_score DESC
-                LIMIT $limit",
+                ORDER BY combined_score DESC",
             )
             .bind(("query", query))
-            .bind(("limit", limit))
             .await;
 
-        match response.and_then(|mut r| r.take(0)) {
-            Ok(posts) => posts,
+        match response.and_then(|mut r| r.take::<Vec<Post>>(0)) {
+            Ok(hits) => {
+                let mut localized: HashMap<String, Post> = self
+                    .published_posts(lang)
+                    .await
+                    .into_iter()
+                    .map(|post| (post.file_path.clone(), post))
+                    .collect();
+                hits.into_iter()
+                    .filter_map(|hit| localized.remove(&hit.file_path))
+                    .take(limit)
+                    .collect()
+            }
             Err(e) => {
                 eprintln!("Search query failed: {}", e);
                 Vec::new()
@@ -235,28 +250,46 @@ impl PostsSearchEngine {
         }
     }
 
-    pub async fn get_post(&self, file_path: &str) -> Option<Post> {
-        self.db
+    pub async fn get_post(&self, file_path: &str, lang: &str) -> Option<Post> {
+        let posts = self
+            .db
             .query("SELECT * FROM posts WHERE file_path = $path AND metadata.is_draft = false")
             .bind(("path", file_path.to_string()))
             .await
             .unwrap()
-            .take::<Option<Post>>(0)
-            .unwrap()
+            .take::<Vec<Post>>(0)
+            .unwrap();
+        localize(posts, lang).into_iter().next()
     }
 
-    pub async fn posts_with_tag(&self, tag: &str) -> Vec<Post> {
-        self.published_posts()
+    pub async fn translations(&self, file_path: &str) -> Vec<String> {
+        let mut langs: Vec<String> = self
+            .db
+            .query(
+                "SELECT VALUE lang FROM posts WHERE file_path = $path AND metadata.is_draft = false",
+            )
+            .bind(("path", file_path.to_string()))
+            .await
+            .and_then(|mut r| r.take(0))
+            .unwrap_or_default();
+        langs.sort();
+        langs
+    }
+
+    pub async fn posts_with_tag(&self, tag: &str, lang: &str) -> Vec<Post> {
+        self.published_posts(lang)
             .await
             .into_iter()
             .filter(|post| post.metadata.tags.iter().any(|t| tag_matches(t, tag)))
             .collect()
     }
 
-    pub async fn published_posts(&self) -> Vec<Post> {
-        let mut posts: Vec<Post> = self
-            .raw_query::<Vec<Post>>("SELECT * FROM posts WHERE metadata.is_draft = false")
-            .await;
+    pub async fn published_posts(&self, lang: &str) -> Vec<Post> {
+        let mut posts = localize(
+            self.raw_query::<Vec<Post>>("SELECT * FROM posts WHERE metadata.is_draft = false")
+                .await,
+            lang,
+        );
         posts.sort_by(|a, b| {
             b.metadata
                 .date
@@ -266,8 +299,8 @@ impl PostsSearchEngine {
         posts
     }
 
-    pub async fn tag_counts(&self) -> Vec<(String, usize)> {
-        let posts = self.published_posts().await;
+    pub async fn tag_counts(&self, lang: &str) -> Vec<(String, usize)> {
+        let posts = self.published_posts(lang).await;
         let mut tags: Vec<String> = Vec::new();
         for tag in posts.iter().flat_map(|post| &post.metadata.tags) {
             let segments: Vec<&str> = tag.split('/').collect();
@@ -296,12 +329,7 @@ impl PostsSearchEngine {
     }
 
     pub async fn get_overall_graph_data(&self) -> GraphData {
-        let mut posts_result = self
-            .db
-            .query("SELECT * FROM posts WHERE metadata.is_draft = false")
-            .await
-            .unwrap();
-        let posts: Vec<Post> = posts_result.take(0).unwrap();
+        let posts = self.published_posts(DEFAULT_LANG).await;
 
         let mut edges_result = self
             .db
@@ -346,12 +374,16 @@ impl PostsSearchEngine {
         main_node_file_path: &str,
         depth: usize,
     ) -> GraphData {
-        if self.get_post(main_node_file_path).await.is_none() {
+        if self
+            .get_post(main_node_file_path, DEFAULT_LANG)
+            .await
+            .is_none()
+        {
             return GraphData::empty();
         }
 
         let titles: HashMap<String, String> = self
-            .published_posts()
+            .published_posts(DEFAULT_LANG)
             .await
             .into_iter()
             .map(|post| (post.file_path, post.metadata.title))
@@ -422,7 +454,7 @@ impl PostsSearchEngine {
     }
 
     pub async fn get_unlinked_mentions(&self, file_path: &str) -> Vec<Mention> {
-        let Some(target) = self.get_post(file_path).await else {
+        let Some(target) = self.get_post(file_path, DEFAULT_LANG).await else {
             return Vec::new();
         };
         let title = target.metadata.title.trim();
@@ -441,7 +473,7 @@ impl PostsSearchEngine {
             .collect();
 
         let mut mentions: Vec<Mention> = self
-            .published_posts()
+            .published_posts(DEFAULT_LANG)
             .await
             .into_iter()
             .filter(|post| post.file_path != file_path && !linked.contains(&post.file_path))
@@ -550,6 +582,7 @@ mod tests {
         Post {
             file_name: "post.md".to_string(),
             file_path: "post.md".to_string(),
+            lang: DEFAULT_LANG.to_string(),
             metadata: MdMetadata {
                 title: "Post".to_string(),
                 topic: None,

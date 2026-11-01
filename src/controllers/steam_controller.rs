@@ -7,14 +7,15 @@ use games_module::{RecentGame, SteamProfile, TopGame};
 use maud::{PreEscaped, html};
 
 use crate::controllers::{AppState, render_page};
+use crate::i18n::{Locale, Texts, fill};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(steam_page);
 }
 
 #[get("/steam")]
-async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
-    let content = steam_page_content(app_state.clone())
+async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest, locale: Locale) -> Html {
+    let content = steam_page_content(app_state.clone(), locale)
         .await
         .unwrap_or_else(|error_html| error_html);
 
@@ -24,20 +25,24 @@ async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest) -> Html {
 #[cached(
     ttl_secs = 3600,
     key = "String",
-    convert = r#"{ "steam".to_string() }"#
+    convert = r#"{ format!("steam-{}", locale.as_str()) }"#
 )]
-async fn steam_page_content(app_state: web::Data<AppState>) -> Result<String, String> {
+async fn steam_page_content(
+    app_state: web::Data<AppState>,
+    locale: Locale,
+) -> Result<String, String> {
+    let t = locale.texts();
     let profile = app_state.steam_state.get_profile().await;
     let recent_games = app_state.steam_state.get_recent_games(5).await;
     let top_games = app_state.steam_state.get_top_played_games(5).await;
 
     match (profile, recent_games, top_games) {
         (Ok(profile), Ok(recent_games), Ok(top_games)) => {
-            Ok(render_steam_page(profile, recent_games, top_games).into_string())
+            Ok(render_steam_page(profile, recent_games, top_games, t).into_string())
         }
         _ => Err(html! {
             div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
-                "Error loading Steam page"
+                (t.steam_error)
             }
         }
         .into_string()),
@@ -48,17 +53,18 @@ fn render_steam_page(
     profile: SteamProfile,
     recent_games: Vec<RecentGame>,
     top_games: Vec<TopGame>,
+    t: &Texts,
 ) -> PreEscaped<String> {
     html! {
         @let status_text = match profile.personastate {
-            0 => "Offline",
-            1 => "Online",
-            2 => "Busy",
-            3 => "Away",
-            4 => "Snooze",
-            5 => "Looking to Trade",
-            6 => "Looking to Play",
-            _ => "Unknown",
+            0 => t.steam_offline,
+            1 => t.steam_online,
+            2 => t.steam_busy,
+            3 => t.steam_away,
+            4 => t.steam_snooze,
+            5 => t.steam_looking_to_trade,
+            6 => t.steam_looking_to_play,
+            _ => t.steam_unknown,
         };
 
         @let status_classes = match profile.personastate {
@@ -93,7 +99,7 @@ fn render_steam_page(
                                 {
                                     img
                                         src=(profile.avatar_full)
-                                        alt="Steam Avatar"
+                                        alt=(t.steam_avatar_alt)
                                         class="transition-all duration-200 w-32 h-32 border-4 border-slate-700 shadow-xl hover:border-primary-color";
                                 }
                                 div
@@ -119,7 +125,7 @@ fn render_steam_page(
 
                                     span class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm font-semibold border border-purple-500/30"
                                     {
-                                        "Level " (profile.level)
+                                        (fill(t.steam_level, profile.level))
                                     }
                                 }
 
@@ -135,7 +141,7 @@ fn render_steam_page(
                                 target="_blank"
                                 class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
                             {
-                                "View on Steam"
+                                (t.steam_view_profile)
                                 svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
                                     path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" {}
                                 }
@@ -169,14 +175,14 @@ fn render_steam_page(
                                 }
                             }
                             div {
-                                p class="text-slate-400 text-sm font-medium" { "Member Since" }
+                                p class="text-slate-400 text-sm font-medium" { (t.steam_member_since) }
                                 p class="text-xl font-bold text-white" {
                                     @if let Some(timestamp) = profile.timecreated {
                                         (chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp as i64, 0)
                                             .unwrap()
                                             .format("%b %Y"))
                                     } @else {
-                                        "Unknown"
+                                        (t.steam_unknown)
                                     }
                                 }
                             }
@@ -193,7 +199,7 @@ fn render_steam_page(
                                 }
                             }
                             div {
-                                p class="text-slate-400 text-sm font-medium" { "Country" }
+                                p class="text-slate-400 text-sm font-medium" { (t.steam_country) }
                                 p class="text-xl font-bold text-white" { (country) }
                             }
                         }
@@ -207,7 +213,7 @@ fn render_steam_page(
                         path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" {}
                         path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" {}
                     }
-                    "Recently Played"
+                    (t.steam_recently_played)
                 }
 
                 div class="grid grid-cols-1 gap-4" {
@@ -229,13 +235,13 @@ fn render_steam_page(
                                             svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
                                                 path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" {}
                                             }
-                                            span { (format_playtime(game.playtime_2weeks)) " (2 weeks)" }
+                                            span { (format_playtime(game.playtime_2weeks)) " " (t.steam_two_weeks) }
                                         }
                                         div class="flex items-center gap-1 text-slate-500" {
                                             svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
                                                 path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" {}
                                             }
-                                            span { (format_playtime(game.playtime_forever)) " total" }
+                                            span { (format_playtime(game.playtime_forever)) " " (t.steam_total) }
                                         }
                                     }
                                 }
@@ -263,7 +269,7 @@ fn render_steam_page(
                         path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" {}
                         path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" {}
                     }
-                    "Top Played Games"
+                    (t.steam_top_played)
                 }
                 div class="grid grid-cols-1 gap-4" {
                     @for game in &top_games {
@@ -284,13 +290,13 @@ fn render_steam_page(
                                             svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
                                                 path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" {}
                                             }
-                                            span { (format_playtime(game.playtime_2weeks.unwrap_or(0))) " (2 weeks)" }
+                                            span { (format_playtime(game.playtime_2weeks.unwrap_or(0))) " " (t.steam_two_weeks) }
                                         }
                                         div class="flex items-center gap-1 text-slate-500" {
                                             svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
                                                 path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" {}
                                             }
-                                            span { (format_playtime(game.playtime_forever)) " total" }
+                                            span { (format_playtime(game.playtime_forever)) " " (t.steam_total) }
                                         }
                                     }
                                 }
