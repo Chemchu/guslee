@@ -14,6 +14,7 @@ async fn render_metadata(
     path: web::Path<String>,
     locale: Locale,
 ) -> Html {
+    let t = locale.texts();
     let file_path = format!("{}.md", path.as_str());
     let post = app_state
         .post_search_engine
@@ -30,29 +31,29 @@ async fn render_metadata(
                 div class="flex flex-col gap-2 w-full" {
                     div class="flex flex-col gap-px border-t border-shade-color" {
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
-                            p class="text-zinc-500 text-xs uppercase tracking-widest" { "Title" }
+                            p class="text-zinc-500 text-xs uppercase tracking-widest" { (t.meta_title) }
                             p class="text-zinc-100 text-sm font-semibold" { (p.metadata.title) }
                         }
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
-                            p class="text-zinc-500 text-xs uppercase tracking-widest" { "Description" }
+                            p class="text-zinc-500 text-xs uppercase tracking-widest" { (t.meta_description) }
                             p class="text-zinc-100 text-sm" { (p.metadata.description) }
                         }
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
-                            p class="text-zinc-500 text-xs uppercase tracking-widest" { "Reading time" }
-                            p class="text-sm font-semibold" { (p.metadata.reading_time) " min" }
+                            p class="text-zinc-500 text-xs uppercase tracking-widest" { (t.meta_reading_time) }
+                            p class="text-sm font-semibold" { (p.metadata.reading_time) " " (t.meta_minutes) }
                         }
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
-                            p class="text-zinc-500 text-xs uppercase tracking-widest" { "Date" }
+                            p class="text-zinc-500 text-xs uppercase tracking-widest" { (t.meta_date) }
                             p class="text-sm font-semibold" { (p.metadata.date) }
                         }
                         @if let Some(last_updated) = &p.metadata.last_updated {
                             div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest" { "Last updated" }
+                                p class="text-zinc-500 text-xs uppercase tracking-widest" { (t.meta_last_updated) }
                                 time id="last-updated" datetime=(last_updated) class="text-sm font-semibold" { (last_updated) }
                             }
                         }
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
-                            p class="text-zinc-500 text-xs uppercase tracking-widest" { "Tags" }
+                            p class="text-zinc-500 text-xs uppercase tracking-widest" { (t.meta_tags) }
                             div class="flex flex-wrap gap-1" {
                                 @for tag in &p.metadata.tags {
                                     a
@@ -63,9 +64,9 @@ async fn render_metadata(
                             }
                         }
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
-                            p class="text-zinc-500 text-xs uppercase tracking-widest" { "Linked mentions" }
+                            p class="text-zinc-500 text-xs uppercase tracking-widest" { (t.meta_linked_mentions) }
                             @if backlinks.is_empty() {
-                                p class="text-zinc-500 text-sm" { "No notes link here yet." }
+                                p class="text-zinc-500 text-sm" { (t.meta_no_backlinks) }
                             } @else {
                                 ul id="backlinks" class="flex flex-col gap-1" {
                                     @for backlink in &backlinks {
@@ -89,8 +90,8 @@ async fn render_metadata(
                             div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
                                 p
                                 class="text-zinc-500 text-xs uppercase tracking-widest"
-                                title="Notes that mention this one's title without linking to it"
-                                { "Unlinked mentions" }
+                                title=(t.meta_unlinked_hint)
+                                { (t.meta_unlinked_mentions) }
                                 ul id="unlinked-mentions" class="flex flex-col gap-2" {
                                     @for mention in &mentions {
                                         li class="flex flex-col" {
@@ -115,7 +116,7 @@ async fn render_metadata(
                             }
                         }
                         div class="flex flex-col gap-1 px-4 py-3 border-b border-r border-shade-color border-l hover:border-l-2 border-l-shade-color hover:border-l-primary-color hover:bg-shade-color transition-colors" {
-                            p class="text-zinc-500 text-xs uppercase tracking-widest" { "Post Source" }
+                            p class="text-zinc-500 text-xs uppercase tracking-widest" { (t.meta_source) }
                             a href={(p.metadata.post_source_url) "?plain=1"} target="_blank" rel="noopener noreferrer"
                             class="text-zinc-100 hover:text-primary-color text-sm truncate" { (p.metadata.post_source_url) }
                         }
@@ -126,7 +127,7 @@ async fn render_metadata(
         }
         None => {
             let html = html! {
-                p class="text-zinc-500 text-sm" { "No metadata found for this post." }
+                p class="text-zinc-500 text-sm" { (t.meta_not_found) }
             };
             Html::new(html)
         }

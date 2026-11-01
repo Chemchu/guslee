@@ -12,6 +12,7 @@ use serde_json::json;
 use std::collections::HashMap;
 
 use crate::controllers::{AppState, render_page};
+use crate::i18n::{Locale, Texts, fill};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(chess_stats_by_game)
@@ -23,8 +24,9 @@ async fn chess_stats_by_game(
     app_state: web::Data<AppState>,
     path: web::Path<String>,
     req: HttpRequest,
+    locale: Locale,
 ) -> Html {
-    let content = chess_stats_content(app_state.clone(), path.into_inner())
+    let content = chess_stats_content(app_state.clone(), path.into_inner(), locale)
         .await
         .unwrap_or_else(|fallback| fallback);
 
@@ -32,9 +34,9 @@ async fn chess_stats_by_game(
 }
 
 #[get("/chess/games/analysis")]
-async fn chess_games_analysis(app_state: web::Data<AppState>) -> Html {
+async fn chess_games_analysis(app_state: web::Data<AppState>, locale: Locale) -> Html {
     Html::new(
-        chess_games_analysis_content(app_state)
+        chess_games_analysis_content(app_state, locale)
             .await
             .unwrap_or_else(|fallback| fallback),
     )
@@ -43,43 +45,52 @@ async fn chess_games_analysis(app_state: web::Data<AppState>) -> Html {
 #[cached(
     ttl_secs = 3600,
     key = "String",
-    convert = r#"{ format!("chess-{}", game_mode) }"#
+    convert = r#"{ format!("chess-{}-{}", locale.as_str(), game_mode) }"#
 )]
 async fn chess_stats_content(
     app_state: web::Data<AppState>,
     game_mode: String,
+    locale: Locale,
 ) -> Result<String, String> {
     let (player_stats, rating_history) = ChessModule::get_player_data(&app_state.lichess_state)
         .await
         .map_err(|err| {
             log::error!("Error fetching chess data: {}", err);
-            chess_fallback_html()
+            chess_fallback_html(locale.texts())
         })?;
 
-    Ok(render_chess_page(game_mode, rating_history, player_stats).into_string())
+    Ok(render_chess_page(game_mode, rating_history, player_stats, locale.texts()).into_string())
 }
 
 #[cached(
     ttl_secs = 3600,
     key = "String",
-    convert = r#"{ "chess-games-analysis".to_string() }"#
+    convert = r#"{ format!("chess-games-analysis-{}", locale.as_str()) }"#
 )]
-async fn chess_games_analysis_content(app_state: web::Data<AppState>) -> Result<String, String> {
+async fn chess_games_analysis_content(
+    app_state: web::Data<AppState>,
+    locale: Locale,
+) -> Result<String, String> {
     let games = ChessModule::get_last_games_analysis(&app_state.lichess_state, 10)
         .await
         .map_err(|err| {
             log::error!("Error fetching chess games analysis: {}", err);
-            chess_fallback_html()
+            chess_fallback_html(locale.texts())
         })?;
 
-    Ok(render_analysis_page(games, &app_state.lichess_state.lichess_username).into_string())
+    Ok(render_analysis_page(
+        games,
+        &app_state.lichess_state.lichess_username,
+        locale.texts(),
+    )
+    .into_string())
 }
 
-fn chess_fallback_html() -> String {
+fn chess_fallback_html(t: &Texts) -> String {
     let template_path =
         std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
     let fallback_md = std::fs::read_to_string(format!("{}/chess_stats_fallback.md", template_path))
-        .unwrap_or_else(|_| "Error loading chess stats".to_string());
+        .unwrap_or_else(|_| t.chess_error.to_string());
     markdown::to_html(&fallback_md)
 }
 
@@ -124,6 +135,7 @@ fn render_chess_page(
     game_mode: String,
     rating_history: Vec<GameRatingHistory>,
     player_stats: LichessUser,
+    t: &Texts,
 ) -> PreEscaped<String> {
     let game_mode_normalized = normalize_game_mode(&game_mode);
     let game_mode_normalized = game_mode_normalized.as_str();
@@ -186,53 +198,53 @@ fn render_chess_page(
             div id="chess-stats" {
                 div class="text-bright-color w-full" {
                     div class="container mx-auto max-w-4xl h-full" {
-                        h1 class="text-5xl md:text-6xl font-bold pb-8" { "Chess Journey" }
+                        h1 class="text-5xl md:text-6xl font-bold pb-8" { (t.chess_title) }
                         div class="grid grid-cols-2 md:grid-cols-4 mb-6" {
                             div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Current Rating" }
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { (t.chess_current_rating) }
                                 p class="text-3xl font-bold" { (current_rating) }
                             }
                             div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Peak Rating" }
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { (t.chess_peak_rating) }
                                 p class="text-3xl font-bold text-primary-color" { (peak_rating) }
                             }
                             div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Games (" (game_mode) ")" }
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { (fill(t.chess_mode_games, &game_mode)) }
                                 p class="text-3xl font-bold" { (total_games) }
                             }
                             div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { "Total Games" }
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { (t.chess_total_games) }
                                 p class="text-3xl font-bold" { (total_all_games) }
                             }
                         }
 
                         div class="grid grid-cols-3 mb-6" {
                             div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Win Rate" }
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { (t.chess_win_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-emerald-500 rounded-full"
                                         style=(format!("width:{}%", win_rate)) {}
                                 }
                                 p class="text-2xl font-bold text-emerald-400" { (format!("{:.2}%", win_rate)) }
-                                p class="text-zinc-600 text-xs mt-1" { (win_count) " games" }
+                                p class="text-zinc-600 text-xs mt-1" { (fill(t.chess_games_count, win_count)) }
                             }
                             div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Draw Rate" }
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { (t.chess_draw_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-primary-color rounded-full"
                                         style=(format!("width:{}%", draw_rate)) {}
                                 }
                                 p class="text-2xl font-bold text-primary-color" { (format!("{:.2}%", draw_rate)) }
-                                p class="text-zinc-600 text-xs mt-1" { (draw_count) " games" }
+                                p class="text-zinc-600 text-xs mt-1" { (fill(t.chess_games_count, draw_count)) }
                             }
                             div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { "Loss Rate" }
+                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { (t.chess_loss_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-rose-500 rounded-full"
                                         style=(format!("width:{}%", loss_rate)) {}
                                 }
                                 p class="text-2xl font-bold text-rose-400" { (format!("{:.2}%", loss_rate)) }
-                                p class="text-zinc-600 text-xs mt-1" { (loss_count) " games" }
+                                p class="text-zinc-600 text-xs mt-1" { (fill(t.chess_games_count, loss_count)) }
                             }
                         }
 
@@ -246,7 +258,7 @@ fn render_chess_page(
                         hx-target="this"
                         hx-swap="innerHTML"
                         class="w-full min-w-0 overflow-y-auto pt-10"
-                        { "Loading..." }
+                        { (t.loading) }
                     }
                 }
             }
@@ -262,7 +274,7 @@ fn plays_white(game: &Game, username: &str) -> bool {
         .is_some_and(|user| user.name.eq_ignore_ascii_case(username))
 }
 
-fn render_analysis_page(games: Vec<Game>, username: &str) -> PreEscaped<String> {
+fn render_analysis_page(games: Vec<Game>, username: &str, t: &Texts) -> PreEscaped<String> {
     let total = games.len();
 
     let mut white_openings: HashMap<String, usize> = HashMap::new();
@@ -312,49 +324,49 @@ fn render_analysis_page(games: Vec<Game>, username: &str) -> PreEscaped<String> 
         div class="w-full mx-auto" {
 
             header {
-                h1 class="text-3xl font-bold tracking-tight mb-2" { "Game Analysis" }
+                h1 class="text-3xl font-bold tracking-tight mb-2" { (t.chess_analysis_title) }
                 div class="w-12 h-px mx-auto" {}
-                p class="text-gray-400 text-xs uppercase tracking-widest" { (total) " games reviewed" }
+                p class="text-gray-400 text-xs uppercase tracking-widest" { (fill(t.chess_games_reviewed, total)) }
             }
 
             div class="flex items-center gap-3 mb-4 pt-10" {
-                p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Recently played openings" }
+                p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { (t.chess_openings) }
             }
             div class="grid grid-cols-1 sm:grid-cols-2" {
                 div class="p-7 border border-shade-color border-l-2 border-l-zinc-400" {
                     p class="text-gray-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2" {
                         span class="inline-block w-2 h-2 rounded-full bg-zinc-300" {}
-                        "As White"
+                        (t.chess_as_white)
                     }
                     @if let Some((name, count)) = &top_white_opening {
                         p class="text-zinc-100 text-lg font-semibold leading-snug mb-2" { (name) }
                         p class="text-zinc-500 text-xs" {
-                            "Played " span class="text-primary-color" { (count) }
-                            (if *count == 1 {" time"} else {" times"}) " recently"
+                            (t.chess_played) " " span class="text-primary-color" { (count) }
+                            " " (if *count == 1 { t.chess_time_recently } else { t.chess_times_recently })
                         }
                     } @else {
-                        p class="text-zinc-600 text-base" { "No data" }
+                        p class="text-zinc-600 text-base" { (t.chess_no_data) }
                     }
                 }
                 div class="p-7 border border-shade-color border-l-2 border-l-primary-color" {
                     p class="text-gray-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2" {
                         span class="inline-block w-2 h-2 rounded-full bg-primary-color" {}
-                        "As Black"
+                        (t.chess_as_black)
                     }
                     @if let Some((name, count)) = &top_black_opening {
                         p class="text-zinc-100 text-lg font-semibold leading-snug mb-2" { (name) }
                         p class="text-zinc-500 text-xs" {
-                            "Played " span class="text-primary-color" { (count) }
-                            (if *count == 1 {" time"} else {" times"}) " recently"
+                            (t.chess_played) " " span class="text-primary-color" { (count) }
+                            " " (if *count == 1 { t.chess_time_recently } else { t.chess_times_recently })
                         }
                     } @else {
-                        p class="text-zinc-600 text-base" { "No data" }
+                        p class="text-zinc-600 text-base" { (t.chess_no_data) }
                     }
                 }
             }
 
             div class="flex items-center gap-3 mb-4 pt-4" {
-                p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { "Recent Games" }
+                p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { (t.chess_recent_games) }
             }
             div class="flex flex-col border-t border-shade-color" {
                 @for game in games.iter() {
@@ -363,32 +375,32 @@ fn render_analysis_page(games: Vec<Game>, username: &str) -> PreEscaped<String> 
                         (Some(Winner::White), "white") | (Some(Winner::Black), "black") => (
                             "border-l-2 border-l-emerald-500",
                             "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-                            "Win"
+                            t.chess_win
                         ),
                         (Some(Winner::White), "black") | (Some(Winner::Black), "white") => (
                             "border-l-2 border-l-rose-500",
                             "bg-rose-500/10 text-rose-400 border border-rose-500/20",
-                            "Loss"
+                            t.chess_loss
                         ),
                         (None, _) => (
                             "border-l-2 border-l-primary-color",
                             "bg-primary-color/10 text-primary-color border border-primary-color/20",
-                            "Draw"
+                            t.chess_draw
                         ),
                         _ => (
                             "border-l-2 border-l-shade-color",
                             "bg-shade-color text-zinc-400 border border-shade-color",
-                            "Unknown"
+                            t.chess_unknown
                         ),
                     };
                     @let opening_name = game.opening.as_ref()
                         .map(|o| o.name.as_str())
-                        .unwrap_or("Unknown Opening");
+                        .unwrap_or(t.chess_unknown_opening);
                     @let speed = format!("{:?}", game.speed);
                     div class=(format!("{} px-5 py-4 flex items-center justify-between border-b border-r border-shade-color hover:bg-shade-color transition-all hover:pl-7 text-sm", border)) {
                         div {
                             p class="text-zinc-100" { (opening_name) }
-                            p class="text-zinc-600 text-xs mt-1" { "#" (game.id) " played as " (main_player_color) }
+                            p class="text-zinc-600 text-xs mt-1" { "#" (game.id) " " (t.chess_played_as) " " (if main_player_color == "white" { t.chess_white } else { t.chess_black }) }
                         }
                         div class="flex items-center gap-4" {
                             p class="text-zinc-500 text-xs uppercase tracking-wide hidden sm:block" { (speed) }
@@ -479,8 +491,12 @@ mod tests {
 
     #[test]
     fn analysis_groups_openings_by_colour_for_the_configured_user() {
-        let html =
-            render_analysis_page(vec![game_with_white("SomeUser")], "someuser").into_string();
+        let html = render_analysis_page(
+            vec![game_with_white("SomeUser")],
+            "someuser",
+            Locale::En.texts(),
+        )
+        .into_string();
 
         assert!(html.contains("Italian Game"));
     }

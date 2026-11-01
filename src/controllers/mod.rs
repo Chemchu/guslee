@@ -3,9 +3,10 @@ use chess_module::LichessState;
 use games_module::SteamState;
 use music_module::SpotifyState;
 use search_engine::{PostsSearchEngine, utils::DEFAULT_LANG};
+use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
-use crate::i18n::LANG_PARAM;
+use crate::i18n::{LANG_PARAM, Locale, Texts};
 
 pub mod chess_controller;
 pub mod fallback_controller;
@@ -20,7 +21,8 @@ pub mod routines_controller;
 pub mod steam_controller;
 pub mod tags_controller;
 
-static INDEX_TEMPLATE: OnceLock<String> = OnceLock::new();
+static INDEX_TEMPLATES: OnceLock<HashMap<Locale, String>> = OnceLock::new();
+const TEXT_PLACEHOLDER: &str = "{{t:";
 
 pub struct AppState {
     pub app_name: String,
@@ -30,8 +32,6 @@ pub struct AppState {
     pub steam_state: SteamState,
     pub post_search_engine: Arc<PostsSearchEngine>,
 }
-
-pub const SITE_DESCRIPTION: &str = "My personal digital garden, built with Rust + HTMX";
 
 #[derive(Default)]
 pub struct PageMeta {
@@ -57,8 +57,11 @@ impl PageMeta {
         }
     }
 
-    fn head(&self, app_name: &str, url: Option<&str>) -> String {
-        let description = self.description.as_deref().unwrap_or(SITE_DESCRIPTION);
+    fn head(&self, app_name: &str, url: Option<&str>, texts: &Texts) -> String {
+        let description = self
+            .description
+            .as_deref()
+            .unwrap_or(texts.site_description);
         let og_type = if self.is_article {
             "article"
         } else {
@@ -116,8 +119,8 @@ pub fn encode_path(path: &str) -> String {
     encoded
 }
 
-pub fn wrap_content_into_full_page(app_name: &str, content: &str) -> String {
-    wrap_content_with_meta(app_name, content, &PageMeta::default(), None)
+pub fn wrap_content_into_full_page(app_name: &str, content: &str, locale: Locale) -> String {
+    wrap_content_with_meta(app_name, content, &PageMeta::default(), None, locale)
 }
 
 pub fn wrap_content_with_meta(
@@ -125,16 +128,68 @@ pub fn wrap_content_with_meta(
     content: &str,
     meta: &PageMeta,
     url: Option<&str>,
+    locale: Locale,
 ) -> String {
-    let html = INDEX_TEMPLATE.get_or_init(|| {
+    let templates = INDEX_TEMPLATES.get_or_init(|| {
         let template_path =
             std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
-        std::fs::read_to_string(format!("{}/index.html", template_path))
-            .expect("Failed to read index.html template")
+        let template = std::fs::read_to_string(format!("{}/index.html", template_path))
+            .expect("Failed to read index.html template");
+        Locale::ALL
+            .into_iter()
+            .map(|locale| (locale, localize_template(&template, locale)))
+            .collect()
     });
 
-    html.replace("{{HEAD}}", &meta.head(app_name, url))
+    templates[&locale]
+        .replace("{{HEAD}}", &meta.head(app_name, url, locale.texts()))
         .replace("{{CONTENT}}", content)
+}
+
+fn localize_template(template: &str, locale: Locale) -> String {
+    let texts = locale.texts();
+    let mut html = String::with_capacity(template.len());
+    let mut rest = template;
+
+    while let Some(start) = rest.find(TEXT_PLACEHOLDER) {
+        html.push_str(&rest[..start]);
+        let after = &rest[start + TEXT_PLACEHOLDER.len()..];
+        let Some(end) = after.find("}}") else {
+            rest = &rest[start..];
+            break;
+        };
+        let key = &after[..end];
+        match texts.get(key) {
+            Some(text) => html.push_str(&maud::html! { (text) }.into_string()),
+            None => {
+                log::warn!("Missing {} text for template key {key}", locale.as_str());
+                html.push_str(key);
+            }
+        }
+        rest = &after[end + "}}".len()..];
+    }
+    html.push_str(rest);
+
+    html.replace("{{LANG}}", locale.as_str())
+        .replace("{{LANGUAGE_SWITCHER}}", &language_switcher(locale))
+}
+
+fn language_switcher(current: Locale) -> String {
+    maud::html! {
+        nav aria-label=(current.texts().language_label) class="flex gap-2" {
+            @for locale in Locale::ALL {
+                a
+                href=(format!("?{LANG_PARAM}={}", locale.as_str()))
+                hx-boost="false"
+                hreflang=(locale.as_str())
+                lang=(locale.as_str())
+                aria-current=[(locale == current).then_some("true")]
+                class="uppercase hover:text-primary-color aria-[current=true]:text-primary-color"
+                { (locale.as_str()) }
+            }
+        }
+    }
+    .into_string()
 }
 
 pub fn is_partial_request(req: &HttpRequest) -> bool {
@@ -168,17 +223,20 @@ pub fn render_page_with_meta(
             content,
             meta,
             Some(&url),
+            Locale::negotiate(req),
         ))
     }
 }
 
 pub fn render_not_found(app_state: &AppState, req: &HttpRequest) -> HttpResponse {
+    let locale = Locale::negotiate(req);
+    let t = locale.texts();
     let content = maud::html! {
         div class="flex flex-col w-full gap-4 p-6 lg:p-8" {
             h1 class="text-4xl text-primary-color" { "404" }
-            p { "This page does not exist (yet)." }
+            p { (t.not_found_message) }
             a href="/posts/welcome" hx-target="#main-section" class="hover:text-primary-color underline" {
-                "Back to the garden"
+                (t.not_found_back)
             }
         }
     }
@@ -187,7 +245,7 @@ pub fn render_not_found(app_state: &AppState, req: &HttpRequest) -> HttpResponse
     let body = if is_partial_request(req) {
         content
     } else {
-        wrap_content_into_full_page(&app_state.app_name, &content)
+        wrap_content_into_full_page(&app_state.app_name, &content, locale)
     };
 
     HttpResponse::NotFound()
@@ -240,14 +298,16 @@ mod tests {
 
     #[test]
     fn content_is_wrapped_into_the_index_template() {
-        let page = wrap_content_into_full_page("Test garden", "<p id=\"marker\">hi</p>");
+        let page =
+            wrap_content_into_full_page("Test garden", "<p id=\"marker\">hi</p>", Locale::En);
 
         assert!(page.starts_with("<!doctype html>"));
         assert!(page.contains("<title>Test garden</title>"));
         assert!(page.contains("<p id=\"marker\">hi</p>"));
         assert!(!page.contains("{{HEAD}}") && !page.contains("{{CONTENT}}"));
         assert!(page.contains(&format!(
-            "<meta name=\"description\" content=\"{SITE_DESCRIPTION}\">"
+            "<meta name=\"description\" content=\"{}\">",
+            Locale::En.texts().site_description
         )));
         assert!(page.contains(r#"<meta property="og:type" content="website">"#));
         assert!(!page.contains("og:url"), "no URL without a request");
@@ -262,7 +322,13 @@ mod tests {
             ..PageMeta::default()
         };
 
-        let page = wrap_content_with_meta("Garden", "", &meta, Some("https://g.dev/posts/fog"));
+        let page = wrap_content_with_meta(
+            "Garden",
+            "",
+            &meta,
+            Some("https://g.dev/posts/fog"),
+            Locale::En,
+        );
 
         assert!(page.contains("<title>Fog &lt;notes&gt; · Garden</title>"));
         assert!(page.contains(r#"<meta property="og:title" content="Fog &lt;notes&gt;">"#));
@@ -280,7 +346,13 @@ mod tests {
             ..PageMeta::titled("Niebla")
         };
 
-        let page = wrap_content_with_meta("Garden", "", &meta, Some("https://g.dev/posts/fog"));
+        let page = wrap_content_with_meta(
+            "Garden",
+            "",
+            &meta,
+            Some("https://g.dev/posts/fog"),
+            Locale::En,
+        );
 
         assert!(page.contains(r#"<link rel="canonical" href="https://g.dev/posts/fog?lang=es">"#));
         assert!(
@@ -306,11 +378,73 @@ mod tests {
             ..PageMeta::titled("Fog")
         };
 
-        let page = wrap_content_with_meta("Garden", "", &meta, Some("https://g.dev/posts/fog"));
+        let page = wrap_content_with_meta(
+            "Garden",
+            "",
+            &meta,
+            Some("https://g.dev/posts/fog"),
+            Locale::En,
+        );
 
         assert!(page.contains(r#"<link rel="canonical" href="https://g.dev/posts/fog">"#));
-        assert!(!page.contains("hreflang"));
+        assert!(!page.contains(r#"rel="alternate" hreflang"#));
         assert!(page.contains(r#"href="/rss.xml""#));
+    }
+
+    #[test]
+    fn every_template_text_exists_in_every_language() {
+        let template = std::fs::read_to_string("templates/index.html").unwrap();
+
+        for locale in Locale::ALL {
+            let html = localize_template(&template, locale);
+            assert!(!html.contains(TEXT_PLACEHOLDER), "{}", locale.as_str());
+            assert!(!html.contains("{{LANG"), "{}", locale.as_str());
+            assert!(html.contains(&format!(r#"<html lang="{}">"#, locale.as_str())));
+        }
+    }
+
+    #[test]
+    fn spanish_pages_use_spanish_texts() {
+        let page = wrap_content_into_full_page("Garden", "", Locale::Es);
+
+        assert!(page.contains(r#"<html lang="es">"#));
+        assert!(page.contains("INICIO"));
+        assert!(page.contains(r#"placeholder="Busca cualquier post...""#));
+        assert!(page.contains(&format!(
+            r#"<meta name="description" content="{}">"#,
+            Locale::Es.texts().site_description
+        )));
+        assert!(!page.contains(">HOME<"));
+    }
+
+    #[test]
+    fn template_texts_are_html_escaped() {
+        let html = localize_template(
+            r#"<p title="{{t:switcher_help}}">{{t:tag_back}}</p>"#,
+            Locale::En,
+        );
+
+        assert_eq!(
+            html,
+            r#"<p title="↑↓ to move · Enter to open · Esc to close">← All tags</p>"#
+        );
+        assert_eq!(
+            localize_template("{{t:not_a_key}} {{t:unclosed", Locale::En),
+            "not_a_key {{t:unclosed"
+        );
+    }
+
+    #[test]
+    fn the_language_switcher_marks_the_current_language() {
+        let switcher = language_switcher(Locale::Es);
+
+        assert!(switcher.contains(r#"<nav aria-label="Idioma""#));
+        assert!(
+            switcher.contains(r#"href="?lang=en" hx-boost="false" hreflang="en" lang="en" class="#)
+        );
+        assert!(switcher.contains(
+            r#"href="?lang=es" hx-boost="false" hreflang="es" lang="es" aria-current="true""#
+        ));
     }
 
     #[test]

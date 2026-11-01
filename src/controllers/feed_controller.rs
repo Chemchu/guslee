@@ -2,7 +2,7 @@ use actix_web::{HttpRequest, HttpResponse, get, web};
 use chrono::NaiveDate;
 use search_engine::utils::{DEFAULT_LANG, Post};
 
-use crate::controllers::{AppState, SITE_DESCRIPTION, base_url, encode_path};
+use crate::controllers::{AppState, base_url, encode_path};
 use crate::i18n::{LANG_PARAM, Locale};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
@@ -11,14 +11,15 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 
 #[get("/rss.xml")]
 async fn rss_feed(app_state: web::Data<AppState>, req: HttpRequest) -> HttpResponse {
-    let lang = Locale::from_query(req.query_string())
-        .unwrap_or_default()
-        .as_str();
-    let posts = app_state.post_search_engine.published_posts(lang).await;
+    let locale = Locale::from_query(req.query_string()).unwrap_or_default();
+    let posts = app_state
+        .post_search_engine
+        .published_posts(locale.as_str())
+        .await;
 
     HttpResponse::Ok()
         .content_type("application/rss+xml; charset=utf-8")
-        .body(rss(&app_state.app_name, &base_url(&req), lang, &posts))
+        .body(rss(&app_state.app_name, &base_url(&req), locale, &posts))
 }
 
 fn lang_query(lang: &str) -> String {
@@ -29,7 +30,8 @@ fn lang_query(lang: &str) -> String {
     }
 }
 
-fn rss(app_name: &str, base_url: &str, lang: &str, posts: &[Post]) -> String {
+fn rss(app_name: &str, base_url: &str, locale: Locale, posts: &[Post]) -> String {
+    let lang = locale.as_str();
     let mut xml = format!(
         concat!(
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
@@ -43,7 +45,7 @@ fn rss(app_name: &str, base_url: &str, lang: &str, posts: &[Post]) -> String {
         ),
         title = escape_xml(app_name),
         base = escape_xml(base_url),
-        description = escape_xml(SITE_DESCRIPTION),
+        description = escape_xml(locale.texts().site_description),
         lang = lang,
         feed_query = escape_xml(&lang_query(lang)),
     );
@@ -126,7 +128,7 @@ mod tests {
         let xml = rss(
             "Gus' garden",
             "https://g.dev",
-            DEFAULT_LANG,
+            Locale::En,
             &[post(
                 "journal/2025/my note.md",
                 "Fog & letters",
@@ -155,7 +157,7 @@ mod tests {
         let xml = rss(
             "G",
             "https://g.dev",
-            DEFAULT_LANG,
+            Locale::En,
             &[post("a.md", "A", "someday")],
         );
 
@@ -171,9 +173,17 @@ mod tests {
         };
         let untranslated = post("notes/letters.md", "Letters", "2025-02-01");
 
-        let xml = rss("G", "https://g.dev", "es", &[translated, untranslated]);
+        let xml = rss(
+            "G",
+            "https://g.dev",
+            Locale::Es,
+            &[translated, untranslated],
+        );
 
         assert!(xml.contains("<language>es</language>"));
+        assert!(xml.contains(
+            "<description>Mi jardín digital personal, hecho con Rust + HTMX</description>"
+        ));
         assert!(xml.contains("<atom:link href=\"https://g.dev/rss.xml?lang=es\" rel=\"self\""));
         assert!(xml.contains("<link>https://g.dev/posts/notes/fog?lang=es</link>"));
         assert!(

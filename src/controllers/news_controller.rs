@@ -1,10 +1,8 @@
 use crate::controllers::{AppState, render_page};
+use crate::i18n::Locale;
 use actix_web::{HttpRequest, Responder, get, web};
 use maud::html;
-use serde::{Deserialize, Serialize};
-use surrealdb::types::SurrealValue;
 
-#[derive(SurrealValue, Serialize, Deserialize)]
 struct News {
     title: String,
     file_path: String,
@@ -18,33 +16,24 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 }
 
 #[get("/news")]
-async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
-    let query = "SELECT 
-        file_path,
-        metadata.date AS date,
-        metadata.description AS description,
-        metadata.title AS title,
-        metadata.tags AS tags
-    FROM posts
-    WHERE metadata.is_draft = false
-    ORDER BY date DESC";
-
+async fn news_page(
+    app_state: web::Data<AppState>,
+    req: HttpRequest,
+    locale: Locale,
+) -> impl Responder {
+    let t = locale.texts();
     let news: Vec<News> = app_state
         .post_search_engine
-        .raw_query::<Vec<News>>(query)
+        .published_posts(locale.as_str())
         .await
-        .iter()
-        .map(|n| {
-            let path = format!("/{}", n.file_path.replace(".md", ""));
-            News {
-                title: n.title.clone(),
-                file_path: path,
-                date: n.date.clone(),
-                description: n.description.clone(),
-                tags: n.tags.clone(),
-            }
+        .into_iter()
+        .map(|post| News {
+            file_path: format!("/{}", post.file_path.replace(".md", "")),
+            title: post.metadata.title,
+            date: post.metadata.date,
+            description: post.metadata.description,
+            tags: post.metadata.tags,
         })
-        .clone()
         .collect();
 
     let is_empty = news.is_empty();
@@ -62,12 +51,12 @@ async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Res
                     h1
                     class="text-5xl md:text-6xl font-bold bg-clip-text mb-4"
                     {
-                        "Latest Updates"
+                        (t.news_title)
                     }
                     p
                     class="text-lg text-slate-600 dark:text-slate-400"
                     {
-                        "Discover my silly little adventures"
+                        (t.news_subtitle)
                     }
                 }
 
@@ -95,12 +84,12 @@ async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Res
                         h3
                         class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2"
                         {
-                            "No posts yet"
+                            (t.news_empty_title)
                         }
                         p
                         class="text-slate-600 dark:text-slate-400"
                         {
-                            "Check back soon for new content!"
+                            (t.news_empty_body)
                         }
                     }
                 } @else {
@@ -185,7 +174,7 @@ async fn news_page(app_state: web::Data<AppState>, req: HttpRequest) -> impl Res
                                     span
                                     class="text-sm"
                                     {
-                                        "Read more"
+                                        (t.news_read_more)
                                     }
                                     svg
                                     class="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-200"

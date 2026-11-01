@@ -7,6 +7,7 @@ use search_engine::utils::DEFAULT_LANG;
 use serde::Deserialize;
 
 use crate::controllers::{AppState, render_page};
+use crate::i18n::Locale;
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(graph_network)
@@ -26,7 +27,9 @@ async fn graph_network(
     app_state: web::Data<AppState>,
     path: web::Path<String>,
     query: web::Query<GraphQuery>,
+    locale: Locale,
 ) -> Html {
+    let t = locale.texts();
     let depth = query.depth.unwrap_or(1).clamp(1, MAX_GRAPH_DEPTH);
     let graph_data = {
         let file_path = format!("{}.md", path.as_str());
@@ -51,8 +54,8 @@ async fn graph_network(
                 data-depth=(depth) {}
             div
             role="group"
-            aria-label="Link depth"
-            title="How many links away to show"
+            aria-label=(t.graph_depth_label)
+            title=(t.graph_depth_hint)
             class="absolute top-1 right-1 flex gap-1 text-xs"
             {
                 @for option in 1..=MAX_GRAPH_DEPTH {
@@ -91,7 +94,7 @@ async fn garden_view_dispatcher(
 }
 
 #[get("/garden-view")]
-async fn garden_view(app_state: web::Data<AppState>) -> Html {
+async fn garden_view(app_state: web::Data<AppState>, locale: Locale) -> Html {
     let graph_data = app_state.post_search_engine.get_overall_graph_data().await;
     let nodes_json = serde_json::to_string(&graph_data.nodes).unwrap();
     let edges_json = serde_json::to_string(&graph_data.edges).unwrap();
@@ -104,7 +107,7 @@ async fn garden_view(app_state: web::Data<AppState>) -> Html {
         data-nodes=(nodes_json)
         data-edges=(edges_json)
         data-folders=(folders_json)
-        data-root-label="garden entry" {}
+        data-root-label=(locale.texts().graph_root_label) {}
     };
 
     Html::new(graph)

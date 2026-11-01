@@ -169,7 +169,7 @@ async fn translated_posts_advertise_their_language_versions() {
         spanish
             .contains(r#"type="application/rss+xml" title="E2E garden" href="/rss.xml?lang=es""#)
     );
-    assert!(!untranslated.contains("hreflang"));
+    assert!(!untranslated.contains(r#"rel="alternate" hreflang"#));
 }
 
 #[tokio::test]
@@ -189,4 +189,126 @@ async fn feeds_are_chosen_by_the_query_only() {
 
     assert!(default.contains("<language>en</language>"));
     assert!(default.contains("<title>Notes about the fog</title>"));
+}
+
+#[tokio::test]
+async fn the_layout_follows_the_language() {
+    let app = TestApp::spawn().await;
+
+    let spanish = get_with_language(&app, "/posts/notes/fog", "es").await.body;
+    let english = get_with_language(&app, "/posts/notes/fog", "en").await.body;
+
+    assert!(spanish.contains(r#"<html lang="es">"#));
+    assert!(spanish.contains("INICIO"));
+    assert!(spanish.contains(r#"placeholder="Busca cualquier post...""#));
+    assert!(spanish.contains(r#"data-switcher-placeholder="Busca una nota...""#));
+    assert!(spanish.contains(r#"aria-label="Panel lateral""#));
+    assert!(spanish.contains(r#"lang="es" aria-current="true""#));
+    assert!(!spanish.contains(">HOME<") && !spanish.contains("\n          HOME\n"));
+
+    assert!(english.contains(r#"<html lang="en">"#));
+    assert!(english.contains("HOME"));
+    assert!(english.contains(r#"lang="en" aria-current="true""#));
+}
+
+#[tokio::test]
+async fn the_language_switcher_reloads_the_whole_page() {
+    let app = TestApp::spawn().await;
+
+    let body = app.get("/posts/notes/fog").await.body;
+
+    assert!(body.contains(r#"href="?lang=es" hx-boost="false""#));
+    let chosen = app.get("/posts/notes/fog?lang=es").await;
+    assert!(chosen.body.contains(r#"<html lang="es">"#));
+    assert!(chosen.header("set-cookie").unwrap().starts_with("lang=es;"));
+}
+
+#[tokio::test]
+async fn side_panels_and_listings_use_the_language() {
+    let app = TestApp::spawn().await;
+    let htmx_get = |path: &'static str| {
+        let app = &app;
+        async move {
+            app.send(
+                app.client
+                    .get(app.url(path))
+                    .header("HX-Request", "true")
+                    .header("Accept-Language", "es"),
+            )
+            .await
+            .body
+        }
+    };
+
+    assert!(
+        htmx_get("/metadata/notes/letters")
+            .await
+            .contains("Tiempo de lectura")
+    );
+    assert!(htmx_get("/tags").await.contains("ETIQUETAS"));
+    assert!(
+        htmx_get("/tags/gaming")
+            .await
+            .contains("← Todas las etiquetas")
+    );
+    let not_found = htmx_get("/posts/missing").await;
+    assert!(not_found.contains("Esta página no existe (todavía)."));
+
+    let news = htmx_get("/news").await;
+    assert!(news.contains("Últimas novedades"));
+    assert_eq!(news.matches("Notas sobre la niebla").count(), 1);
+    assert!(
+        !news.contains("Notes about the fog"),
+        "translated posts are listed once"
+    );
+}
+
+#[tokio::test]
+async fn the_schedule_speaks_the_language() {
+    let app = TestApp::spawn().await;
+    let schedule = |lang: &'static str| {
+        let app = &app;
+        async move {
+            app.send(
+                app.client
+                    .get(app.url("/schedule"))
+                    .header("HX-Request", "true")
+                    .header("Accept-Language", lang),
+            )
+            .await
+            .body
+        }
+    };
+
+    assert_ne!(schedule("es").await, schedule("en").await);
+}
+
+#[tokio::test]
+async fn cached_pages_are_kept_per_language() {
+    let app = TestApp::spawn().await;
+    e2e::mocks::mount_steam(
+        &app,
+        serde_json::json!([{"appid": 10, "name": "Most Played", "playtime_forever": 6_000}]),
+        1,
+    )
+    .await;
+    let steam = |lang: &'static str| {
+        let app = &app;
+        async move {
+            app.send(
+                app.client
+                    .get(app.url("/steam"))
+                    .header("HX-Request", "true")
+                    .header("Accept-Language", lang),
+            )
+            .await
+            .body
+        }
+    };
+
+    let english = steam("en").await;
+    let spanish = steam("es").await;
+
+    assert!(english.contains("Level 42") && english.contains("View on Steam"));
+    assert!(spanish.contains("Nivel 42") && spanish.contains("Ver en Steam"));
 }

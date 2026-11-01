@@ -74,7 +74,7 @@
     if (results.length === 0) {
       const empty = document.createElement("li");
       empty.className = "px-4 py-3 text-zinc-500";
-      empty.textContent = "No notes found";
+      empty.textContent = document.body.dataset.switcherEmpty || "No notes found";
       list.append(empty);
       input.removeAttribute("aria-activedescendant");
       return;
@@ -143,6 +143,11 @@
       </div>`;
     input = overlay.querySelector("input");
     list = overlay.querySelector("ul");
+
+    const text = document.body.dataset;
+    if (text.switcherLabel) overlay.firstElementChild.setAttribute("aria-label", text.switcherLabel);
+    if (text.switcherPlaceholder) input.placeholder = text.switcherPlaceholder;
+    if (text.switcherHelp) overlay.querySelector("p").textContent = text.switcherHelp;
 
     input.addEventListener("input", update);
     input.addEventListener("keydown", (event) => {

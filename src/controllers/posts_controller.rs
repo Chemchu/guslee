@@ -22,7 +22,7 @@ use crate::controllers::{
     AppState, PageMeta, base_url, is_partial_request, render_not_found, render_page_with_meta,
     tags_controller::tag_url, wrap_content_into_full_page, wrap_content_with_meta,
 };
-use crate::i18n::Locale;
+use crate::i18n::{Locale, Texts};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(landing)
@@ -40,7 +40,8 @@ async fn landing(app_state: web::Data<AppState>, req: HttpRequest, locale: Local
             .content_type("text/html; charset=utf-8")
             .body(wrap_content_into_full_page(
                 &app_state.app_name,
-                "<p>Error loading welcome page</p>",
+                &html! { p { (locale.texts().welcome_error) } }.into_string(),
+                locale,
             ));
     };
 
@@ -55,12 +56,13 @@ async fn landing(app_state: web::Data<AppState>, req: HttpRequest, locale: Local
             post.md,
             "welcome".to_string(),
             &post.lang,
-            &Garden::of(&app_state),
+            &Garden::of(&app_state, locale),
         )
         .into_string()
         .as_str(),
         &meta,
         Some(&url),
+        locale,
     ))
     .customize()
     .insert_header((CONTENT_LANGUAGE, post.lang))
@@ -128,7 +130,7 @@ async fn get_post_page(
                 post.md,
                 route.to_string(),
                 &post.lang,
-                &Garden::of(&app_state),
+                &Garden::of(&app_state, locale),
             )
             .into_string(),
             &post.meta,
@@ -157,7 +159,7 @@ async fn post_preview(
             .content_type("text/html; charset=utf-8")
             .insert_header((CONTENT_LANGUAGE, post.lang.as_str()))
             .body(
-                post_preview_content(&post.content, &post.lang, &Garden::of(&app_state))
+                post_preview_content(&post.content, &post.lang, &Garden::of(&app_state, locale))
                     .into_string(),
             ),
         None => HttpResponse::NotFound().finish(),
@@ -462,14 +464,18 @@ fn absolutize_post_links(html: &str) -> String {
     result
 }
 
-fn render_wikilinks(html: &str, link_index: &LinkIndex) -> String {
+fn render_wikilinks(html: &str, link_index: &LinkIndex, texts: &Texts) -> String {
     const CODE_END: &str = "</code>";
     let mut result = String::with_capacity(html.len());
     let mut rest = html;
 
     loop {
         let code_start = rest.find("<code").unwrap_or(rest.len());
-        result.push_str(&render_wikilinks_in_text(&rest[..code_start], link_index));
+        result.push_str(&render_wikilinks_in_text(
+            &rest[..code_start],
+            link_index,
+            texts,
+        ));
         rest = &rest[code_start..];
         if rest.is_empty() {
             break;
@@ -485,7 +491,7 @@ fn render_wikilinks(html: &str, link_index: &LinkIndex) -> String {
     result
 }
 
-fn render_wikilinks_in_text(text: &str, link_index: &LinkIndex) -> String {
+fn render_wikilinks_in_text(text: &str, link_index: &LinkIndex, texts: &Texts) -> String {
     let mut result = String::with_capacity(text.len());
     let mut last = 0;
 
@@ -502,7 +508,7 @@ fn render_wikilinks_in_text(text: &str, link_index: &LinkIndex) -> String {
             None => html! {
                 span
                 class="wikilink-unresolved"
-                title="This note hasn't been written yet"
+                title=(texts.unresolved_link)
                 { (link.display_text()) }
             },
         };
@@ -644,13 +650,15 @@ fn strip_tags(html: &str) -> String {
 pub struct Garden<'a> {
     pub link_index: &'a LinkIndex,
     pub path: &'a str,
+    pub texts: &'static Texts,
 }
 
 impl<'a> Garden<'a> {
-    fn of(app_state: &'a AppState) -> Garden<'a> {
+    fn of(app_state: &'a AppState, locale: Locale) -> Garden<'a> {
         Garden {
             link_index: app_state.post_search_engine.link_index(),
             path: &app_state.garden_path,
+            texts: locale.texts(),
         }
     }
 }
@@ -757,19 +765,19 @@ fn render_post_html_at_depth(
     let html = markdown::to_html_with_options(md, &frontmatter).unwrap();
     let html = render_callouts(&absolutize_post_links(&html));
     let html = render_embeds(&html, garden, embed_depth);
-    let html = render_wikilinks(&html, garden.link_index);
+    let html = render_wikilinks(&html, garden.link_index, garden.texts);
     let html = render_inline_tags(&render_highlights(&html));
     add_heading_anchors(&html, anchor_attribute)
 }
 
 const OUTLINE_INDENT: [&str; 6] = ["pl-0", "pl-3", "pl-6", "pl-9", "pl-12", "pl-15"];
 
-fn outline(headings: &[Heading]) -> PreEscaped<String> {
+fn outline(headings: &[Heading], texts: &Texts) -> PreEscaped<String> {
     let top_level = headings.iter().map(|h| h.level).min().unwrap_or(1);
 
     html! {
         @if headings.is_empty() {
-            p class="text-zinc-500 text-sm" { "No headings in this note." }
+            p class="text-zinc-500 text-sm" { (texts.outline_empty) }
         } @else {
             ul class="flex flex-col gap-1 text-sm" {
                 @for heading in headings {
@@ -793,6 +801,7 @@ fn post_page_shell(
     garden: &Garden,
 ) -> PreEscaped<String> {
     let (post_html, headings) = render_post_html(&md, garden, "id");
+    let t = garden.texts;
     let tab_class = "pb-1 border-b-2 border-transparent text-zinc-500 hover:text-bright-color aria-selected:text-primary-color aria-selected:border-primary-color uppercase tracking-wider transition-colors";
 
     html! {
@@ -810,8 +819,8 @@ fn post_page_shell(
         data-resize-edge="left"
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize side panel"
-        title="Drag to resize, double-click to reset"
+        aria-label=(t.panel_resize)
+        title=(t.resize_hint)
         class="hidden lg:block w-1 shrink-0 cursor-col-resize bg-shade-color hover:bg-primary-color transition-colors"
         {}
         div
@@ -836,7 +845,7 @@ fn post_page_shell(
             {
                 div
                 role="tablist"
-                aria-label="Side panel"
+                aria-label=(t.panel_label)
                 class="flex gap-4 px-2 pt-2 text-sm font-semibold border-b border-shade-color"
                 {
                     button
@@ -846,7 +855,7 @@ fn post_page_shell(
                     aria-controls="bottom-right-section"
                     aria-selected="true"
                     class=(tab_class)
-                    { "Metadata" }
+                    { (t.panel_metadata) }
                     button
                     type="button"
                     role="tab"
@@ -854,7 +863,7 @@ fn post_page_shell(
                     aria-controls="outline-section"
                     aria-selected="false"
                     class=(tab_class)
-                    { "Outline" }
+                    { (t.panel_outline) }
                 }
                 div
                 class="flex flex-col grow min-h-0 overflow-y-auto"
@@ -869,17 +878,17 @@ fn post_page_shell(
                     hx-swap="innerHTML"
                     class="flex w-full grow p-2"
                     {
-                        "Loading..."
+                        (t.loading)
                     }
                     nav
                     id="outline-section"
                     role="tabpanel"
                     data-panel="outline"
-                    aria-label="Outline"
+                    aria-label=(t.panel_outline)
                     hidden
                     class="w-full p-2"
                     {
-                        (outline(&headings))
+                        (outline(&headings, t))
                     }
                 }
             }
@@ -897,6 +906,7 @@ mod tests {
         Garden {
             link_index: INDEX.get_or_init(index),
             path: concat!(env!("CARGO_MANIFEST_DIR"), "/crates/e2e/fixtures/garden"),
+            texts: Locale::En.texts(),
         }
     }
 
@@ -1046,6 +1056,7 @@ mod tests {
         let html = render_wikilinks(
             "<p>[[fog]], [[Fog#The fog|that fog]] and [[#Intro]]</p>",
             &index(),
+            Locale::En.texts(),
         );
 
         assert_eq!(
@@ -1056,7 +1067,7 @@ mod tests {
 
     #[test]
     fn missing_notes_render_as_unresolved_links() {
-        let html = render_wikilinks("<p>[[not yet]]</p>", &index());
+        let html = render_wikilinks("<p>[[not yet]]</p>", &index(), Locale::En.texts());
 
         assert_eq!(
             html,
@@ -1068,13 +1079,13 @@ mod tests {
     fn wikilinks_in_code_are_left_alone() {
         let html = "<pre><code>[[fog]]</code></pre><p><code>[[fog]]</code></p>";
 
-        assert_eq!(render_wikilinks(html, &index()), html);
+        assert_eq!(render_wikilinks(html, &index(), Locale::En.texts()), html);
     }
 
     #[test]
     fn embeds_inside_a_sentence_become_links() {
         assert_eq!(
-            render_wikilinks("<p>See ![[fog]] here</p>", &index()),
+            render_wikilinks("<p>See ![[fog]] here</p>", &index(), Locale::En.texts()),
             r#"<p>See <a href="/posts/notes/fog">fog</a> here</p>"#
         );
     }
@@ -1136,7 +1147,11 @@ mod tests {
 
     #[test]
     fn wikilink_text_is_unescaped_to_resolve_and_escaped_again() {
-        let html = render_wikilinks("<p>[[rock &amp; roll|R&amp;R &lt;3]]</p>", &index());
+        let html = render_wikilinks(
+            "<p>[[rock &amp; roll|R&amp;R &lt;3]]</p>",
+            &index(),
+            Locale::En.texts(),
+        );
 
         assert_eq!(
             html,

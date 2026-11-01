@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{LANG}}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -24,6 +24,10 @@
   <body
     class="flex flex-col w-full h-dvh max-h-dvh bg-background-color text-bright-color"
     hx-boost:inherited="true"
+    data-switcher-label="{{t:switcher_label}}"
+    data-switcher-placeholder="{{t:switcher_placeholder}}"
+    data-switcher-empty="{{t:switcher_empty}}"
+    data-switcher-help="{{t:switcher_help}}"
   >
     <!-- Responsive header with search bar on mobile -->
     <div class="w-full max-h-10 flex justify-between items-center p-2 gap-2">
@@ -35,7 +39,7 @@
           class="w-full px-2 py-1 text-sm focus:outline-hidden"
           type="text"
           name="query"
-          placeholder="Search posts..."
+          placeholder="{{t:search_placeholder_mobile}}"
           hx-get="/search"
           hx-vals='{"limit": 100}'
           hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
@@ -95,7 +99,7 @@
           hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
-          HOME
+          {{t:nav_home}}
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
@@ -106,7 +110,7 @@
           hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
-          NEWS
+          {{t:nav_news}}
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
@@ -117,7 +121,7 @@
           hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
-          GARDEN
+          {{t:nav_garden}}
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
@@ -128,7 +132,7 @@
           hx-target="#main-section"
           hx-swap="innerHTML transition:true"
         >
-          TAGS
+          {{t:nav_tags}}
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
@@ -140,7 +144,7 @@
           hx-swap="innerHTML"
           hx-indicator="#global-skeleton"
         >
-          CHESS
+          {{t:nav_chess}}
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
@@ -152,7 +156,7 @@
           hx-swap="innerHTML"
           hx-indicator="#global-skeleton"
         >
-          MUSIC
+          {{t:nav_music}}
         </a>
         <span class="text-primary-color">&#8226;</span>
         <a
@@ -164,7 +168,7 @@
           hx-swap="innerHTML"
           hx-indicator="#global-skeleton"
         >
-          GAMES
+          {{t:nav_games}}
         </a>
       </div>
       <span
@@ -175,7 +179,7 @@
         hx-swap="innerHTML"
         class="hidden md:block text-base lg:text-lg font-semibold truncate"
       >
-        Loading schedule...
+        {{t:schedule_loading}}
       </span>
     </div>
 
@@ -198,7 +202,7 @@
         hx-trigger="click"
         hx-target="#main-section"
         hx-swap="innerHTML transition:true"
-        >HOME</a
+        >{{t:nav_home}}</a
       >
       <a
         id="news-section-mobile"
@@ -207,7 +211,7 @@
         hx-trigger="click"
         hx-target="#main-section"
         hx-swap="innerHTML transition:true"
-        >NEWS</a
+        >{{t:nav_news}}</a
       >
       <a
         id="garden-view-section-mobile"
@@ -216,7 +220,7 @@
         hx-trigger="click"
         hx-target="#main-section"
         hx-swap="innerHTML transition:true"
-        >GARDEN</a
+        >{{t:nav_garden}}</a
       >
       <a
         id="tags-section-mobile"
@@ -225,7 +229,7 @@
         hx-trigger="click"
         hx-target="#main-section"
         hx-swap="innerHTML transition:true"
-        >TAGS</a
+        >{{t:nav_tags}}</a
       >
       <a
         id="chess-link-mobile"
@@ -236,7 +240,7 @@
         hx-indicator="#global-skeleton"
         class="cursor-pointer hover:text-primary-color py-2"
       >
-        CHESS
+        {{t:nav_chess}}
       </a>
       <a
         id="music-link-mobile"
@@ -247,7 +251,7 @@
         hx-indicator="#global-skeleton"
         class="cursor-pointer hover:text-primary-color py-2"
       >
-        MUSIC
+        {{t:nav_music}}
       </a>
       <a
         id="games-link-mobile"
@@ -258,7 +262,7 @@
         hx-indicator="#global-skeleton"
         class="cursor-pointer hover:text-primary-color py-2"
       >
-        GAMES
+        {{t:nav_games}}
       </a>
     </div>
 
@@ -277,8 +281,8 @@
             class="w-full px-2 py-1 text-sm md:text-base focus:outline-hidden"
             type="text"
             name="query"
-            placeholder="Search any post..."
-            title="Ctrl+K opens the quick switcher"
+            placeholder="{{t:search_placeholder}}"
+            title="{{t:search_switcher_hint}}"
             hx-get="/search"
             hx-vals='{"limit": 100}'
             hx-include="#explorer-view"
@@ -289,8 +293,8 @@
           <button
             id="desktop-search-clear"
             type="button"
-            aria-label="Clear search"
-            title="Clear search"
+            aria-label="{{t:search_clear}}"
+            title="{{t:search_clear}}"
             hidden
             class="cursor-pointer shrink-0 px-1 opacity-30 hover:opacity-80"
           >
@@ -333,7 +337,7 @@
 
         <div
           role="tablist"
-          aria-label="Browse posts by"
+          aria-label="{{t:explorer_label}}"
           class="flex gap-3 pt-2 text-xs font-semibold uppercase tracking-wider"
         >
           <button
@@ -343,7 +347,7 @@
             aria-selected="true"
             class="text-zinc-500 hover:text-bright-color aria-selected:text-primary-color transition-colors"
           >
-            Topics
+            {{t:explorer_topics}}
           </button>
           <button
             type="button"
@@ -352,7 +356,7 @@
             aria-selected="false"
             class="text-zinc-500 hover:text-bright-color aria-selected:text-primary-color transition-colors"
           >
-            Folders
+            {{t:explorer_folders}}
           </button>
           <input type="hidden" id="explorer-view" name="view" value="topics" />
         </div>
@@ -364,7 +368,7 @@
             hx-trigger="load"
             hx-target="#list-section"
           >
-            Loading...
+            {{t:loading}}
           </div>
         </div>
       </div>
@@ -377,8 +381,8 @@
         data-resize-edge="right"
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize sidebar"
-        title="Drag to resize, double-click to reset"
+        aria-label="{{t:sidebar_resize}}"
+        title="{{t:resize_hint}}"
         class="hidden md:block w-1 shrink-0 cursor-col-resize bg-shade-color hover:bg-primary-color transition-colors"
       ></div>
 
@@ -460,8 +464,9 @@
         target="_blank"
         rel="noopener noreferrer"
         href="https://www.github.com/Chemchu/guslee.git"
-        >SOURCE</a
+        >{{t:footer_source}}</a
       >
+      {{LANGUAGE_SWITCHER}}
     </div>
     <script>
       // Mobile search input handler

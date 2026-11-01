@@ -10,6 +10,12 @@ use actix_web::{
     middleware::Next,
 };
 
+pub use texts::{Texts, fill};
+
+mod en;
+mod es;
+mod texts;
+
 pub const LANG_PARAM: &str = "lang";
 const STATIC_PREFIX: &str = "/_static";
 
@@ -27,6 +33,13 @@ impl Locale {
         match self {
             Locale::En => "en",
             Locale::Es => "es",
+        }
+    }
+
+    pub fn texts(self) -> &'static Texts {
+        match self {
+            Locale::En => &en::TEXTS,
+            Locale::Es => &es::TEXTS,
         }
     }
 
