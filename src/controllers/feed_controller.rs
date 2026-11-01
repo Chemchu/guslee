@@ -1,9 +1,9 @@
 use actix_web::{HttpRequest, HttpResponse, get, web};
 use chrono::NaiveDate;
-use search_engine::utils::{DEFAULT_LANG, Post};
+use search_engine::utils::Post;
 
 use crate::controllers::{AppState, base_url, encode_path};
-use crate::i18n::{LANG_PARAM, Locale};
+use crate::i18n::{Locale, lang_query};
 
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(rss_feed);
@@ -20,14 +20,6 @@ async fn rss_feed(app_state: web::Data<AppState>, req: HttpRequest) -> HttpRespo
     HttpResponse::Ok()
         .content_type("application/rss+xml; charset=utf-8")
         .body(rss(&app_state.app_name, &base_url(&req), locale, &posts))
-}
-
-fn lang_query(lang: &str) -> String {
-    if lang == DEFAULT_LANG {
-        String::new()
-    } else {
-        format!("?{LANG_PARAM}={lang}")
-    }
 }
 
 fn rss(app_name: &str, base_url: &str, locale: Locale, posts: &[Post]) -> String {
@@ -101,7 +93,7 @@ fn escape_xml(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use search_engine::utils::MdMetadata;
+    use search_engine::utils::{DEFAULT_LANG, MdMetadata};
 
     fn post(file_path: &str, title: &str, date: &str) -> Post {
         Post {

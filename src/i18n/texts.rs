@@ -8,11 +8,8 @@ macro_rules! texts {
         }
 
         impl Texts {
-            pub fn get(&self, key: &str) -> Option<&'static str> {
-                match key {
-                    $(stringify!($key) => Some(self.$key),)*
-                    _ => None,
-                }
+            pub fn entries(&self) -> Vec<(&'static str, &'static str)> {
+                vec![$((stringify!($key), self.$key)),*]
             }
         }
     };
@@ -159,35 +156,12 @@ mod tests {
     }
 
     #[test]
-    fn texts_are_looked_up_by_key() {
-        assert_eq!(Locale::En.texts().get("nav_home"), Some("HOME"));
-        assert_eq!(Locale::Es.texts().get("nav_home"), Some("INICIO"));
-        assert_eq!(Locale::En.texts().get("missing_key"), None);
-    }
-
-    #[test]
     fn placeholders_match_between_languages() {
-        let keys = [
-            "tags_count",
-            "tags_description",
-            "tag_post_one",
-            "tag_post_other",
-            "tag_description",
-            "chess_mode_games",
-            "chess_games_count",
-            "chess_games_reviewed",
-            "music_subscriber",
-            "steam_level",
-        ];
-        for key in keys {
-            for locale in Locale::ALL {
-                assert_eq!(
-                    locale.texts().get(key).unwrap().matches("{}").count(),
-                    1,
-                    "{key} in {}",
-                    locale.as_str()
-                );
-            }
+        let english = Locale::En.texts().entries();
+        let spanish = Locale::Es.texts().entries();
+
+        for ((key, en), (_, es)) in english.into_iter().zip(spanish) {
+            assert_eq!(en.matches("{}").count(), es.matches("{}").count(), "{key}");
         }
     }
 

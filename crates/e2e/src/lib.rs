@@ -125,6 +125,27 @@ impl TestApp {
         .await
     }
 
+    pub async fn get_in(&self, path: &str, accept_language: &str) -> Response {
+        self.send(
+            self.client
+                .get(self.url(path))
+                .header("Accept-Language", accept_language),
+        )
+        .await
+    }
+
+    pub async fn htmx_get_in(&self, path: &str, accept_language: &str) -> String {
+        self.send(
+            self.client
+                .get(self.url(path))
+                .header("HX-Request", "true")
+                .header("HX-Request-Type", "partial")
+                .header("Accept-Language", accept_language),
+        )
+        .await
+        .body
+    }
+
     pub async fn history_restore_get(&self, path: &str) -> Response {
         self.send(
             self.client

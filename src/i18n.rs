@@ -19,6 +19,14 @@ mod texts;
 pub const LANG_PARAM: &str = "lang";
 const STATIC_PREFIX: &str = "/_static";
 
+pub fn lang_query(lang: &str) -> String {
+    if lang == Locale::default().as_str() {
+        String::new()
+    } else {
+        format!("?{LANG_PARAM}={lang}")
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Locale {
     #[default]

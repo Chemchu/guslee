@@ -6,7 +6,7 @@ use search_engine::{PostsSearchEngine, utils::DEFAULT_LANG};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
-use crate::i18n::{LANG_PARAM, Locale, Texts};
+use crate::i18n::{LANG_PARAM, Locale, Texts, lang_query};
 
 pub mod chess_controller;
 pub mod fallback_controller;
@@ -22,7 +22,6 @@ pub mod steam_controller;
 pub mod tags_controller;
 
 static INDEX_TEMPLATES: OnceLock<HashMap<Locale, String>> = OnceLock::new();
-const TEXT_PLACEHOLDER: &str = "{{t:";
 
 pub struct AppState {
     pub app_name: String,
@@ -72,10 +71,10 @@ impl PageMeta {
             (Some(lang), true) => lang_url(url, lang),
             _ => url.to_string(),
         });
-        let feed_url = match self.lang.as_deref() {
-            Some(lang) if lang != DEFAULT_LANG => lang_url("/rss.xml", lang),
-            _ => "/rss.xml".to_string(),
-        };
+        let feed_url = format!(
+            "/rss.xml{}",
+            lang_query(self.lang.as_deref().unwrap_or(DEFAULT_LANG))
+        );
 
         maud::html! {
             title { (self.full_title(app_name)) }
@@ -147,30 +146,17 @@ pub fn wrap_content_with_meta(
 }
 
 fn localize_template(template: &str, locale: Locale) -> String {
-    let texts = locale.texts();
-    let mut html = String::with_capacity(template.len());
-    let mut rest = template;
-
-    while let Some(start) = rest.find(TEXT_PLACEHOLDER) {
-        html.push_str(&rest[..start]);
-        let after = &rest[start + TEXT_PLACEHOLDER.len()..];
-        let Some(end) = after.find("}}") else {
-            rest = &rest[start..];
-            break;
-        };
-        let key = &after[..end];
-        match texts.get(key) {
-            Some(text) => html.push_str(&maud::html! { (text) }.into_string()),
-            None => {
-                log::warn!("Missing {} text for template key {key}", locale.as_str());
-                html.push_str(key);
-            }
-        }
-        rest = &after[end + "}}".len()..];
-    }
-    html.push_str(rest);
-
-    html.replace("{{LANG}}", locale.as_str())
+    locale
+        .texts()
+        .entries()
+        .into_iter()
+        .fold(template.to_string(), |html, (key, text)| {
+            html.replace(
+                &format!("{{{{t:{key}}}}}"),
+                &maud::html! { (text) }.into_string(),
+            )
+        })
+        .replace("{{LANG}}", locale.as_str())
         .replace("{{LANGUAGE_SWITCHER}}", &language_switcher(locale))
 }
 
@@ -397,7 +383,7 @@ mod tests {
 
         for locale in Locale::ALL {
             let html = localize_template(&template, locale);
-            assert!(!html.contains(TEXT_PLACEHOLDER), "{}", locale.as_str());
+            assert!(!html.contains("{{t:"), "{}", locale.as_str());
             assert!(!html.contains("{{LANG"), "{}", locale.as_str());
             assert!(html.contains(&format!(r#"<html lang="{}">"#, locale.as_str())));
         }
@@ -427,10 +413,6 @@ mod tests {
         assert_eq!(
             html,
             r#"<p title="↑↓ to move · Enter to open · Esc to close">← All tags</p>"#
-        );
-        assert_eq!(
-            localize_template("{{t:not_a_key}} {{t:unclosed", Locale::En),
-            "not_a_key {{t:unclosed"
         );
     }
 

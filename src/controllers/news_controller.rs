@@ -3,14 +3,6 @@ use crate::i18n::Locale;
 use actix_web::{HttpRequest, Responder, get, web};
 use maud::html;
 
-struct News {
-    title: String,
-    file_path: String,
-    date: String,
-    description: String,
-    tags: Vec<String>,
-}
-
 pub fn configure_services(cfg: &mut web::ServiceConfig) {
     cfg.service(news_page);
 }
@@ -22,19 +14,10 @@ async fn news_page(
     locale: Locale,
 ) -> impl Responder {
     let t = locale.texts();
-    let news: Vec<News> = app_state
+    let news = app_state
         .post_search_engine
         .published_posts(locale.as_str())
-        .await
-        .into_iter()
-        .map(|post| News {
-            file_path: format!("/{}", post.file_path.replace(".md", "")),
-            title: post.metadata.title,
-            date: post.metadata.date,
-            description: post.metadata.description,
-            tags: post.metadata.tags,
-        })
-        .collect();
+        .await;
 
     let is_empty = news.is_empty();
 
@@ -96,13 +79,14 @@ async fn news_page(
                     div
                     class="space-y-6"
                     {
-                        @for n in news {
+                        @for post in news {
+                        @let n = &post.metadata;
                         article
                         class="group relative shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-shade-color"
                         {
                             a
                             class="block p-6 md:p-8"
-                            href=(format!("/posts{}", n.file_path))
+                            href=(format!("/posts/{}", post.file_path.replace(".md", "")))
                             hx-target="#main-section"
                             hx-trigger="click"
                             hx-swap="innerHTML transition:true"
