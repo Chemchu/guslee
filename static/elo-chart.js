@@ -9,9 +9,15 @@ function initChessChart(chartData) {
     return;
   }
 
-  const margin = { top: 20, right: 50, bottom: 30, left: 50 };
-  const width = 900 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const container = document.getElementById("elo-chart");
+  const outerWidth = container.clientWidth || 900;
+  const narrow = outerWidth < 640;
+  const margin = narrow
+    ? { top: 20, right: 12, bottom: 30, left: 44 }
+    : { top: 20, right: 50, bottom: 30, left: 50 };
+  const width = outerWidth - margin.left - margin.right;
+  const height = (narrow ? 240 : 400) - margin.top - margin.bottom;
+  container.dataset.renderedWidth = outerWidth;
 
   const svg = d3
     .select("#elo-chart")
@@ -53,7 +59,7 @@ function initChessChart(chartData) {
     .append("g")
     .attr("class", "grid")
     .selectAll("line")
-    .data(y.ticks(8))
+    .data(y.ticks(narrow ? 5 : 8))
     .enter()
     .append("line")
     .attr("x1", 0)
@@ -68,7 +74,7 @@ function initChessChart(chartData) {
   svg
     .append("g")
     .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x).ticks(6))
+    .call(d3.axisBottom(x).ticks(narrow ? 3 : 6))
     .attr("color", "#9ca3af")
     .selectAll("text")
     .style("font-size", "12px");
@@ -76,7 +82,7 @@ function initChessChart(chartData) {
   // Y Axis
   svg
     .append("g")
-    .call(d3.axisLeft(y).ticks(8))
+    .call(narrow ? d3.axisLeft(y).ticks(5, "d") : d3.axisLeft(y).ticks(8))
     .attr("color", "#9ca3af")
     .selectAll("text")
     .style("font-size", "12px");
@@ -86,7 +92,7 @@ function initChessChart(chartData) {
     .datum(data)
     .attr("fill", "none")
     .attr("stroke", "#bc6c25")
-    .attr("stroke-width", 3)
+    .attr("stroke-width", narrow ? 2 : 3)
     .attr("d", line);
 
   svg
@@ -105,17 +111,25 @@ function initChessChart(chartData) {
     .on("mouseover", function (_event, d) {
       d3.select(this).transition().duration(200).attr("r", 6);
 
+      svg.selectAll(".tooltip").remove();
+
+      const tipWidth = narrow ? 56 : 80;
+      const tipHeight = narrow ? 28 : 40;
+      const tipX = Math.min(Math.max(x(d.date), tipWidth / 2), width - tipWidth / 2);
+      const tipY = Math.max(y(d.rating) - 20, tipHeight - 5 - margin.top);
+
       const tooltip = svg
         .append("g")
         .attr("class", "tooltip")
-        .attr("transform", `translate(${x(d.date)},${y(d.rating) - 20})`);
+        .attr("pointer-events", "none")
+        .attr("transform", `translate(${tipX},${tipY})`);
 
       tooltip
         .append("rect")
-        .attr("x", -40)
-        .attr("y", -25)
-        .attr("width", 80)
-        .attr("height", 40)
+        .attr("x", -tipWidth / 2)
+        .attr("y", -tipHeight + 15)
+        .attr("width", tipWidth)
+        .attr("height", tipHeight)
         .attr("fill", "#1f2937")
         .attr("stroke", "#F58A07")
         .attr("rx", 4);
@@ -123,9 +137,9 @@ function initChessChart(chartData) {
       tooltip
         .append("text")
         .attr("text-anchor", "middle")
-        .attr("y", 2.5)
+        .attr("y", narrow ? 6 : 2.5)
         .attr("fill", "#fff")
-        .style("font-size", "24px")
+        .style("font-size", narrow ? "16px" : "24px")
         .text(d.rating);
     })
     .on("mouseout", function () {
@@ -173,5 +187,18 @@ document.addEventListener("DOMContentLoaded", function () {
   observer.observe(targetContainer, {
     childList: true,
     subtree: true,
+  });
+
+  let resizeFrame = null;
+  window.addEventListener("resize", function () {
+    if (resizeFrame) return;
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = null;
+      const chart = document.getElementById("elo-chart");
+      if (!chart || !chart.querySelector("svg")) return;
+      if (Math.abs(chart.clientWidth - Number(chart.dataset.renderedWidth)) < 2) return;
+      chart.innerHTML = "";
+      tryInitChart();
+    });
   });
 });

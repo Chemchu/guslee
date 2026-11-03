@@ -28,7 +28,7 @@ async fn get_user_profile(
     let html_to_render = match user_profile.is_err() {
         true => {
             html! {
-                div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
+                div class="flex flex-col w-full gap-10 p-4 md:p-6 lg:p-8 overflow-auto" {
                     (t.music_error)
                 }
             }
@@ -41,22 +41,22 @@ async fn get_user_profile(
 
 fn render_spotify_profile(user: SpotifyUser, t: &Texts) -> PreEscaped<String> {
     html! {
-        div class="flex flex-col w-full gap-4 p-6 lg:p-8 overflow-auto" {
-            div class="bg-background-color p-6 border border-shade-color border-l-[3px] border-l-primary-color" {
-                div class="flex items-center gap-6" {
+        div class="flex flex-col w-full gap-4 p-4 md:p-6 lg:p-8 overflow-auto" {
+            div class="bg-background-color p-4 md:p-6 border border-shade-color border-l-[3px] border-l-primary-color" {
+                div class="flex items-center gap-4 md:gap-6" {
                     @if let Some(image) = user.images.first() {
-                        a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" {
+                        a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" class="shrink-0" {
                             img src=(image.url)
-                            class="w-28 h-28 transition-all duration-300 rounded-full ring-2 ring-bright-color hover:ring-primary-color shadow-2xl" {}
+                            class="w-16 h-16 md:w-28 md:h-28 transition-all duration-300 rounded-full ring-2 ring-bright-color hover:ring-primary-color shadow-2xl" {}
                         }
                     }
-                    div class="flex-1" {
-                        h2 class="transition-all duration-300 text-4xl font-bold mb-2 bg-clip-text text-bright-color hover:text-primary-color" {
+                    div class="flex-1 min-w-0" {
+                        h2 class="transition-all duration-300 text-2xl md:text-4xl font-bold mb-1 md:mb-2 break-words bg-clip-text text-bright-color hover:text-primary-color" {
                             a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" {
                                 (user.display_name)
                             }
                         }
-                        p class="text-gray-300 text-lg" {
+                        p class="text-gray-300 text-base md:text-lg" {
                             (title_case(&fill(t.music_subscriber, &user.product)))
                         }
                         div class="flex gap-6 text-sm text-gray-400" {
@@ -178,7 +178,7 @@ async fn user_top_item_content(
     let t = locale.texts();
     let error_html = |message: String| {
         html! {
-            div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
+            div class="flex flex-col w-full gap-10 p-4 md:p-6 lg:p-8 overflow-auto" {
                 (message)
             }
         }
@@ -262,10 +262,10 @@ fn render_artists_list(top_artists: &TopArtistsResponse, t: &Texts) -> PreEscape
             @for artist in top_artists.items.iter() {
                 a href=(artist.external_urls.spotify) target="_blank" rel="noopener noreferrer"
                     style="background-color:#1F1F1F;"
-                    class="group h-[90px] p-4 flex items-center gap-4 hover:brightness-125 transition-all duration-300 border border-transparent hover:border-primary-color" {
+                    class="group h-[90px] p-3 md:p-4 flex items-center gap-3 md:gap-4 hover:brightness-125 transition-all duration-300 border border-transparent hover:border-primary-color" {
                     @if let Some(image) = artist.images.first() {
                         img src=(image.url)
-                            class="w-14 h-14 rounded-full shadow-md" {}
+                            class="w-14 h-14 shrink-0 rounded-full shadow-md" {}
                     }
                     div class="flex-1 min-w-0" {
                         h3 class="font-semibold text-base text-white truncate" {

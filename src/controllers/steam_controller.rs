@@ -41,7 +41,7 @@ async fn steam_page_content(
             Ok(render_steam_page(profile, recent_games, top_games, t).into_string())
         }
         _ => Err(html! {
-            div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
+            div class="flex flex-col w-full gap-6 md:gap-10 p-4 md:p-6 lg:p-8 overflow-auto" {
                 (t.steam_error)
             }
         }
@@ -89,9 +89,9 @@ fn render_steam_page(
             _ => "absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-slate-900 shadow-lg bg-slate-500",
         };
 
-        div class="flex flex-col w-full gap-10 md:p-6 lg:p-8 overflow-auto" {
+        div class="flex flex-col w-full gap-6 md:gap-10 p-4 md:p-6 lg:p-8 overflow-auto" {
             div class="flex flex-col gap-6" {
-                div class="bg-gradient-to-br from-slate-800 to-slate-900 shadow-2xl p-6 border border-shade-color" {
+                div class="bg-gradient-to-br from-slate-800 to-slate-900 shadow-2xl p-4 md:p-6 border border-shade-color" {
                     div class="flex flex-col md:flex-row gap-6 items-start" {
                         div class="shrink-0" {
                             div class="relative" {
@@ -100,7 +100,7 @@ fn render_steam_page(
                                     img
                                         src=(profile.avatar_full)
                                         alt=(t.steam_avatar_alt)
-                                        class="transition-all duration-200 w-32 h-32 border-4 border-slate-700 shadow-xl hover:border-primary-color";
+                                        class="transition-all duration-200 w-24 h-24 md:w-32 md:h-32 border-4 border-slate-700 shadow-xl hover:border-primary-color";
                                 }
                                 div
                                 class=(pfp_indicator_color)
@@ -110,7 +110,7 @@ fn render_steam_page(
 
                         div class="flex-1 min-w-0" {
                             div class="flex flex-col gap-3" {
-                                h2 class="text-3xl font-bold text-white truncate" {
+                                h2 class="text-2xl md:text-3xl font-bold text-white truncate" {
                                     (profile.personaname)
                                 }
 
@@ -218,16 +218,16 @@ fn render_steam_page(
 
                 div class="grid grid-cols-1 gap-4" {
                     @for game in &recent_games {
-                        div class="bg-gradient-to-r from-slate-800 to-slate-900 p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
+                        div class="bg-gradient-to-r from-slate-800 to-slate-900 p-3 md:p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
                             div class="flex gap-4 items-center" {
                                 img
                                     src=(game.img_logo_url)
                                     onerror={"this.onerror=null; this.src='http://media.steampowered.com/steamcommunity/public/images/apps/"(game.appid)"/"(game.img_icon_url)".jpg';"}
                                     alt=(game.name)
-                                    class="w-16 h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
+                                    class="w-12 h-12 md:w-16 md:h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
 
                                 div class="flex-1 min-w-0" {
-                                    h3 class="text-xl font-bold text-white truncate mb-2" {
+                                    h3 class="text-lg md:text-xl font-bold text-white truncate mb-2" {
                                         (game.name)
                                     }
                                     div class="flex flex-wrap gap-4 text-sm" {
@@ -273,16 +273,16 @@ fn render_steam_page(
                 }
                 div class="grid grid-cols-1 gap-4" {
                     @for game in &top_games {
-                        div class="bg-gradient-to-r from-slate-800 to-slate-900 p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
+                        div class="bg-gradient-to-r from-slate-800 to-slate-900 p-3 md:p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
                             div class="flex gap-4 items-center" {
                                 img
                                     src=(game.img_logo_url)
                                     onerror={"this.onerror=null; this.src='http://media.steampowered.com/steamcommunity/public/images/apps/"(game.appid)"/"(game.img_icon_url)".jpg';"}
                                     alt=(game.name)
-                                    class="w-16 h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
+                                    class="w-12 h-12 md:w-16 md:h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
 
                                 div class="flex-1 min-w-0" {
-                                    h3 class="text-xl font-bold text-white truncate mb-2" {
+                                    h3 class="text-lg md:text-xl font-bold text-white truncate mb-2" {
                                         (game.name)
                                     }
                                     div class="flex flex-wrap gap-4 text-sm" {

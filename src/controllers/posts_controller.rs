@@ -809,6 +809,58 @@ fn post_page_shell(
         lang=(lang)
         class="prose prose-theme w-full max-w-full p-4 md:p-6 lg:p-8 overflow-auto text-sm md:text-base"
             {
+                details
+                id="mobile-post-panel"
+                hx-get=(format!("/metadata/{}", post_path))
+                hx-trigger="toggle once"
+                hx-target="#mobile-metadata-section"
+                hx-swap="innerHTML"
+                class="not-prose lg:hidden mb-6 border border-shade-color"
+                {
+                    summary
+                    class="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-400"
+                    { (t.panel_metadata) " · " (t.panel_outline) }
+                    div
+                    role="tablist"
+                    aria-label=(t.panel_label)
+                    class="flex gap-4 px-3 pt-1 text-sm font-semibold border-b border-shade-color"
+                    {
+                        button
+                        type="button"
+                        role="tab"
+                        data-panel-tab="metadata"
+                        aria-controls="mobile-metadata-section"
+                        aria-selected="true"
+                        class=(tab_class)
+                        { (t.panel_metadata) }
+                        button
+                        type="button"
+                        role="tab"
+                        data-panel-tab="outline"
+                        aria-controls="mobile-outline-section"
+                        aria-selected="false"
+                        class=(tab_class)
+                        { (t.panel_outline) }
+                    }
+                    div
+                    id="mobile-metadata-section"
+                    role="tabpanel"
+                    data-panel="metadata"
+                    class="flex w-full p-2"
+                    {
+                        (t.loading)
+                    }
+                    nav
+                    id="mobile-outline-section"
+                    role="tabpanel"
+                    data-panel="outline"
+                    aria-label=(t.panel_outline)
+                    hidden
+                    class="w-full p-3"
+                    {
+                        (outline(&headings, t))
+                    }
+                }
                (PreEscaped(post_html))
             }
         div

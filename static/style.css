@@ -217,3 +217,23 @@ footer {
 details[open] summary::marker {
   color: #f58a07;
 }
+
+@media (width < 48rem) {
+  #left-section.explorer-open {
+    display: flex;
+    position: fixed;
+    top: 2.5rem;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    padding-bottom: 0.5rem;
+    border-top: 1px solid var(--color-shade-color);
+    background-color: var(--color-background-color);
+  }
+
+  #left-section.explorer-open #list-section a,
+  #left-section.explorer-open #list-section summary {
+    padding-block: 0.25rem;
+  }
+}

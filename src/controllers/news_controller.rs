@@ -32,7 +32,7 @@ async fn news_page(
                 class="mb-12"
                 {
                     h1
-                    class="text-5xl md:text-6xl font-bold bg-clip-text mb-4"
+                    class="text-4xl md:text-6xl font-bold bg-clip-text mb-4"
                     {
                         (t.news_title)
                     }
@@ -85,7 +85,7 @@ async fn news_page(
                         class="group relative shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-shade-color"
                         {
                             a
-                            class="block p-6 md:p-8"
+                            class="block p-4 md:p-8"
                             href=(format!("/posts/{}", post.file_path.replace(".md", "")))
                             hx-target="#main-section"
                             hx-trigger="click"
@@ -102,7 +102,7 @@ async fn news_page(
                                     class="flex-1 space-y-3"
                                     {
                                         h2
-                                        class="text-2xl md:text-3xl font-semibold text-bright-color group-hover:text-primary-color transition-colors duration-200"
+                                        class="text-xl md:text-3xl font-semibold text-bright-color group-hover:text-primary-color transition-colors duration-200"
                                         {
                                             (n.title)
                                         }

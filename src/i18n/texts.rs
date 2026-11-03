@@ -25,6 +25,8 @@ texts! {
     nav_chess,
     nav_music,
     nav_games,
+    nav_browse,
+    menu_toggle,
     footer_source,
     schedule_loading,
     schedule_unknown,

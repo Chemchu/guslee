@@ -30,13 +30,16 @@
     data-switcher-help="{{t:switcher_help}}"
   >
     <!-- Responsive header with search bar on mobile -->
-    <div class="w-full max-h-10 flex justify-between items-center p-2 gap-2">
+    <div
+      class="relative w-full max-h-10 flex justify-between items-center p-2 gap-2"
+    >
       <div
+        id="mobile-search"
         class="md:hidden grow flex justify-between border border-shade-color focus-within:border-primary-color"
       >
         <input
           id="mobile-search-input"
-          class="w-full px-2 py-1 text-sm focus:outline-hidden"
+          class="w-full min-w-0 px-2 py-0.5 text-base focus:outline-hidden"
           type="text"
           name="query"
           placeholder="{{t:search_placeholder_mobile}}"
@@ -46,6 +49,29 @@
           hx-target="#mobile-search-results"
           hx-swap="innerHTML"
         />
+        <button
+          id="mobile-search-clear"
+          type="button"
+          aria-label="{{t:search_clear}}"
+          title="{{t:search_clear}}"
+          hidden
+          class="cursor-pointer shrink-0 px-2 opacity-30 hover:opacity-80"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 18 18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
 
         <svg
           id="mobile-search-icon"
@@ -54,7 +80,7 @@
           viewBox="0 0 24 24"
           stroke-width="1.5"
           stroke="currentColor"
-          class="cursor-pointer w-6 h-6 px-1 opacity-30 hover:opacity-80 shrink-0"
+          class="cursor-pointer w-8 h-7 px-1.5 opacity-30 hover:opacity-80 shrink-0"
           hx-get="/search"
           hx-vals="js:{limit: 100, query: document.querySelector('#mobile-search-input').value}"
           hx-trigger="click"
@@ -71,7 +97,11 @@
 
       <button
         id="mobile-menu-btn"
-        class="md:hidden hover:text-primary-color shrink-0 cursor-pointer"
+        type="button"
+        aria-label="{{t:menu_toggle}}"
+        aria-controls="mobile-menu"
+        aria-expanded="false"
+        class="group md:hidden hover:text-primary-color shrink-0 cursor-pointer p-1 -m-1"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -79,12 +109,26 @@
           viewBox="0 0 24 24"
           stroke-width="1.5"
           stroke="currentColor"
-          class="w-6 h-6"
+          class="w-6 h-6 group-aria-expanded:hidden"
         >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+          />
+        </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6 hidden group-aria-expanded:block"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6 18 18 6M6 6l12 12"
           />
         </svg>
       </button>
@@ -181,23 +225,30 @@
       >
         {{t:schedule_loading}}
       </span>
+
+      <div
+        id="mobile-search-results"
+        class="hidden md:hidden absolute top-full left-0 right-0 max-h-[60dvh] overflow-auto border-b border-shade-color bg-background-color z-50 shadow-lg px-2 pb-1"
+      ></div>
     </div>
 
-    <!-- Mobile search results -->
-    <div
-      id="mobile-search-results"
-      class="hidden md:hidden absolute top-10 left-0 right-0 max-h-64 overflow-auto border-b border-shade-color bg-background-color z-50 shadow-lg px-2 pb-1"
-    >
-      <!-- Search results will appear here -->
-    </div>
     <!-- Mobile menu dropdown -->
     <div
       id="mobile-menu"
-      class="hidden md:hidden flex-col gap-2 p-4 border-t border-b border-shade-color"
+      class="hidden md:hidden flex-col px-4 py-2 border-t border-b border-shade-color"
     >
+      <button
+        id="mobile-browse-btn"
+        type="button"
+        aria-controls="left-section"
+        aria-expanded="false"
+        class="text-left cursor-pointer hover:text-primary-color aria-expanded:text-primary-color py-2"
+      >
+        {{t:nav_browse}}
+      </button>
       <a
         id="home-section-mobile"
-        class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        class="cursor-pointer hover:text-primary-color whitespace-nowrap py-2"
         href="/posts/welcome"
         hx-trigger="click"
         hx-target="#main-section"
@@ -206,7 +257,7 @@
       >
       <a
         id="news-section-mobile"
-        class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        class="cursor-pointer hover:text-primary-color whitespace-nowrap py-2"
         href="/news"
         hx-trigger="click"
         hx-target="#main-section"
@@ -215,7 +266,7 @@
       >
       <a
         id="garden-view-section-mobile"
-        class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        class="cursor-pointer hover:text-primary-color whitespace-nowrap py-2"
         href="/garden-view-dispatcher"
         hx-trigger="click"
         hx-target="#main-section"
@@ -224,7 +275,7 @@
       >
       <a
         id="tags-section-mobile"
-        class="cursor-pointer hover:text-primary-color whitespace-nowrap"
+        class="cursor-pointer hover:text-primary-color whitespace-nowrap py-2"
         href="/tags"
         hx-trigger="click"
         hx-target="#main-section"
@@ -278,7 +329,7 @@
         >
           <input
             id="desktop-search-input"
-            class="w-full px-2 py-1 text-sm md:text-base focus:outline-hidden"
+            class="w-full px-2 py-1 text-base focus:outline-hidden"
             type="text"
             name="query"
             placeholder="{{t:search_placeholder}}"
@@ -469,43 +520,83 @@
       {{LANGUAGE_SWITCHER}}
     </div>
     <script>
-      // Mobile search input handler
-      document
-        .getElementById("mobile-search-input")
-        .addEventListener("input", function () {
-          const results = document.getElementById("mobile-search-results");
-          if (this.value.trim() === "") {
+      (function () {
+        const input = document.getElementById("mobile-search-input");
+        const results = document.getElementById("mobile-search-results");
+        const clear = document.getElementById("mobile-search-clear");
+        const menu = document.getElementById("mobile-menu");
+        const menuBtn = document.getElementById("mobile-menu-btn");
+        const browseBtn = document.getElementById("mobile-browse-btn");
+        const explorer = document.getElementById("left-section");
+
+        function syncResults() {
+          const empty = input.value.trim() === "";
+          results.classList.toggle("hidden", empty);
+          clear.hidden = input.value === "";
+        }
+
+        function setMenu(open) {
+          menu.classList.toggle("hidden", !open);
+          menu.classList.toggle("flex", open);
+          menuBtn.setAttribute("aria-expanded", String(open));
+        }
+
+        function setExplorer(open) {
+          explorer.classList.toggle("explorer-open", open);
+          browseBtn.setAttribute("aria-expanded", String(open));
+        }
+
+        window.closeMobilePanels = function () {
+          setMenu(false);
+          setExplorer(false);
+          results.classList.add("hidden");
+        };
+
+        input.addEventListener("input", syncResults);
+
+        input.addEventListener("focus", function () {
+          if (input.value.trim() !== "") results.classList.remove("hidden");
+        });
+
+        document
+          .getElementById("mobile-search-icon")
+          .addEventListener("click", function () {
+            if (input.value.trim() !== "") results.classList.remove("hidden");
+          });
+
+        clear.addEventListener("click", function () {
+          input.value = "";
+          results.innerHTML = "";
+          syncResults();
+          input.focus();
+        });
+
+        menuBtn.addEventListener("click", function () {
+          const open = menu.classList.contains("hidden");
+          setMenu(open);
+          if (open) setExplorer(false);
+        });
+
+        browseBtn.addEventListener("click", function () {
+          setExplorer(!explorer.classList.contains("explorer-open"));
+          setMenu(false);
+        });
+
+        menu.addEventListener("htmx:after:request", function () {
+          setMenu(false);
+        });
+
+        document.addEventListener("click", function (event) {
+          if (!document.getElementById("mobile-search").contains(event.target) &&
+              !results.contains(event.target)) {
             results.classList.add("hidden");
-          } else {
-            results.classList.remove("hidden");
           }
         });
 
-      // Mobile search icon click handler
-      document
-        .getElementById("mobile-search-icon")
-        .addEventListener("click", function () {
-          const input = document.getElementById("mobile-search-input");
-          if (input.value.trim() !== "") {
-            document
-              .getElementById("mobile-search-results")
-              .classList.remove("hidden");
-          }
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape") window.closeMobilePanels();
         });
-
-      // Mobile menu toggle
-      document
-        .getElementById("mobile-menu-btn")
-        .addEventListener("click", function () {
-          document.getElementById("mobile-menu").classList.toggle("hidden");
-        });
-
-      // Close the mobile menu once any of its links has loaded
-      document
-        .getElementById("mobile-menu")
-        .addEventListener("htmx:after:request", function () {
-          this.classList.add("hidden");
-        });
+      })();
     </script>
   </body>
 </html>

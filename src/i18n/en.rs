@@ -10,6 +10,8 @@ pub const TEXTS: Texts = Texts {
     nav_chess: "CHESS",
     nav_music: "MUSIC",
     nav_games: "GAMES",
+    nav_browse: "BROWSE",
+    menu_toggle: "Toggle menu",
     footer_source: "SOURCE",
     schedule_loading: "Loading schedule...",
     schedule_unknown: "I should probably see why the hour is not between 0 and 23...",

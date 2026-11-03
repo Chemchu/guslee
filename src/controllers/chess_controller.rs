@@ -194,56 +194,56 @@ fn render_chess_page(
     };
 
     html! {
-        div class="flex flex-col w-full gap-6 md:p-6 lg:p-8 overflow-y-auto h-full" {
+        div class="flex flex-col w-full gap-6 p-4 md:p-6 lg:p-8 overflow-y-auto h-full" {
             div id="chess-stats" {
                 div class="text-bright-color w-full" {
                     div class="container mx-auto max-w-4xl h-full" {
-                        h1 class="text-5xl md:text-6xl font-bold pb-8" { (t.chess_title) }
+                        h1 class="text-4xl md:text-6xl font-bold pb-4 md:pb-8" { (t.chess_title) }
                         div class="grid grid-cols-2 md:grid-cols-4 mb-6" {
-                            div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { (t.chess_current_rating) }
-                                p class="text-3xl font-bold" { (current_rating) }
+                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                                p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-1 truncate" { (t.chess_current_rating) }
+                                p class="text-2xl md:text-3xl font-bold" { (current_rating) }
                             }
-                            div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { (t.chess_peak_rating) }
-                                p class="text-3xl font-bold text-primary-color" { (peak_rating) }
+                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                                p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-1 truncate" { (t.chess_peak_rating) }
+                                p class="text-2xl md:text-3xl font-bold text-primary-color" { (peak_rating) }
                             }
-                            div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { (fill(t.chess_mode_games, &game_mode)) }
-                                p class="text-3xl font-bold" { (total_games) }
+                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                                p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-1 truncate" { (fill(t.chess_mode_games, &game_mode)) }
+                                p class="text-2xl md:text-3xl font-bold" { (total_games) }
                             }
-                            div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-1" { (t.chess_total_games) }
-                                p class="text-3xl font-bold" { (total_all_games) }
+                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                                p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-1 truncate" { (t.chess_total_games) }
+                                p class="text-2xl md:text-3xl font-bold" { (total_all_games) }
                             }
                         }
 
                         div class="grid grid-cols-3 mb-6" {
-                            div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { (t.chess_win_rate) }
+                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                                p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-2 truncate" { (t.chess_win_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-emerald-500 rounded-full"
                                         style=(format!("width:{}%", win_rate)) {}
                                 }
-                                p class="text-2xl font-bold text-emerald-400" { (format!("{:.2}%", win_rate)) }
+                                p class="text-lg md:text-2xl font-bold text-emerald-400" { (format!("{:.2}%", win_rate)) }
                                 p class="text-zinc-600 text-xs mt-1" { (fill(t.chess_games_count, win_count)) }
                             }
-                            div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { (t.chess_draw_rate) }
+                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                                p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-2 truncate" { (t.chess_draw_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-primary-color rounded-full"
                                         style=(format!("width:{}%", draw_rate)) {}
                                 }
-                                p class="text-2xl font-bold text-primary-color" { (format!("{:.2}%", draw_rate)) }
+                                p class="text-lg md:text-2xl font-bold text-primary-color" { (format!("{:.2}%", draw_rate)) }
                                 p class="text-zinc-600 text-xs mt-1" { (fill(t.chess_games_count, draw_count)) }
                             }
-                            div class="p-5 border border-shade-color" {
-                                p class="text-zinc-500 text-xs uppercase tracking-widest mb-2" { (t.chess_loss_rate) }
+                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                                p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-2 truncate" { (t.chess_loss_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-rose-500 rounded-full"
                                         style=(format!("width:{}%", loss_rate)) {}
                                 }
-                                p class="text-2xl font-bold text-rose-400" { (format!("{:.2}%", loss_rate)) }
+                                p class="text-lg md:text-2xl font-bold text-rose-400" { (format!("{:.2}%", loss_rate)) }
                                 p class="text-zinc-600 text-xs mt-1" { (fill(t.chess_games_count, loss_count)) }
                             }
                         }
@@ -333,7 +333,7 @@ fn render_analysis_page(games: Vec<Game>, username: &str, t: &Texts) -> PreEscap
                 p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { (t.chess_openings) }
             }
             div class="grid grid-cols-1 sm:grid-cols-2" {
-                div class="p-7 border border-shade-color border-l-2 border-l-zinc-400" {
+                div class="p-4 md:p-7 border border-shade-color border-l-2 border-l-zinc-400" {
                     p class="text-gray-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2" {
                         span class="inline-block w-2 h-2 rounded-full bg-zinc-300" {}
                         (t.chess_as_white)
@@ -348,7 +348,7 @@ fn render_analysis_page(games: Vec<Game>, username: &str, t: &Texts) -> PreEscap
                         p class="text-zinc-600 text-base" { (t.chess_no_data) }
                     }
                 }
-                div class="p-7 border border-shade-color border-l-2 border-l-primary-color" {
+                div class="p-4 md:p-7 border border-shade-color border-l-2 border-l-primary-color" {
                     p class="text-gray-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2" {
                         span class="inline-block w-2 h-2 rounded-full bg-primary-color" {}
                         (t.chess_as_black)
@@ -397,12 +397,12 @@ fn render_analysis_page(games: Vec<Game>, username: &str, t: &Texts) -> PreEscap
                         .map(|o| o.name.as_str())
                         .unwrap_or(t.chess_unknown_opening);
                     @let speed = format!("{:?}", game.speed);
-                    div class=(format!("{} px-5 py-4 flex items-center justify-between border-b border-r border-shade-color hover:bg-shade-color transition-all hover:pl-7 text-sm", border)) {
-                        div {
+                    div class=(format!("{} px-3 md:px-5 py-3 md:py-4 flex items-center justify-between gap-3 border-b border-r border-shade-color hover:bg-shade-color transition-all hover:pl-7 text-sm", border)) {
+                        div class="min-w-0" {
                             p class="text-zinc-100" { (opening_name) }
                             p class="text-zinc-600 text-xs mt-1" { "#" (game.id) " " (t.chess_played_as) " " (if main_player_color == "white" { t.chess_white } else { t.chess_black }) }
                         }
-                        div class="flex items-center gap-4" {
+                        div class="flex items-center gap-4 shrink-0" {
                             p class="text-zinc-500 text-xs uppercase tracking-wide hidden sm:block" { (speed) }
                             span class=(format!("text-xs uppercase tracking-wider px-2 py-1 {}", badge_cls)) {
                                 (result_label)
