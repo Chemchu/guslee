@@ -81,6 +81,8 @@ texts! {
     graph_depth_label,
     graph_depth_hint,
     graph_root_label,
+    graph_touch_hint,
+    graph_recenter,
     chess_title,
     chess_current_rating,
     chess_peak_rating,

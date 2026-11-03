@@ -79,14 +79,38 @@ function renderGraph(targetContainerId) {
 
   const g = svg.append("g"); // Zoom functionality
 
-  svg.call(
-    d3
-      .zoom()
-      .scaleExtent([0.1, 4])
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform);
-      }),
-  );
+  let userMoved = false;
+  const zoom = d3
+    .zoom()
+    .scaleExtent([0.1, 4])
+    .on("zoom", (event) => {
+      if (event.sourceEvent) userMoved = true;
+      g.attr("transform", event.transform);
+    });
+  svg.call(zoom);
+
+  const FIT_PADDING = 16;
+
+  function fitToView(force) {
+    const box = g.node().getBBox();
+    const { width: viewWidth, height: viewHeight } = getDimensions();
+    if (!box.width || !box.height || !viewWidth || !viewHeight) return;
+
+    const fits =
+      box.width + FIT_PADDING * 2 <= viewWidth && box.height + FIT_PADDING * 2 <= viewHeight;
+    if (fits && !force) return;
+
+    const scale = Math.min(
+      1,
+      (viewWidth - FIT_PADDING * 2) / box.width,
+      (viewHeight - FIT_PADDING * 2) / box.height,
+    );
+    const transform = d3.zoomIdentity
+      .translate(viewWidth / 2, viewHeight / 2)
+      .scale(scale)
+      .translate(-(box.x + box.width / 2), -(box.y + box.height / 2));
+    svg.transition().duration(400).call(zoom.transform, transform);
+  }
 
   // Obsidian-like physics
   const simulation = d3
@@ -152,7 +176,27 @@ function renderGraph(targetContainerId) {
       .attr("stroke-opacity", (l) => (!focused ? 0.6 : touches(l) ? 1 : GRAPH_DIMMED));
   }
 
-  if (!isLocalGraph) addLegend();
+  if (!isLocalGraph) {
+    addLegend();
+    addRecenterButton();
+    simulation.on("end", () => {
+      if (!userMoved) fitToView(false);
+    });
+  }
+
+  function addRecenterButton() {
+    const label = container.dataset.recenterLabel || "Re-center graph";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.className =
+      "absolute bottom-2 right-2 p-2 border border-shade-color bg-background-color/80 text-zinc-400 hover:text-primary-color hover:border-primary-color transition-colors cursor-pointer";
+    button.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 3.75H6A2.25 2.25 0 0 0 3.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0 1 20.25 6v1.5m0 9V18A2.25 2.25 0 0 1 18 20.25h-1.5m-9 0H6A2.25 2.25 0 0 1 3.75 18v-1.5M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>';
+    button.addEventListener("click", () => fitToView(true));
+    container.append(button);
+  }
 
   function addLegend() {
     const shown = [...new Set(nodes.map(topFolder))].sort((a, b) =>
@@ -217,6 +261,7 @@ function renderGraph(targetContainerId) {
 
   function drag(simulation) {
     function dragStarted(event) {
+      userMoved = true;
       if (!event.active) simulation.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;

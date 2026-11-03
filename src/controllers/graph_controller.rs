@@ -77,16 +77,22 @@ async fn graph_network(
 async fn garden_view_dispatcher(
     app_state: web::Data<AppState>,
     req: HttpRequest,
+    locale: Locale,
 ) -> impl actix_web::Responder {
+    let t = locale.texts();
     let h = html! {
-        div
-        #garden-view-section
-        style="width: 100%; height: 100%;"
-        hx-get="/garden-view"
-        hx-target="#garden-view-section"
-        hx-trigger="load"
-        hx-swap="innerHTML"
-        {}
+        div class="flex flex-col w-full h-full min-h-0 gap-2 p-4 md:p-0 md:gap-0 overflow-y-auto md:overflow-hidden" {
+            h1 class="md:hidden text-4xl font-bold" { (t.nav_garden) }
+            div
+            #garden-view-section
+            hx-get="/garden-view"
+            hx-target="#garden-view-section"
+            hx-trigger="load"
+            hx-swap="innerHTML"
+            class="relative w-full h-[60dvh] shrink-0 border border-shade-color md:h-full md:shrink md:border-0"
+            {}
+            p class="md:hidden text-xs text-zinc-500" { (t.graph_touch_hint) }
+        }
     }
     .into_string();
 
@@ -107,7 +113,8 @@ async fn garden_view(app_state: web::Data<AppState>, locale: Locale) -> Html {
         data-nodes=(nodes_json)
         data-edges=(edges_json)
         data-folders=(folders_json)
-        data-root-label=(locale.texts().graph_root_label) {}
+        data-root-label=(locale.texts().graph_root_label)
+        data-recenter-label=(locale.texts().graph_recenter) {}
     };
 
     Html::new(graph)

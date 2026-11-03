@@ -66,6 +66,8 @@ pub const TEXTS: Texts = Texts {
     graph_depth_label: "Profundidad de enlaces",
     graph_depth_hint: "A cuántos enlaces de distancia mostrar",
     graph_root_label: "entrada del jardín",
+    graph_touch_hint: "Arrastra para moverte · pellizca para hacer zoom · toca una nota para abrirla",
+    graph_recenter: "Recentrar el grafo",
     chess_title: "Mi camino en el ajedrez",
     chess_current_rating: "Elo actual",
     chess_peak_rating: "Elo máximo",

@@ -7,5 +7,6 @@ document.addEventListener("htmx:after:swap", function (evt) {
       document.getElementById("mobile-search-clear").hidden = true;
     }
     window.closeMobilePanels?.();
+    window.scrollTo(0, 0);
   }
 });

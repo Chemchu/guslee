@@ -160,7 +160,6 @@ body {
   margin: 0; /* Remove default margin */
   font-family: "Iosevka Regular", sans-serif;
   font-weight: 600;
-  min-height: 100vh; /* Ensure body covers full viewport */
 }
 
 h1,
