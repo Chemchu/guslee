@@ -749,3 +749,53 @@ async fn graph_panel_height_does_not_depend_on_the_graph() {
         "swapped graphs can't resize it"
     );
 }
+
+fn class_list(tag: &str) -> Vec<&str> {
+    let start = tag.find("class=\"").map(|i| i + "class=\"".len());
+    start
+        .map(|start| {
+            tag[start..start + tag[start..].find('"').unwrap()]
+                .split_whitespace()
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[tokio::test]
+async fn mobile_layout_shows_a_single_search_bar() {
+    let app = TestApp::spawn().await;
+
+    let layout = app.get("/").await.body;
+    let shown_on_mobile: Vec<&str> = layout
+        .match_indices(r#"name="query""#)
+        .map(|(at, _)| {
+            let input = layout[..at].rfind("<input").unwrap();
+            let wrapper = layout[..input].rfind("<div").unwrap();
+            &layout[wrapper..wrapper + layout[wrapper..].find('>').unwrap()]
+        })
+        .filter(|wrapper| !class_list(wrapper).contains(&"hidden"))
+        .collect();
+
+    assert_eq!(
+        shown_on_mobile.len(),
+        1,
+        "visible on phones: {shown_on_mobile:?}"
+    );
+    assert!(shown_on_mobile[0].contains(r#"id="mobile-search""#));
+    assert!(class_list(shown_on_mobile[0]).contains(&"md:hidden"));
+}
+
+#[tokio::test]
+async fn browse_button_opens_the_explorer_as_a_mobile_drawer() {
+    let app = TestApp::spawn().await;
+
+    let layout = app.get("/").await.body;
+    let menu = layout.find(r#"id="mobile-menu""#).unwrap();
+    let browse = layout.find(r#"id="mobile-browse-btn""#).unwrap();
+    let button = &layout[browse..browse + layout[browse..].find('>').unwrap()];
+    let css = app.get("/_static/compiled.css").await.body;
+
+    assert!(menu < browse, "lives in the mobile menu");
+    assert!(button.contains(r#"aria-controls="left-section""#));
+    assert!(css.contains("#left-section.explorer-open"));
+}
