@@ -208,6 +208,19 @@ async fn overall_graph_leaves_drafts_out() {
 }
 
 #[tokio::test]
+async fn posts_without_frontmatter_are_skipped() {
+    let garden = garden();
+    fs::write(garden.path().join("notes/empty.md"), "").unwrap();
+    fs::write(garden.path().join("untitled.md"), "# Just a heading").unwrap();
+    let engine = engine(&garden).await;
+
+    assert_eq!(
+        paths(&engine.published_posts(DEFAULT_LANG).await),
+        vec!["notes/first_note.md", "notes/second_note.md", "welcome.md"]
+    );
+}
+
+#[tokio::test]
 async fn related_graph_centres_on_the_requested_post() {
     let garden = garden();
     let engine = engine(&garden).await;

@@ -81,8 +81,15 @@ impl PostsSearchEngine {
 
                 match fs::read_to_string(path) {
                     Ok(content) => {
-                        let mut metadata =
-                            extract_full_metadata(repo_path, full_path.as_str()).unwrap();
+                        let Some(mut metadata) =
+                            extract_full_metadata(repo_path, full_path.as_str())
+                        else {
+                            eprintln!(
+                                "Skipping {}: missing or invalid frontmatter",
+                                path.display()
+                            );
+                            continue;
+                        };
                         metadata.last_updated = last_updated.get(&source_path).cloned();
                         for tag in markdown_inline_tags(&content) {
                             if !metadata.tags.iter().any(|t| t.eq_ignore_ascii_case(&tag)) {

@@ -1,14 +1,14 @@
 const GRAPH_ROOT_COLOR = "#F58A07";
-const GRAPH_FOLDER_COLORS = [
-  "#4c9aff",
-  "#2ebfa5",
-  "#a77bdb",
-  "#e5534b",
-  "#e0b43a",
-  "#4fbf67",
-  "#22c3d6",
-  "#d16ba5",
-];
+const GRAPH_GOLDEN_FRACTION = 0.381966;
+const GRAPH_ROOT_HUES = { from: 15, to: 55 };
+const GRAPH_FIRST_FOLDER_HUE = 210;
+
+function graphFolderColor(index) {
+  const span = 360 - (GRAPH_ROOT_HUES.to - GRAPH_ROOT_HUES.from);
+  const phase = GRAPH_FIRST_FOLDER_HUE - GRAPH_ROOT_HUES.to;
+  const hue = GRAPH_ROOT_HUES.to + ((phase + index * span * GRAPH_GOLDEN_FRACTION) % span);
+  return `hsl(${Math.round(hue % 360)}, 65%, 62%)`;
+}
 const GRAPH_DEPTH_KEY = "graph-depth";
 const GRAPH_DIMMED = 0.12;
 
@@ -36,13 +36,13 @@ function renderGraph(targetContainerId) {
   const folders = JSON.parse(container.getAttribute("data-folders") || "[]");
   const isLocalGraph = targetContainerId === "graph-container";
 
-  const topFolder = (d) => (d.file_path?.includes("/") ? d.file_path.split("/")[0] : null);
-  const colorOf = (d) => {
-    const folder = topFolder(d);
-    if (!folder) return GRAPH_ROOT_COLOR;
-    const index = Math.max(folders.indexOf(folder), 0);
-    return GRAPH_FOLDER_COLORS[index % GRAPH_FOLDER_COLORS.length];
+  const parentFolder = (d) => {
+    const slash = d.file_path?.lastIndexOf("/") ?? -1;
+    return slash > 0 ? d.file_path.slice(0, slash) : null;
   };
+  const folderColor = (folder) =>
+    folder === null ? GRAPH_ROOT_COLOR : graphFolderColor(Math.max(folders.indexOf(folder), 0));
+  const colorOf = (d) => folderColor(parentFolder(d));
   const isCurrent = (d) => isLocalGraph && d.id === 1;
   const radiusOf = (d) => (isCurrent(d) ? 11 : 8);
 
@@ -199,21 +199,35 @@ function renderGraph(targetContainerId) {
   }
 
   function addLegend() {
-    const shown = [...new Set(nodes.map(topFolder))].sort((a, b) =>
+    const shown = [...new Set(nodes.map(parentFolder))].sort((a, b) =>
       a === null ? -1 : b === null ? 1 : a.localeCompare(b),
     );
     if (shown.length < 2) return;
 
+    const nameOf = (folder) => folder.slice(folder.lastIndexOf("/") + 1);
+    const nameCounts = new Map();
+    for (const folder of shown) {
+      if (folder !== null) nameCounts.set(nameOf(folder), (nameCounts.get(nameOf(folder)) ?? 0) + 1);
+    }
+    const labelOf = (folder) => {
+      if (folder === null) return container.dataset.rootLabel || "garden entry";
+      return nameCounts.get(nameOf(folder)) > 1 ? folder : nameOf(folder);
+    };
+
     const legend = document.createElement("ul");
     legend.className =
-      "absolute top-2 left-2 flex flex-col gap-1 p-2 text-xs bg-background-color/80 border border-shade-color pointer-events-none";
+      "absolute top-2 left-2 flex flex-col gap-1 p-2 max-w-[60%] max-h-[45%] overflow-y-auto text-xs bg-background-color/80 border border-shade-color";
     for (const folder of shown) {
       const item = document.createElement("li");
       item.className = "flex items-center gap-2";
       const dot = document.createElement("span");
-      dot.className = "inline-block w-2.5 h-2.5 rounded-full";
-      dot.style.background = colorOf({ file_path: folder ? folder + "/" : "" });
-      item.append(dot, folder ?? (container.dataset.rootLabel || "garden entry"));
+      dot.className = "inline-block shrink-0 w-2.5 h-2.5 rounded-full";
+      dot.style.background = folderColor(folder);
+      const name = document.createElement("span");
+      name.className = "truncate";
+      name.textContent = labelOf(folder);
+      if (folder !== null) name.title = folder;
+      item.append(dot, name);
       legend.append(item);
     }
     container.append(legend);

@@ -41,7 +41,7 @@ async fn graph_network(
 
     let nodes_json = serde_json::to_string(&graph_data.nodes).unwrap();
     let edges_json = serde_json::to_string(&graph_data.edges).unwrap();
-    let folders_json = top_folders_json(&app_state).await;
+    let folders_json = folders_json(&app_state).await;
 
     let graph = html! {
         div class="relative w-full h-full" {
@@ -105,7 +105,7 @@ async fn garden_view(app_state: web::Data<AppState>, locale: Locale) -> Html {
     let nodes_json = serde_json::to_string(&graph_data.nodes).unwrap();
     let edges_json = serde_json::to_string(&graph_data.edges).unwrap();
 
-    let folders_json = top_folders_json(&app_state).await;
+    let folders_json = folders_json(&app_state).await;
 
     let graph = html! {
         div #garden-view-content
@@ -120,15 +120,41 @@ async fn garden_view(app_state: web::Data<AppState>, locale: Locale) -> Html {
     Html::new(graph)
 }
 
-async fn top_folders_json(app_state: &AppState) -> String {
-    let mut folders: Vec<String> = app_state
+async fn folders_json(app_state: &AppState) -> String {
+    let posts = app_state
         .post_search_engine
         .published_posts(DEFAULT_LANG)
-        .await
-        .into_iter()
-        .filter_map(|post| Some(post.file_path.split_once('/')?.0.to_string()))
+        .await;
+    let file_paths = posts.iter().map(|post| post.file_path.as_str());
+    serde_json::to_string(&parent_folders(file_paths)).unwrap()
+}
+
+fn parent_folders<'a>(file_paths: impl Iterator<Item = &'a str>) -> Vec<String> {
+    let mut folders: Vec<String> = file_paths
+        .filter_map(|file_path| Some(file_path.rsplit_once('/')?.0.to_string()))
         .collect();
     folders.sort();
     folders.dedup();
-    serde_json::to_string(&folders).unwrap()
+    folders
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn folders_are_the_directories_posts_sit_in() {
+        let folders = parent_folders(
+            [
+                "welcome.md",
+                "gaming/post.md",
+                "gaming/a/b/c/post.md",
+                "gaming/a/b/c/other.md",
+                "notes/c/post.md",
+            ]
+            .into_iter(),
+        );
+
+        assert_eq!(folders, vec!["gaming", "gaming/a/b/c", "notes/c"]);
+    }
 }
