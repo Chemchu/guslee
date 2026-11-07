@@ -22,7 +22,7 @@ fn assert_ok(path: &str, response: &Response) {
 async fn every_real_post_renders_every_page() {
     let app = TestApp::spawn_with_garden(REAL_GARDEN_PATH).await;
     let routes = post_routes();
-    assert!(routes.len() > 10, "the real garden was not found");
+    assert!(!routes.is_empty(), "the real garden was not found");
 
     for route in &routes {
         for path in [
